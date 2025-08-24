@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Inspiration - Printify Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .pin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 1rem;
+        }
+        .pin-card {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .pin-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">Printify Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Create Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pricing.html">Manage Pricing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="inspiration.html">Search Inspiration</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Search Inspiration on Pinterest</h1>
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <input type="text" id="searchQuery" class="form-control" placeholder="Enter keywords to search for pins...">
+                    <button id="searchBtn" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsContainer">
+            <!-- Search results will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchBtn = document.getElementById('searchBtn');
+            const searchQuery = document.getElementById('searchQuery');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            searchBtn.addEventListener('click', handleSearch);
+            searchQuery.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+
+            async function handleSearch() {
+                const query = searchQuery.value.trim();
+                if (!query) {
+                    alert('Please enter a search query.');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const proxyUrl = window.location.hostname === 'localhost' 
+                        ? '/api/search-inspiration' // Adjust if you have a local proxy setup
+                        : '/.netlify/functions/search-inspiration';
+
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ keyword: query })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    displayResults(data);
+
+                } catch (error) {
+                    console.error('Error fetching inspiration:', error);
+                    resultsContainer.innerHTML = `<div class="alert alert-danger">Failed to fetch inspiration: ${error.message}</div>`;
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            function displayResults(data) {
+                resultsContainer.innerHTML = ''; // Clear previous results
+
+                let pins = [];
+                if (data && data.data && Array.isArray(data.data)) {
+                    pins = data.data;
+                } else if (data && data.results && Array.isArray(data.results)) {
+                    pins = data.results;
+                } else if (Array.isArray(data)) {
+                    pins = data;
+                }
+
+                if (pins.length === 0) {
+                    resultsContainer.innerHTML = '<div class="alert alert-info">No results found.</div>';
+                    return;
+                }
+
+                const grid = document.createElement('div');
+                grid.className = 'pin-grid';
+
+                const formattedPins = pins.map(pin => ({
+                    id: pin.id || pin.node_id,
+                    image: pin.images?.orig?.url || 
+                           pin.images?.['736x']?.url ||
+                           pin.images?.['474x']?.url ||
+                           pin.images?.['236x']?.url,
+                    title: pin.grid_title || pin.title || 'Untitled Pin',
+                    domain: pin.domain || pin.pinner?.username || 'pinterest.com'
+                })).filter(pin => pin.image && pin.id);
+
+                if (formattedPins.length === 0) {
+                    resultsContainer.innerHTML = '<div class="alert alert-info">No results with images found.</div>';
+                    return;
+                }
+
+                formattedPins.forEach(pin => {
+                    const card = document.createElement('div');
+                    card.className = 'card pin-card';
+                    card.innerHTML = `
+                        <img src="${pin.image}" class="card-img-top" alt="${pin.title}">
+                        <div class="card-body">
+                            <p class="card-text small">${pin.title}</p>
+                            <p class="card-text"><small class="text-muted">${pin.domain}</small></p>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => {
+                        selectImage(pin);
+                        // Trigger color analysis when image is selected
+                        analyzeImageColors(pin.images?.['236x'] || pin.image_url, pin);
+                    });
+                    grid.appendChild(card);
+                });
+
+                resultsContainer.appendChild(grid);
+            }
+
+            function setLoading(isLoading) {
+                if (isLoading) {
+                    searchBtn.disabled = true;
+                    searchBtn.innerHTML = 
+                        `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Searching...`;
+                    resultsContainer.innerHTML = '<div class="text-center p-4">Loading...</div>';
+                } else {
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = 'Search';
+                }
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printify Print-on-Demand Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .step-container {
+            display: none;
+        }
+        .step-container.active {
+            display: block;
+        }
+        .print-area-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 120px;
+        }
+        .print-area-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 8px rgba(0,123,255,0.2);
+        }
+        .print-area-card.selected {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+        .print-area-card.has-design {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+        .design-preview {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .generated-design {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+        .generated-design:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 8px rgba(0,123,255,0.2);
+        }
+        .generated-design img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .step-indicator .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        .step-indicator .step.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .step-indicator .step.completed {
+            background-color: #28a745;
+            color: white;
+        }
+        .mockup-preview {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .mockup-preview img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        .variant-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .variant-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        .variant-card.selected {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .design-assignment {
+            background-color: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .design-assignment.has-design {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">Printify Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">Create Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="bulk.html">Bulk Creator</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pricing.html">Manage Pricing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="inspiration.html">Search Inspiration</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1 class="mb-4"><i class="bi bi-palette"></i> Printify Print-on-Demand Manager</h1>
+        
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">
+                <i class="bi bi-key"></i><br>
+                <small>API Setup</small>
+            </div>
+            <div class="step" id="step2">
+                <i class="bi bi-shop"></i><br>
+                <small>Select Shop</small>
+            </div>
+            <div class="step" id="step3">
+                <i class="bi bi-box"></i><br>
+                <small>Choose Product</small>
+            </div>
+            <div class="step" id="step4">
+                <i class="bi bi-magic"></i><br>
+                <small>Generate Designs</small>
+            </div>
+            <div class="step" id="step5">
+                <i class="bi bi-check-circle"></i><br>
+                <small>Create Product</small>
+            </div>
+        </div>
+
+        <!-- Step 1: API Setup -->
+        <div class="step-container active" id="step1-container">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-key"></i> API Setup</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="apiKey" class="form-label">Printify API Key</label>
+                        <input type="password" class="form-control" id="apiKey" placeholder="Enter your Printify API key">
+                        <div class="form-text">
+                            Get your API key from <a href="https://printify.com/app/account/api" target="_blank">Printify Account → API</a>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="verifyApiBtn">
+                        <i class="bi bi-shield-check"></i> Verify API Key
+                    </button>
+                    <div id="apiStatus" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Shop Selection -->
+        <div class="step-container" id="step2-container">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-shop"></i> Select Shop</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="shopSelect" class="form-label">Choose your Printify shop</label>
+                        <select class="form-select" id="shopSelect">
+                            <option value="">Loading shops...</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="selectShopBtn" disabled>
+                        <i class="bi bi-arrow-right"></i> Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Product Selection -->
+        <div class="step-container" id="step3-container">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-box"></i> Choose Product Type</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="blueprintSelect" class="form-label">Product Type</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control mb-2" id="productSearch" placeholder="Search products...">
+                                    <select class="form-select" id="blueprintSelect" size="8">
+                                        <option value="">Select a product type...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="providerSelect" class="form-label">Print Provider</label>
+                                <select class="form-select" id="providerSelect" disabled>
+                                    <option value="">Select a product first</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mockup-preview" id="productPreview">
+                                <img src="data:image/svg+xml,%3Csvg width='300' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='300' height='400' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='20' text-anchor='middle' dominant-baseline='middle' fill='%23555555'%3ESelect Product%3C/text%3E%3C/svg%3E" alt="Product Preview">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="printAreasContainer" class="mt-4" style="display: none;">
+                        <h5>Available Print Areas:</h5>
+                        <div id="printAreasList" class="row"></div>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="selectProductBtn" disabled>
+                        <i class="bi bi-arrow-right"></i> Continue to Design Generation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Design Generation -->
+        <div class="step-container" id="step4-container">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-magic"></i> Generate & Assign Designs</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Generate or Upload Designs</h5>
+                            <ul class="nav nav-tabs" id="designSourceTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-content" type="button" role="tab">AI Generation</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-content" type="button" role="tab">Upload Images</button>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content mt-3" id="designSourceTabContent">
+                                <!-- AI Generation Tab -->
+                                <div class="tab-pane fade show active" id="ai-content" role="tabpanel">
+                                    <div class="mb-3">
+                                        <label for="designPrompt" class="form-label">Design Description</label>
+                                        <select class="form-select mb-2" id="designPromptSelect" onchange="updateDesignPrompt()">
+                                            <option value="">Select a design prompt...</option>
+                                            <option value="health is wealth slogan with a cool, modern, and fun health design, transparent background, print-ready, 300 DPI, commercial use">Slogan: 'Health is Wealth' with Modern Design</option>
+                                            <option value="A minimalist yoga pose silhouette with zen elements, clean design, transparent background, 300 DPI, commercial use">Minimalist Yoga Pose Silhouette</option>
+                                            <option value="A retro sunset with palm trees, 80s vibe, isolated object, no background, commercial use, print-ready">Retro 80s Sunset with Palm Trees</option>
+                                            <option value="'Good Vibes Only' typographic design, handwritten script font, professional, high resolution, transparent background">'Good Vibes Only' Typography</option>
+                                            <option value="An astronaut chilling on the moon, fun cartoon style, detailed, high quality, print-ready, isolated object">Cartoon Astronaut on the Moon</option>
+                                        </select>
+                                        <textarea class="form-control" id="designPrompt" rows="3" placeholder="Or enter your own design prompt..."></textarea>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="numDesigns" class="form-label">Number of Variations</label>
+                                            <select class="form-select" id="numDesigns">
+                                                <option value="1">1 design</option>
+                                                <option value="2">2 designs</option>
+                                                <option value="4" selected>4 designs</option>
+                                                <option value="6">6 designs</option>
+                                                <option value="8">8 designs</option>
+                                                <option value="10">10 designs</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="aiModel" class="form-label">Style</label>
+                                            <select class="form-select" id="aiModel">
+                                                <option value="flux-dev" selected>Balanced</option>
+                                                <option value="flux-pro">Premium</option>
+                                                <option value="recraft-v3">Vector Art</option>
+                                                <option value="ideogram-v2">Typography</option>
+                                                <option value="flux-schnell">Quick Draft</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-success" id="generateDesignBtn">
+                                            <i class="bi bi-stars"></i> Generate Designs
+                                        </button>
+                                        <button class="btn btn-outline-primary" id="savePromptBtn" onclick="savePrompt()">
+                                            <i class="bi bi-bookmark-plus"></i> Save Prompt
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Upload Tab -->
+                                <div class="tab-pane fade" id="upload-content" role="tabpanel">
+                                    <div class="mb-3">
+                                        <label for="imageUpload" class="form-label">Upload Your Images</label>
+                                        <input class="form-control" type="file" id="imageUpload" accept="image/*" multiple>
+                                        <div class="form-text">Select multiple files to upload several designs at once.</div>
+                                    </div>
+                                    <button class="btn btn-primary" id="uploadImagesBtn">
+                                        <i class="bi bi-cloud-arrow-up"></i> Upload Images
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="generateStatus" class="mt-3"></div>
+                            
+                            <div id="generatedDesigns" class="mt-4">
+                                <h6>Available Designs: <span class="badge bg-secondary" id="designCount">0</span></h6>
+                                <div class="row" id="designsList"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Print Areas</h5>
+                            <div id="printAreasAssignment"></div>
+                            
+                            <div class="mt-4">
+                                <button class="btn btn-primary" id="continueToProductBtn" disabled>
+                                    <i class="bi bi-arrow-right"></i> Continue to Product Creation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Product Creation -->
+        <div class="step-container" id="step5-container">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-check-circle"></i> Create Product</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Product Details</h5>
+                            <div class="mb-3">
+                                <label for="productTitle" class="form-label">Product Title</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="productTitle" placeholder="Enter product title">
+                                    <button class="btn btn-outline-primary" type="button" id="generateTitleBtn">
+                                        <i class="bi bi-magic"></i> Generate
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productDescription" class="form-label">Product Description</label>
+                                <div class="input-group">
+                                    <textarea class="form-control" id="productDescription" rows="3" placeholder="Enter product description"></textarea>
+                                    <button class="btn btn-outline-primary" type="button" id="generateDescriptionBtn">
+                                        <i class="bi bi-magic"></i> Generate
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productTags" class="form-label">Product Tags</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="productTags" placeholder="Enter tags separated by commas">
+                                    <button class="btn btn-outline-primary" type="button" id="generateTagsBtn">
+                                        <i class="bi bi-magic"></i> Generate
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <h5>Variants & Pricing</h5>
+                            <div id="variantsList"></div>
+                            
+                            <button class="btn btn-success btn-lg" id="createProductBtn" disabled>
+                                <i class="bi bi-plus-circle"></i> Create Product
+                            </button>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Product Preview</h5>
+                            <div id="productPreviewFinal"></div>
+                            
+                            <h5>Design Assignments</h5>
+                            <div id="designAssignmentsSummary"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- GLOBAL STATE --- 
+        const AppState = {
+            apiKey: '',
+            shops: [],
+            selectedShop: null,
+            allBlueprints: [],
+            selectedBlueprint: null,
+            selectedProvider: null,
+            variants: [],
+            printAreas: [],
+            selectedVariants: new Set(),
+            generatedDesigns: [],
+            designAssignments: new Map(), // Maps print_area_position -> design_object
+        };
+
+        // --- UTILITY FUNCTIONS ---
+        function showStep(stepNumber) {
+            document.querySelectorAll('.step-container').forEach(container => container.classList.remove('active'));
+            document.getElementById(`step${stepNumber}-container`).classList.add('active');
+            document.querySelectorAll('.step-indicator .step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 === stepNumber) step.classList.add('active');
+                else if (index + 1 < stepNumber) step.classList.add('completed');
+            });
+        }
+        
+        function addSuggestedColorVariant(colorName, colorHex) {
+            // Add the suggested color as a new variant
+            const variantsContainer = document.getElementById('variantsList');
+            const variantId = `suggested-${Date.now()}`;
+            
+            // Create a new variant checkbox
+            const variantDiv = document.createElement('div');
+            variantDiv.className = 'form-check';
+            variantDiv.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${variantId}" id="v-${variantId}" checked>
+                <label class="form-check-label" for="v-${variantId}">
+                    ${colorName} <span style="display: inline-block; width: 12px; height: 12px; background-color: ${colorHex}; border-radius: 2px; margin-left: 5px;"></span>
+                </label>
+            `;
+            variantsContainer.appendChild(variantDiv);
+            
+            // Update selected variants
+            updateSelectedVariants();
+            
+            // Show success message
+            showNotification(`Added ${colorName} variant!`, 'success');
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create a simple notification
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const statusDiv = document.getElementById('generateStatus');
+            statusDiv.appendChild(alertDiv);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function showButtonLoading(btnId, text) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${text}`;
+        }
+
+        function hideButtonLoading(btnId, text) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            btn.disabled = false;
+            btn.innerHTML = text;
+        }
+        
+        function updateDesignPrompt() {
+            const select = document.getElementById('designPromptSelect');
+            const textarea = document.getElementById('designPrompt');
+            if (select.value) {
+                textarea.value = select.value;
+            }
+        }
+
+        // --- API CALLS ---
+        async function makeApiCall(endpoint, options = {}) {
+            const proxyUrl = 'https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/printify-proxy';
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    endpoint,
+                    apiKey: AppState.apiKey,
+                    method: options.method || 'GET',
+                    body: options.body || null
+                })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || `API Error: ${response.status}`);
+            }
+            return data.data;
+        }
+
+        // --- STEP 1: API & SHOP --- 
+        async function verifyApiKeyAndLoadShops() {
+            const apiKeyInput = document.getElementById('apiKey');
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                alert('Please enter your Printify API Key.');
+                return;
+            }
+            AppState.apiKey = apiKey;
+            const statusDiv = document.getElementById('apiStatus');
+            showButtonLoading('verifyApiBtn', 'Verifying...');
+            try {
+                const shops = await makeApiCall('/shops.json');
+                if (!shops || shops.length === 0) throw new Error('No shops found for this API key.');
+                
+                AppState.shops = shops;
+                localStorage.setItem('printifyApiKey', apiKey);
+                statusDiv.innerHTML = `<div class="alert alert-success">API Key is valid. Found ${shops.length} shop(s).</div>`;
+                
+                const shopSelect = document.getElementById('shopSelect');
+                shopSelect.innerHTML = '<option value="">-- Select a Shop --</option>';
+                shops.forEach(shop => {
+                    shopSelect.innerHTML += `<option value="${shop.id}">${shop.title}</option>`;
+                });
+                setTimeout(() => showStep(2), 500);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                hideButtonLoading('verifyApiBtn', '<i class="bi bi-shield-check"></i> Verify API Key');
+            }
+        }
+
+        // --- STEP 2: PRODUCT --- 
+async function loadBlueprints() {
+    const blueprintSelect = document.getElementById('blueprintSelect');
+    blueprintSelect.innerHTML = '<option>Loading all products...</option>';
+    try {
+        // Fetch all blueprints without any filtering
+        const blueprints = await makeApiCall('/catalog/blueprints.json');
+        AppState.allBlueprints = blueprints;
+        
+        // Group by brand for better organization
+        const brandGroups = {};
+        blueprints.forEach(bp => {
+            const brand = bp.brand || 'Other';
+            if (!brandGroups[brand]) brandGroups[brand] = [];
+            brandGroups[brand].push(bp);
+        });
+        
+        blueprintSelect.innerHTML = '<option value="">-- Select a Product --</option>';
+        
+        // Add Bella+Canvas products first if available
+        if (brandGroups['Bella+Canvas'] || brandGroups['Bella Canvas']) {
+            const bellaProducts = brandGroups['Bella+Canvas'] || brandGroups['Bella Canvas'];
+            blueprintSelect.innerHTML += '<optgroup label="🎯 Bella+Canvas">';
+            bellaProducts.forEach(bp => {
+                blueprintSelect.innerHTML += `<option value="${bp.id}">${bp.title}</option>`;
+            });
+            blueprintSelect.innerHTML += '</optgroup>';
+            delete brandGroups['Bella+Canvas'];
+            delete brandGroups['Bella Canvas'];
+        }
+        
+        // Add other brands alphabetically
+        Object.keys(brandGroups).sort().forEach(brand => {
+            if (brandGroups[brand].length > 0) {
+                blueprintSelect.innerHTML += `<optgroup label="${brand}">`;
+                brandGroups[brand].forEach(bp => {
+                    blueprintSelect.innerHTML += `<option value="${bp.id}">${bp.title}</option>`;
+                });
+                blueprintSelect.innerHTML += '</optgroup>';
+            }
+        });
+        
+        console.log(`Loaded ${blueprints.length} products from ${Object.keys(brandGroups).length} brands`);
+        console.log('Available brands:', Object.keys(brandGroups));
+        
+    } catch (error) {
+        blueprintSelect.innerHTML = `<option>Error loading products: ${error.message}</option>`;
+        alert(`Error loading products: ${error.message}`);
+    }
+}
+
+        async function loadBlueprintDetails(blueprintId) {
+            const providerSelect = document.getElementById('providerSelect');
+            providerSelect.innerHTML = '<option>Loading details...</option>';
+            providerSelect.disabled = true;
+            document.getElementById('printAreasContainer').style.display = 'none';
+            try {
+                const blueprint = await makeApiCall(`/catalog/blueprints/${blueprintId}.json`);
+                const providers = await makeApiCall(`/catalog/blueprints/${blueprintId}/print_providers.json`);
+                AppState.selectedBlueprint = blueprint;
+                
+                document.querySelector('#productPreview img').src = blueprint.images[0] || '';
+
+                providerSelect.innerHTML = '<option value="">-- Select a Provider --</option>';
+                providers.forEach(p => {
+                    providerSelect.innerHTML += `<option value="${p.id}">${p.title}</option>`;
+                });
+                providerSelect.disabled = false;
+            } catch (error) {
+                providerSelect.innerHTML = '<option>Error loading details</option>';
+                alert(`Error loading blueprint details: ${error.message}`);
+            }
+        }
+
+        async function onProviderChange(providerId) {
+            document.getElementById('printAreasContainer').style.display = 'none';
+            document.getElementById('selectProductBtn').disabled = true;
+            if (!providerId) return;
+
+            AppState.selectedProvider = { id: parseInt(providerId, 10) };
+            const blueprintId = AppState.selectedBlueprint.id;
+            const printAreasList = document.getElementById('printAreasList');
+            printAreasList.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Loading variants...';
+
+            try {
+                const data = await makeApiCall(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`);
+                if (!data.variants || data.variants.length === 0) throw new Error('No variants found for this provider.');
+
+                AppState.variants = data.variants;
+                const printAreasMap = new Map();
+                data.variants.forEach(variant => {
+                    (variant.placeholders || []).forEach(p => {
+                        if (!printAreasMap.has(p.position)) {
+                            printAreasMap.set(p.position, { 
+                                id: p.position, 
+                                title: p.position.charAt(0).toUpperCase() + p.position.slice(1).replace('_', ' ')
+                            });
+                        }
+                    });
+                });
+                AppState.printAreas = Array.from(printAreasMap.values());
+
+                printAreasList.innerHTML = '';
+                AppState.printAreas.forEach(area => {
+                    printAreasList.innerHTML += `<div class="col-12 mb-2"><div class="p-3 border rounded bg-light">${area.title}</div></div>`;
+                });
+
+                document.getElementById('printAreasContainer').style.display = 'block';
+                document.getElementById('selectProductBtn').disabled = false;
+            } catch (error) {
+                printAreasList.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                alert(`Failed to load provider data: ${error.message}`);
+            }
+        }
+
+        // --- STEP 3: DESIGN --- 
+        function setupDesignStep() {
+            const printAreasContainer = document.getElementById('printAreasAssignment');
+            printAreasContainer.innerHTML = '';
+            AppState.printAreas.forEach(area => {
+                printAreasContainer.innerHTML += `
+                    <div class="design-assignment mb-3" id="pa-assign-${area.id}" data-area-id="${area.id}">
+                        <h6>${area.title}</h6>
+                        <button class="btn btn-sm btn-outline-primary assign-btn">Assign Design</button>
+                    </div>`;
+            });
+            displayGeneratedDesigns();
+            showStep(4);
+        }
+
+        async function generateDesigns() {
+            const product = AppState.selectedBlueprint;
+            const design = AppState.selectedDesign;
+            const selectedVariantIds = Array.from(AppState.selectedVariants);
+            const colors = selectedVariantIds.map(id => {
+                const variant = AppState.variants.find(v => v.id === id);
+                return variant?.name || '';
+            }).filter(name => name);
+            const brand = product.brand || 'Generic';
+            
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const toneSelectEl = document.getElementById('toneSelect');
+            const targetAudience = targetAudienceEl ? targetAudienceEl.value : 'general';
+            const tone = toneSelectEl ? toneSelectEl.value : 'professional';
+            const userPrompt = document.getElementById('designPrompt').value.trim();
+            const prompt = userPrompt || `Create a visually appealing design with colors: ${colors.join(', ')}. Style: ${tone}. Target audience: ${targetAudience}.`;
+            
+            const numDesigns = parseInt(document.getElementById('numDesigns').value, 10);
+            if (!prompt) return alert('Please enter a design prompt.');
+
+            const statusDiv = document.getElementById('generateStatus');
+            showButtonLoading('generateDesignBtn', `Generating ${numDesigns}...`);
+            statusDiv.innerHTML = '';
+
+            try {
+                const promises = [];
+                for (let i = 0; i < numDesigns; i++) {
+                    promises.push(
+                        fetch('https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/generate-image', { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ prompt })
+                        })
+                        .then(res => res.json())
+                        .then(imgData => {
+                            if (!imgData.success) throw new Error(imgData.error || 'Image generation failed');
+                            return makeApiCall('/uploads/images.json', {
+                                method: 'POST',
+                                body: { file_name: `${prompt.slice(0, 20)}_${i}.png`, url: imgData.images[0].url }
+                            });
+                        })
+                    );
+                }
+                const uploadedImages = await Promise.all(promises);
+                uploadedImages.forEach(img => AppState.generatedDesigns.push(img));
+                displayGeneratedDesigns();
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                hideButtonLoading('generateDesignBtn', '<i class="bi bi-stars"></i> Generate Designs');
+            }
+        }
+        
+        async function uploadDesigns(files) {
+            if (!files.length) return;
+            const statusDiv = document.getElementById('generateStatus');
+            showButtonLoading('uploadImagesBtn', `Uploading ${files.length}...`);
+            try {
+                const uploadPromises = Array.from(files).map(file => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => {
+                            makeApiCall('/uploads/images.json', { 
+                                method: 'POST', 
+                                body: { file_name: file.name, contents: reader.result.split(',')[1] }
+                            }).then(resolve).catch(reject);
+                        };
+                        reader.onerror = reject;
+                    });
+                });
+                const uploaded = await Promise.all(uploadPromises);
+                AppState.generatedDesigns.push(...uploaded);
+                displayGeneratedDesigns();
+            } catch (error) {
+                 statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                hideButtonLoading('uploadImagesBtn', '<i class="bi bi-cloud-arrow-up"></i> Upload Images');
+            }
+        }
+
+        // Individual AI generation functions
+        async function generateProductTitle() {
+            const product = AppState.selectedBlueprint;
+            const design = AppState.selectedDesign;
+            const selectedVariantIds = Array.from(AppState.selectedVariants);
+            const colors = selectedVariantIds.map(id => {
+                const variant = AppState.variants.find(v => v.id === id);
+                return variant?.name || '';
+            }).filter(name => name);
+            const brand = product.brand || 'Generic';
+            
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const toneEl = document.getElementById('toneSelect');
+            const designPromptEl = document.getElementById('designPrompt');
+            const targetAudience = targetAudienceEl ? targetAudienceEl.value || 'general' : 'general';
+            const tone = toneEl ? toneEl.value || 'professional' : 'professional';
+            const designDescription = designPromptEl ? designPromptEl.value.trim() : '';
+            
+            let prompt = `Generate a compelling product title for a ${product.title} by ${brand}. Colors: ${colors.join(', ')}. Target audience: ${targetAudience}. Tone: ${tone}. Brand: ${brand}.`;
+            if (designDescription) {
+                prompt += ` The design/image on the product is: ${designDescription}. Make sure the title appeals to people who would want this specific design.`;
+            }
+            prompt += ` Keep it under 100 characters.`;
+            
+            try {
+                showButtonLoading('generateTitleBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
+                const response = await fetch('/.netlify/functions/generate-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, contentType: 'title' })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('productTitle').value = result.content;
+                    showNotification('Title generated successfully!', 'success');
+                } else {
+                    throw new Error(result.error || 'Failed to generate title');
+                }
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'danger');
+            } finally {
+                hideButtonLoading('generateTitleBtn', '<i class="bi bi-magic"></i> Generate');
+            }
+        }
+
+        async function generateProductDescription() {
+            const product = AppState.selectedBlueprint;
+            const design = AppState.selectedDesign;
+            const selectedVariantIds = Array.from(AppState.selectedVariants);
+            const colors = selectedVariantIds.map(id => {
+                const variant = AppState.variants.find(v => v.id === id);
+                return variant?.name || '';
+            }).filter(name => name);
+            const brand = product.brand || 'Generic';
+            
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const toneEl = document.getElementById('toneSelect');
+            const designPromptEl = document.getElementById('designPrompt');
+            const targetAudience = targetAudienceEl ? targetAudienceEl.value || 'general' : 'general';
+            const tone = toneEl ? toneEl.value || 'professional' : 'professional';
+            const designDescription = designPromptEl ? designPromptEl.value.trim() : '';
+            
+            let prompt = `Generate a compelling product description for a ${product.title} by ${brand}. Colors: ${colors.join(', ')}. Target audience: ${targetAudience}. Tone: ${tone}. Brand: ${brand}.`;
+            if (designDescription) {
+                prompt += ` The design/image on the product is: ${designDescription}. Focus on why this specific design would appeal to the target audience and what message or feeling it conveys.`;
+            }
+            prompt += ` Make it 150-200 words.`;
+            
+            try {
+                showButtonLoading('generateDescriptionBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
+                const response = await fetch('/.netlify/functions/generate-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, contentType: 'description' })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('productDescription').value = result.content;
+                    showNotification('Description generated successfully!', 'success');
+                } else {
+                    throw new Error(result.error || 'Failed to generate description');
+                }
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'danger');
+            } finally {
+                hideButtonLoading('generateDescriptionBtn', '<i class="bi bi-magic"></i> Generate');
+            }
+        }
+
+        async function generateProductTags() {
+            const product = AppState.selectedBlueprint;
+            const design = AppState.selectedDesign;
+            const selectedVariantIds = Array.from(AppState.selectedVariants);
+            const colors = selectedVariantIds.map(id => {
+                const variant = AppState.variants.find(v => v.id === id);
+                return variant?.name || '';
+            }).filter(name => name);
+            const brand = product.brand || 'Generic';
+            
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const designPromptEl = document.getElementById('designPrompt');
+            const targetAudience = targetAudienceEl ? targetAudienceEl.value || 'general' : 'general';
+            const designDescription = designPromptEl ? designPromptEl.value.trim() : '';
+            
+            let prompt = `Generate 5-8 relevant product tags for a ${product.title} by ${brand}. Colors: ${colors.join(', ')}. Target audience: ${targetAudience}. Brand: ${brand}.`;
+            if (designDescription) {
+                prompt += ` The design/image on the product is: ${designDescription}. Include tags that relate to the design theme and would help people find this specific type of design.`;
+            }
+            prompt += ` Return as comma-separated values.`;
+            
+            try {
+                showButtonLoading('generateTagsBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
+                const response = await fetch('/.netlify/functions/generate-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, contentType: 'tags' })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('productTags').value = result.content;
+                    showNotification('Tags generated successfully!', 'success');
+                } else {
+                    throw new Error(result.error || 'Failed to generate tags');
+                }
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'danger');
+            } finally {
+                hideButtonLoading('generateTagsBtn', '<i class="bi bi-magic"></i> Generate');
+            }
+        }
+
+        function displayGeneratedDesigns() {
+            const container = document.getElementById('designsList');
+            container.innerHTML = '';
+            AppState.generatedDesigns.forEach(design => {
+                container.innerHTML += `
+            <div class="col-6 col-md-4 mb-3">
+                <div class="card h-100">
+                    <img src="${design.preview_url}" class="card-img-top" style="object-fit: contain; height: 120px;">
+                    <div class="card-body p-2">
+                        <button class="btn btn-sm btn-primary w-100 assign-specific-btn" data-design-id="${design.id}">Assign</button>
+                    </div>
+                </div>
+            </div>`;
+            });
+            document.getElementById('designCount').textContent = AppState.generatedDesigns.length;
+        }
+
+        function openDesignModal(targetAreaId = null) {
+            let modalHTML = `<div class="modal fade" id="designModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Select a Design</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body"><div class="row">`;
+            
+            AppState.generatedDesigns.forEach(d => {
+                modalHTML += `<div class="col-4 col-md-3 mb-3"><img src="${d.preview_url}" class="img-fluid rounded border select-design-img" style="cursor:pointer;" data-design-id="${d.id}"></div>`;
+            });
+
+            modalHTML += `</div></div></div></div></div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const modalEl = document.getElementById('designModal');
+            const modal = new bootstrap.Modal(modalEl);
+            
+            modalEl.addEventListener('click', e => {
+                if (e.target.classList.contains('select-design-img')) {
+                    const designId = e.target.dataset.designId;
+                    assignDesignToArea(targetAreaId, designId);
+                    modal.hide();
+                }
+            });
+            modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+            modal.show();
+        }
+
+        function openDesignModalForAssignment(designId) {
+            let modalHTML = `<div class="modal fade" id="areaSelectionModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Select Print Area</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <p>Select which print area to assign this design to:</p>
+                    <div class="list-group">`;
+            
+            AppState.printAreas.forEach(area => {
+                const isAssigned = AppState.designAssignments.has(area.id);
+                modalHTML += `<button type="button" class="list-group-item list-group-item-action ${isAssigned ? 'disabled' : ''}" 
+                    data-area-id="${area.id}" data-design-id="${designId}">
+                    ${area.title} ${isAssigned ? '(Already assigned)' : ''}
+                </button>`;
+            });
+            
+            modalHTML += `</div></div></div></div>`;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const modal = new bootstrap.Modal(document.getElementById('areaSelectionModal'));
+            modal.show();
+            
+            document.querySelectorAll('#areaSelectionModal .list-group-item:not(.disabled)').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const areaId = this.dataset.areaId;
+                    const designId = this.dataset.designId;
+                    assignDesignToArea(areaId, designId);
+                    modal.hide();
+                    const modalEl = document.getElementById('areaSelectionModal');
+                    if (modalEl) modalEl.remove();
+                });
+            });
+            
+            document.getElementById('areaSelectionModal').addEventListener('hidden.bs.modal', () => {
+                const modal = document.getElementById('areaSelectionModal');
+                if (modal) modal.remove();
+            });
+        }
+
+        function assignDesignToArea(areaId, designId) {
+            const design = AppState.generatedDesigns.find(d => d.id === designId);
+            if (!design) return;
+            AppState.designAssignments.set(areaId, design);
+
+            const areaContainer = document.getElementById(`pa-assign-${areaId}`);
+            if (!areaContainer) {
+                console.error(`Element pa-assign-${areaId} not found`);
+                return;
+            }
+            
+            const area = AppState.printAreas.find(a => a.id === areaId);
+            if (!area) return;
+            
+            areaContainer.classList.add('has-design');
+            areaContainer.innerHTML = `
+                <h6>${area.title}</h6>
+                <div class="d-flex align-items-center">
+                    <img src="${design.preview_url}" class="design-preview me-2" style="max-width: 50px; max-height: 50px;">
+                    <button class="btn btn-sm btn-outline-danger remove-design-btn" data-area-id="${areaId}">Remove</button>
+                </div>`;
+            checkAllDesignsAssigned();
+        }
+        
+        function removeDesignAssignment(areaId) {
+            AppState.designAssignments.delete(areaId);
+            const area = AppState.printAreas.find(a => a.id === areaId);
+            const areaContainer = document.getElementById(`pa-assign-${areaId}`);
+            if (!areaContainer) {
+                console.error(`Element pa-assign-${areaId} not found`);
+                return;
+            }
+            
+            areaContainer.classList.remove('has-design');
+            areaContainer.innerHTML = `<h6>${area.title}</h6><button class="btn btn-sm btn-outline-primary assign-btn">Assign Design</button>`;
+            checkAllDesignsAssigned();
+        }
+
+        function checkAllDesignsAssigned() {
+            // Allow continuing if at least one design is assigned
+            const hasAnyAssignment = AppState.designAssignments.size > 0;
+            document.getElementById('continueToProductBtn').disabled = !hasAnyAssignment;
+        }
+
+        // --- STEP 4: FINAL PRODUCT --- 
+        function setupFinalStep() {
+            document.getElementById('productTitle').value = AppState.selectedBlueprint.title;
+            document.getElementById('productDescription').value = AppState.selectedBlueprint.description;
+            
+            const variantsContainer = document.getElementById('variantsList');
+            variantsContainer.innerHTML = '';
+            AppState.variants.forEach(v => {
+                 variantsContainer.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${v.id}" id="v-${v.id}" checked><label class="form-check-label" for="v-${v.id}">${v.title}</label></div>`;
+            });
+            updateSelectedVariants();
+
+            const summaryContainer = document.getElementById('designAssignmentsSummary');
+            summaryContainer.innerHTML = '';
+            AppState.designAssignments.forEach((design, areaId) => {
+                const area = AppState.printAreas.find(a => a.id === areaId);
+                summaryContainer.innerHTML += `<p><strong>${area.title}:</strong> <img src="${design.preview_url}" height="30"></p>`;
+            });
+            showStep(5);
+        }
+        
+        function updateSelectedVariants() {
+            AppState.selectedVariants.clear();
+            document.querySelectorAll('#variantsList input:checked').forEach(el => AppState.selectedVariants.add(parseInt(el.value)));
+            document.getElementById('createProductBtn').disabled = AppState.selectedVariants.size === 0;
+        }
+
+        async function createProduct() {
+            const title = document.getElementById('productTitle').value.trim();
+            const description = document.getElementById('productDescription').value.trim();
+
+            if (!title || !description || AppState.selectedVariants.size === 0) {
+                return alert('Please provide a title, description, and select at least one variant.');
+            }
+            showButtonLoading('createProductBtn', 'Creating...');
+            try {
+                const variantsForApi = [];
+                AppState.selectedVariants.forEach(variantId => {
+                    variantsForApi.push({ id: variantId, price: 2500, is_enabled: true }); // Hardcoded price
+                });
+
+                const printAreasForApi = Array.from(AppState.designAssignments.entries()).map(([position, design]) => ({
+                    variant_ids: [...AppState.selectedVariants],
+                    placeholders: [{ position, images: [{ id: design.id, x: 0.5, y: 0.5, scale: 1, angle: 0 }] }]
+                }));
+
+                const productData = {
+                    title, description,
+                    blueprint_id: AppState.selectedBlueprint.id,
+                    print_provider_id: AppState.selectedProvider.id,
+                    variants: variantsForApi,
+                    print_areas: printAreasForApi
+                };
+
+                                await makeApiCall(`/shops/${AppState.selectedShop.id}/products.json`, { method: 'POST', body: productData });
+                alert(`Product '${title}' created successfully!`);
+                window.location.reload();
+            } catch (error) {
+                alert(`Error creating product: ${error.message}`);
+            } finally {
+                hideButtonLoading('createProductBtn', '<i class="bi bi-plus-circle"></i> Create Product');
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Step 1
+            document.getElementById('verifyApiBtn').addEventListener('click', verifyApiKeyAndLoadShops);
+            
+            // Step 2
+            document.getElementById('shopSelect').addEventListener('change', (e) => {
+                document.getElementById('selectShopBtn').disabled = !e.target.value;
+            });
+            document.getElementById('selectShopBtn').addEventListener('click', () => {
+                const shopId = document.getElementById('shopSelect').value;
+                if (!shopId) return alert('Please select a shop.');
+                AppState.selectedShop = AppState.shops.find(s => s.id == shopId);
+                loadBlueprints();
+                showStep(3);
+            });
+
+            // Step 3
+            document.getElementById('productSearch').addEventListener('input', e => {
+                const searchTerm = e.target.value.toLowerCase();
+                const options = document.querySelectorAll('#blueprintSelect option');
+                options.forEach(opt => {
+                    if (opt.value) opt.style.display = opt.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+                });
+            });
+            document.getElementById('blueprintSelect').addEventListener('change', e => loadBlueprintDetails(e.target.value));
+            document.getElementById('providerSelect').addEventListener('change', e => onProviderChange(e.target.value));
+            document.getElementById('selectProductBtn').addEventListener('click', setupDesignStep);
+
+            // Step 4
+            document.getElementById('generateDesignBtn').addEventListener('click', generateDesigns);
+            document.getElementById('imageUpload').addEventListener('change', e => uploadDesigns(e.target.files));
+            document.getElementById('printAreasAssignment').addEventListener('click', e => {
+                if (e.target.classList.contains('assign-btn')) {
+                    const areaId = e.target.closest('.design-assignment').dataset.areaId;
+                    openDesignModal(areaId);
+                }
+                if (e.target.classList.contains('remove-design-btn')) {
+                    removeDesignAssignment(e.target.dataset.areaId);
+                }
+            });
+            
+            document.getElementById('designsList').addEventListener('click', e => {
+                if (e.target.classList.contains('assign-specific-btn')) {
+                    const designId = e.target.dataset.designId;
+                    // Always show modal for area selection
+                    openDesignModalForAssignment(designId);
+                }
+            });
+            document.getElementById('continueToProductBtn').addEventListener('click', setupFinalStep);
+
+            // Step 5
+            document.getElementById('variantsList').addEventListener('change', updateSelectedVariants);
+            document.getElementById('createProductBtn').addEventListener('click', createProduct);
+            
+            // Individual generate button listeners
+            document.getElementById('generateTitleBtn').addEventListener('click', generateProductTitle);
+            document.getElementById('generateDescriptionBtn').addEventListener('click', generateProductDescription);
+            document.getElementById('generateTagsBtn').addEventListener('click', generateProductTags);
+
+            // Load saved API key
+            const savedApiKey = localStorage.getItem('printifyApiKey');
+            if (savedApiKey) {
+                document.getElementById('apiKey').value = savedApiKey;
+                verifyApiKeyAndLoadShops();
+            }
+        });
+
+        // --- DATABASE OPERATIONS --- 
+        async function savePrompt() {
+            const product = AppState.selectedBlueprint;
+            const design = AppState.selectedDesign;
+            const selectedVariantIds = Array.from(AppState.selectedVariants);
+            const colors = selectedVariantIds.map(id => {
+                const variant = AppState.variants.find(v => v.id === id);
+                return variant?.name || '';
+            }).filter(name => name);
+            
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const toneEl = document.getElementById('toneSelect');
+            const customPromptEl = document.getElementById('designPrompt');
+            const titleEl = document.getElementById('productTitle');
+            const descriptionEl = document.getElementById('productDescription');
+            const tagsEl = document.getElementById('productTags');
+            
+            const targetAudience = targetAudienceEl ? targetAudienceEl.value || 'general' : 'general';
+            const tone = toneEl ? toneEl.value || 'professional' : 'professional';
+            const customPrompt = customPromptEl ? customPromptEl.value.trim() : '';
+            const title = titleEl ? titleEl.value.trim() : '';
+            const description = descriptionEl ? descriptionEl.value.trim() : '';
+            const tags = tagsEl ? tagsEl.value.trim() : '';
+
+            if (!product || !design) {
+                showNotification('Please select a product and design first', 'warning');
+                return;
+            }
+
+            showButtonLoading('savePromptBtn', 'Saving...');
+
+            try {
+                const promptData = {
+                    prompt: customPrompt || `Create a ${tone} design for ${product.title} targeting ${targetAudience}`,
+                    product_id: product.id,
+                    product_name: product.title,
+                    product_brand: product.brand || 'Generic',
+                    product_category: product.category || 'Apparel',
+                    variants: colors,
+                    target_audience: targetAudience,
+                    tone: tone,
+                    ai_response: {
+                        title: title || null,
+                        description: description || null,
+                        tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+                        generated_designs: AppState.generatedDesigns
+                    },
+                    created_at: new Date().toISOString()
+                };
+
+                const response = await fetch('/.netlify/functions/save-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(promptData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Prompt saved successfully!', 'success');
+                    // Optionally clear the prompt field after saving
+                    // document.getElementById('designPrompt').value = '';
+                } else {
+                    throw new Error(result.error || 'Failed to save prompt');
+                }
+            } catch (error) {
+                showNotification(`Error saving prompt: ${error.message}`, 'danger');
+                console.error('Save prompt error:', error);
+            } finally {
+                hideButtonLoading('savePromptBtn', '<i class="bi bi-bookmark-plus"></i> Save Prompt');
+            }
+        }
+
+        async function loadSavedPrompts(productId = null) {
+            try {
+                const url = productId ? `/.netlify/functions/get-prompt?productId=${productId}` : '/.netlify/functions/get-prompt';
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    return result.data;
+                } else {
+                    throw new Error(result.error || 'Failed to load prompts');
+                }
+            } catch (error) {
+                console.error('Load prompts error:', error);
+                return [];
+            }
+        }
+    </script>
+</body>
+</html>

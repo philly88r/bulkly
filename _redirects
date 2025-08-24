@@ -1,0 +1,8 @@
+# Netlify _redirects file
+# This handles client-side routing for the single-page application
+
+# API routes should not be redirected
+/.netlify/functions/* /.netlify/functions/:splat 200
+
+# All other routes should serve the main app
+/* /index.html 200

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test Page</h1>
+    <button onclick="testShops()">Test Shops API</button>
+    <div id="results"></div>
+
+    <script>
+        async function testShops() {
+            const results = document.getElementById('results');
+            results.innerHTML = 'Testing shops endpoint...';
+            
+            try {
+                const proxyUrl = window.location.hostname === 'localhost' 
+                    ? '/api/printify-proxy' 
+                    : '/.netlify/functions/printify-proxy';
+                
+                const response = await fetch(`${proxyUrl}?endpoint=%2Fshops.json`);
+                const data = await response.json();
+                
+                results.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                results.innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

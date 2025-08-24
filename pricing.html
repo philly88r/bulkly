@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printify Product Pricing Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .spinner-border {
+            margin-right: 10px;
+        }
+        .product-card {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .product-image {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: contain;
+        }
+        .variant-row {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .variant-row:last-child {
+            border-bottom: none;
+        }
+        .price-input {
+            max-width: 120px;
+        }
+        .markup-input {
+            max-width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">Printify Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Create Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="pricing.html">Manage Pricing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="inspiration.html">Search Inspiration</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Product Pricing Manager</h1>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Shop Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="shopSelect" class="form-label">Select Shop</label>
+                            <select id="shopSelect" class="form-select">
+                                <option value="">Select a shop...</option>
+                            </select>
+                        </div>
+                        <button id="loadProductsBtn" class="btn btn-primary" disabled>Load Products</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Bulk Pricing Options</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Apply Markup to All Products</label>
+                            <div class="input-group">
+                                <input type="number" id="bulkMarkupInput" class="form-control" value="40" min="1" max="500">
+                                <span class="input-group-text">%</span>
+                                <button id="applyBulkMarkupBtn" class="btn btn-warning" disabled>Apply to Selected</button>
+                            </div>
+                            <small class="text-muted">This will recalculate prices based on product costs</small>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="selectAllProducts">
+                            <label class="form-check-label" for="selectAllProducts">
+                                Select All Products
+                            </label>
+                        </div>
+                        <button id="saveAllPricesBtn" class="btn btn-success" disabled>Save All Price Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="productsContainer" class="mt-4">
+            <div class="alert alert-info">
+                Select a shop and click "Load Products" to manage pricing
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Content Generation Modal -->
+    <div class="modal fade" id="aiContentModal" tabindex="-1" aria-labelledby="aiContentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aiContentModalLabel">AI Content Generation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="selectedProductsInfo" class="mb-3">
+                        <h6>Selected Products: <span id="selectedCount">0</span></h6>
+                        <div id="selectedProductsList" class="small text-muted"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmGenerateContent">Generate Content</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State
+        const AppState = {
+            shops: [],
+            selectedShop: null,
+            products: [],
+            originalPrices: {},
+            priceChanges: {},
+            loading: false
+        };
+
+        // DOM Elements
+        const shopSelect = document.getElementById('shopSelect');
+        const loadProductsBtn = document.getElementById('loadProductsBtn');
+        const productsContainer = document.getElementById('productsContainer');
+        const bulkMarkupInput = document.getElementById('bulkMarkupInput');
+        const applyBulkMarkupBtn = document.getElementById('applyBulkMarkupBtn');
+        const selectAllProducts = document.getElementById('selectAllProducts');
+        const saveAllPricesBtn = document.getElementById('saveAllPricesBtn');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', initialize);
+
+        async function initialize() {
+            await loadShops();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            // Shop selection
+            shopSelect.addEventListener('change', onShopChange);
+            loadProductsBtn.addEventListener('click', loadProducts);
+            
+            // Bulk actions
+            applyBulkMarkupBtn.addEventListener('click', applyBulkMarkup);
+            saveAllPricesBtn.addEventListener('click', saveAllPriceChanges);
+            selectAllProducts.addEventListener('change', toggleSelectAllProducts);
+            
+            // Dynamic listeners for elements created later
+            document.body.addEventListener('change', function(event) {
+                if (event.target.matches('.variant-price-input, .variant-markup-input')) {
+                    handleVariantInputChange(event.target);
+                }
+            });
+        }
+
+        // API Functions
+        async function makeApiCall(endpoint, options = {}) {
+            const proxyUrl = 'https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/printify-proxy';
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    endpoint,
+                    apiKey: window.printifyApiToken,
+                    method: options.method || 'GET',
+                    body: options.body || null
+                })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                const details = data.details ? ` | details=${JSON.stringify(data.details)}` : '';
+                throw new Error((data.error || `API Error: ${response.status}`) + details);
+            }
+            return data.data;
+        }
+
+        // Shop Functions
+        async function loadShops() {
+            try {
+                console.log('Loading shops from Printify API...');
+                const shops = await makeApiCall('/shops.json');
+                
+                if (Array.isArray(shops) && shops.length > 0) {
+                    AppState.shops = shops;
+                    shopSelect.innerHTML = '<option value="">Select a shop...</option>';
+                    shops.forEach(shop => {
+                        const option = document.createElement('option');
+                        option.value = shop.id;
+                        option.textContent = `${shop.title} (${shop.sales_channel || 'Unknown'})`;
+                        shopSelect.appendChild(option);
+                    });
+                    loadProductsBtn.disabled = false;
+                    
+                    // Auto-select first shop if only one
+                    if (shops.length === 1) {
+                        shopSelect.value = shops[0].id;
+                        onShopChange();
+                    }
+                } else if (shops && shops.data && Array.isArray(shops.data) && shops.data.length > 0) {
+                    AppState.shops = shops.data;
+                    shopSelect.innerHTML = '<option value="">Select a shop...</option>';
+                    shops.data.forEach(shop => {
+                        const option = document.createElement('option');
+                        option.value = shop.id;
+                        option.textContent = `${shop.title} (${shop.sales_channel || 'Unknown'})`;
+                        shopSelect.appendChild(option);
+                    });
+                    loadProductsBtn.disabled = false;
+                } else {
+                    throw new Error('No shops found');
+                }
+            } catch (error) {
+                console.error('Shop loading failed:', error);
+                
+                shopSelect.innerHTML = '<option value="">No shops available</option>';
+                loadProductsBtn.disabled = true;
+                
+                productsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>API Connection Failed</strong><br>
+                        ${error.message}<br><br>
+                        <strong>Please check:</strong>
+                        <ul>
+                            <li>API token is configured</li>
+                            <li>Network connection is active</li>
+                            <li>Printify API is accessible</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        // Tags editor UI and update
+        async function editTagsAndUpdate(shop, productId, productDetails) {
+            const existing = Array.isArray(productDetails?.tags) ? productDetails.tags : [];
+            const edited = await openTagsEditor(existing);
+            if (!edited) return false; // user cancelled
+            // If unchanged, skip
+            const normalizedOld = existing.map(t => String(t).trim().toLowerCase()).filter(Boolean);
+            const normalizedNew = edited.map(t => String(t).trim().toLowerCase()).filter(Boolean);
+            if (normalizedOld.length === normalizedNew.length && normalizedOld.every((t, i) => t === normalizedNew[i])) {
+                return false;
+            }
+            try {
+                await makeApiCall(`/shops/${shop.id}/products/${productId}.json`, { method: 'PUT', body: { tags: edited } });
+                return true;
+            } catch (err) {
+                alert(`Failed to update tags before publishing: ${err.message}`);
+                return false;
+            }
+        }
+
+        function openTagsEditor(currentTags) {
+            return new Promise((resolve) => {
+                const existing = document.getElementById('tagsEditModal');
+                if (existing) existing.remove();
+
+                const container = document.createElement('div');
+                container.id = 'tagsEditModal';
+                container.style.position = 'fixed';
+                container.style.inset = '0';
+                container.style.background = 'rgba(0,0,0,0.5)';
+                container.style.zIndex = '9999';
+                container.style.display = 'flex';
+                container.style.justifyContent = 'center';
+                container.style.alignItems = 'center';
+
+                const modal = document.createElement('div');
+                modal.style.background = '#fff';
+                modal.style.borderRadius = '8px';
+                modal.style.width = 'min(500px, 95vw)';
+                modal.style.maxHeight = '80vh';
+                modal.style.overflow = 'auto';
+                modal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+
+                const header = document.createElement('div');
+                header.style.padding = '16px';
+                header.style.borderBottom = '1px solid #eee';
+                header.innerHTML = '<h5 style="margin:0">Edit tags</h5><div style="font-size:12px;color:#666;margin-top:6px">Enter up to 13 comma-separated tags</div>';
+
+                const body = document.createElement('div');
+                body.style.padding = '16px';
+                const input = document.createElement('textarea');
+                input.style.width = '100%';
+                input.style.height = '120px';
+                input.placeholder = 'e.g. women, flowy tank, summer, workout';
+                input.value = (currentTags || []).join(', ');
+                const helper = document.createElement('div');
+                helper.style.fontSize = '12px';
+                helper.style.color = '#666';
+                helper.style.marginTop = '6px';
+                helper.textContent = 'Tip: 13 tags max. Use descriptive phrases, separated by commas.';
+                body.appendChild(input);
+                body.appendChild(helper);
+
+                const footer = document.createElement('div');
+                footer.style.padding = '12px 16px 16px 16px';
+                footer.style.display = 'flex';
+                footer.style.justifyContent = 'flex-end';
+                footer.style.gap = '8px';
+                footer.style.borderTop = '1px solid #eee';
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-outline-secondary btn-sm';
+                cancelBtn.textContent = 'Skip';
+                cancelBtn.onclick = () => { container.remove(); resolve(null); };
+
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn btn-primary btn-sm';
+                saveBtn.textContent = 'Save Tags';
+                saveBtn.onclick = () => {
+                    const tags = input.value.split(',').map(t => t.trim()).filter(Boolean).slice(0, 13);
+                    container.remove();
+                    resolve(tags);
+                };
+
+                footer.appendChild(cancelBtn);
+                footer.appendChild(saveBtn);
+
+                modal.appendChild(header);
+                modal.appendChild(body);
+                modal.appendChild(footer);
+                container.appendChild(modal);
+                document.body.appendChild(container);
+            });
+        }
+
+        function onShopChange() {
+            const shopId = shopSelect.value;
+            AppState.selectedShop = AppState.shops.find(s => s.id == shopId) || null;
+            loadProductsBtn.disabled = !shopId;
+        }
+
+        // Product Functions
+        async function loadProducts() {
+            if (!AppState.selectedShop) return;
+            
+            try {
+                showLoading('productsContainer', 'Loading products...');
+                const shopId = AppState.selectedShop.id;
+                
+                console.log('Loading products for shop:', shopId);
+                console.log('API Token configured:', !!window.printifyApiToken);
+                
+                // Try different API endpoint formats
+                const endpoints = [
+                    `/shops/${shopId}/products.json`,
+                    `/shops/${shopId}/products`,
+                    `/v1/shops/${shopId}/products.json`,
+                    `/v1/shops/${shopId}/products`
+                ];
+                
+                let response = null;
+                let usedEndpoint = null;
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        console.log('Trying endpoint:', endpoint);
+                        response = await makeApiCall(endpoint);
+                        usedEndpoint = endpoint;
+                        console.log('Success with endpoint:', endpoint, response);
+                        break;
+                    } catch (endpointError) {
+                        console.log('Endpoint failed:', endpoint, endpointError.message);
+                        continue;
+                    }
+                }
+                
+                if (!response) {
+                    throw new Error('All API endpoints failed');
+                }
+                
+                // Handle different response formats
+                let products = [];
+                console.log('Raw response:', response);
+                
+                if (Array.isArray(response)) {
+                    products = response;
+                } else if (response.data && Array.isArray(response.data)) {
+                    products = response.data;
+                } else if (response.products && Array.isArray(response.products)) {
+                    products = response.products;
+                } else if (response.items && Array.isArray(response.items)) {
+                    products = response.items;
+                } else {
+                    console.warn('Unexpected response format:', response);
+                    // Try to find any array in response
+                    const arrays = Object.values(response).filter(val => Array.isArray(val));
+                    if (arrays.length > 0) {
+                        products = arrays[0];
+                    }
+                }
+
+                AppState.originalPrices = {};
+                AppState.priceChanges = {};
+                
+                if (products.length > 0) {
+                    AppState.products = products;
+                    applyBulkMarkupBtn.disabled = false;
+                    saveAllPricesBtn.disabled = false;
+                    displayProducts();
+                    
+                    console.log(`Loaded ${products.length} products from endpoint: ${usedEndpoint}`);
+                    console.log('Apply Markup Button enabled:', !applyBulkMarkupBtn.disabled);
+                } else {
+                    productsContainer.innerHTML = `
+                        <div class="alert alert-info">
+                            <strong>No products found</strong><br>
+                            This shop has no products yet.<br><br>
+                            <strong>Next steps:</strong>
+                            <ul>
+                                <li>Create products in your Printify dashboard</li>
+                                <li>Check if products are published</li>
+                                <li>Verify shop connection in Printify</li>
+                            </ul>
+                            <hr>
+                            <small><strong>Debug info:</strong></small>
+                            <ul>
+                                <li>Endpoint: ${usedEndpoint}</li>
+                                <li>Response: ${JSON.stringify(response).substring(0, 200)}...</li>
+                                <li>Shop ID: ${shopId}</li>
+                            </ul>
+                        </div>
+                    `;
+                    
+                    applyBulkMarkupBtn.disabled = true;
+                    saveAllPricesBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Products loading failed:', error);
+                
+                productsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Failed to load products</strong><br>
+                        ${error.message}<br><br>
+                        <strong>Debug info:</strong>
+                        <ul>
+                            <li>Shop ID: ${AppState.selectedShop?.id}</li>
+                            <li>Shop Name: ${AppState.selectedShop?.title}</li>
+                            <li>Error: ${error.message}</li>
+                            <li>API Token: ${window.printifyApiToken ? 'Configured' : 'Missing'}</li>
+                        </ul>
+                        <hr>
+                        <strong>Please check:</strong>
+                        <ul>
+                            <li>Shop is properly connected to Printify</li>
+                            <li>API token has correct permissions</li>
+                            <li>Selected shop has products</li>
+                        </ul>
+                    </div>
+                `;
+                
+                applyBulkMarkupBtn.disabled = true;
+                saveAllPricesBtn.disabled = true;
+            } finally {
+                hideLoading('productsContainer');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return '';
+            return text.replace(/[&<>'"/]/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;'
+            }[char]));
+        }
+
+        function displayProducts() {
+            productsContainer.innerHTML = '';
+            if (!AppState.products || AppState.products.length === 0) {
+                productsContainer.innerHTML = '<div class="alert alert-warning">No products found.</div>';
+                return;
+            }
+            AppState.products.forEach(product => {
+                const card = createProductCard(product);
+                productsContainer.appendChild(card);
+            });
+        }
+
+        function pickImageFromProduct(product) {
+            try {
+                const imgs = product?.images || [];
+                // Prefer default/preview images if flags exist
+                const def = imgs.find(i => i.is_default || i.is_default === true || i.isDefault === true);
+                if (def?.src) return { src: def.src, source: 'product_images:default' };
+                if (imgs[0]?.src) return { src: imgs[0].src, source: 'product_images:first' };
+            } catch (e) { /* ignore */ }
+            return { src: null, source: 'none' };
+        }
+
+        function pickFromPrintAreas(details) {
+            try {
+                const areas = details?.print_areas || [];
+                for (const area of areas) {
+                    const placeholders = area?.placeholders || [];
+                    for (const ph of placeholders) {
+                        const imgs = ph?.images || [];
+                        for (const im of imgs) {
+                            // Prefer direct src/url on placeholder images (these correspond to the uploaded design, BG-removed)
+                            if (im?.src) return { src: im.src, source: 'print_area:src' };
+                            if (im?.url) return { src: im.url, source: 'print_area:url' };
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+            return { src: null, source: 'none' };
+        }
+
+        async function resolveAndSetProductImage(product) {
+            const imgEl = document.querySelector(`img[data-product-id="${product.id}"]`);
+            if (!imgEl) return;
+            // 1) Try from list payload
+            let picked = pickImageFromProduct(product);
+            if (!picked.src) {
+                // 2) Fallback: fetch product details for richer image data (often includes print-area previews)
+                try {
+                    const details = await makeApiCall(`/shops/${AppState.selectedShop.id}/products/${product.id}.json`);
+                    // Prefer the actual design image from placeholders (BG-removed upload)
+                    const fromAreas = pickFromPrintAreas(details);
+                    if (fromAreas.src) picked = fromAreas; else {
+                        const fromDetails = pickImageFromProduct(details);
+                        if (fromDetails.src) picked = fromDetails; else {
+                            picked = { src: details?.images?.[0]?.src || null, source: 'details:images[0]' };
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to fetch product details for image', product.id, e);
+                }
+            }
+            if (picked.src) {
+                imgEl.src = picked.src;
+                imgEl.title = picked.src; // hover to see URL
+                imgEl.dataset.imageSource = picked.source;
+                console.log('[pricing] Image chosen for product', product.id, { url: picked.src, source: picked.source });
+            }
+        }
+
+        function createProductCard(product) {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.dataset.productId = product.id;
+
+            // Placeholder; will be resolved to background-removed (final) image via resolveAndSetProductImage
+            const initialPick = pickImageFromProduct(product);
+            const productImage = initialPick.src || 'https://via.placeholder.com/150';
+            const cleanDescription = (product.description || 'No description').substring(0, 200);
+
+            card.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="form-check me-2">
+                                    <input class="form-check-input product-checkbox" type="checkbox" value="${product.id}" id="product-${product.id}">
+                                </div>
+                                <img src="${productImage}" alt="${escapeHtml(product.title)}" class="product-image me-3" data-product-id="${product.id}">
+                                <div>
+                                    <h5 class="card-title mb-1">${escapeHtml(product.title || 'Untitled Product')}</h5>
+                                    <small class="text-muted">${escapeHtml(product.blueprint?.title || 'Product')}</small>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-primary save-product-btn me-2" onclick="saveProductPrices('${product.id}')">Save</button>
+                                <button class="btn btn-sm btn-success publish-product-btn" onclick="publishProduct('${product.id}')">Publish</button>
+                            </div>
+                        </div>
+                        <div class="variants-section mt-3">
+                            ${((product.variants || []).filter(v => v?.is_available !== false).map(variant => createVariantRow(product.id, variant)).join('')) || '<div class="alert alert-warning">No available variants.</div>'}
+                        </div>
+                    </div>
+                </div>`;
+
+            // Resolve image to the final background-removed preview after rendering
+            // This ensures we show the latest generated preview from Printify, not a stale one
+            resolveAndSetProductImage(product);
+            return card;
+        }
+
+
+        function createVariantRow(productId, variant) {
+            const cost = variant.cost || 0;
+            const price = variant.price || 0;
+            const markup = cost > 0 ? Math.round((price / cost - 1) * 100) : 0;
+            const key = `${productId}-${variant.id}`;
+            AppState.originalPrices[key] = price;
+
+            return `
+                <div class="variant-row" data-variant-id="${variant.id}">
+                    <div class="row align-items-center">
+                        <div class="col-md-4"><strong>${escapeHtml(variant.title)}</strong></div>
+                        <div class="col-md-2">Cost: <strong>$${(cost / 100).toFixed(2)}</strong></div>
+                        <div class="col-md-3">
+                            <div class="input-group price-input">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control variant-price-input" data-product-id="${productId}" data-variant-id="${variant.id}" data-cost="${cost}" value="${(price / 100).toFixed(2)}" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group markup-input">
+                                <input type="number" class="form-control variant-markup-input" data-product-id="${productId}" data-variant-id="${variant.id}" data-cost="${cost}" value="${markup}" min="0">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // Event Handlers & UI Updates
+        function handleVariantInputChange(input) {
+            const productId = input.dataset.productId;
+            const variantId = input.dataset.variantId;
+            const cost = parseInt(input.dataset.cost);
+            const row = input.closest('.variant-row');
+            const priceInput = row.querySelector('.variant-price-input');
+            const markupInput = row.querySelector('.variant-markup-input');
+
+            if (input.classList.contains('variant-price-input')) {
+                const newPrice = Math.round(parseFloat(input.value) * 100);
+                markupInput.value = cost > 0 ? Math.round((newPrice / cost - 1) * 100) : 0;
+                trackPriceChange(productId, variantId, newPrice);
+            } else { // markup-input
+                const newMarkup = parseInt(input.value) / 100;
+                const newPrice = Math.round(cost * (1 + newMarkup));
+                priceInput.value = (newPrice / 100).toFixed(2);
+                trackPriceChange(productId, variantId, newPrice);
+            }
+        }
+
+        function trackPriceChange(productId, variantId, newPrice) {
+            const key = `${productId}-${variantId}`;
+            if (AppState.originalPrices[key] !== newPrice) {
+                AppState.priceChanges[key] = newPrice;
+            } else {
+                delete AppState.priceChanges[key];
+            }
+            updateChangesUI();
+        }
+
+        function updateChangesUI() {
+            const changeCount = Object.keys(AppState.priceChanges).length;
+            saveAllPricesBtn.textContent = `Save All Changes (${changeCount})`;
+            saveAllPricesBtn.disabled = changeCount === 0;
+        }
+
+        function toggleSelectAllProducts() {
+            document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = selectAllProducts.checked);
+        }
+
+        // Bulk Actions
+        async function saveAllPriceChanges() {
+            // Implementation for saving all changes
+        }
+
+
+        async function publishProduct(productId) {
+            const product = AppState.products.find(p => p.id === productId);
+            if (!product) return alert('Error: Product not found.');
+            if (!confirm(`Publish "${escapeHtml(product.title)}"?`)) return;
+
+            try {
+                showLoading('productsContainer', 'Preparing publish...');
+                const shop = AppState.selectedShop || {};
+                const isEtsyStore = String(shop.sales_channel || shop.title || '').toLowerCase().includes('etsy');
+
+                // 1) Fetch latest details
+                let details = await makeApiCall(`/shops/${shop.id}/products/${productId}.json`);
+
+                // 3) Always open image selection and update images[]
+                const imagesUpdated = await handleImageSelectionAndUpdate(shop, productId, details);
+                if (!imagesUpdated) {
+                    hideLoading('productsContainer');
+                    return alert('Publishing cancelled: no images selected.');
+                }
+                if (imagesUpdated) {
+                    details = await makeApiCall(`/shops/${shop.id}/products/${productId}.json`);
+                }
+
+                // 4) Preflight: ensure at least one variant is both enabled and available
+                const allVariants = Array.isArray(details?.variants) ? details.variants : [];
+                const enabledAvailable = allVariants.filter(v => (v?.is_enabled === true || v?.enabled === true) && v?.is_available === true);
+                console.log('[publish] Preflight variants -> total:', allVariants.length, 'enabled+available:', enabledAvailable.length);
+                if (!enabledAvailable.length) {
+                    hideLoading('productsContainer');
+                    return alert('Cannot publish: no variants that are both enabled and available. Enable at least one available variant in Printify, then try again.');
+                }
+
+                // 5) Publish
+                showLoading('productsContainer', 'Publishing...');
+                const payload = { title: true, description: true, images: true, variants: true };
+                if (isEtsyStore) payload.shipping_template = true;
+                console.log('[publish] Outgoing payload to proxy:', payload);
+
+                await makeApiCall(`/shops/${shop.id}/products/${productId}/publish.json`, { method: 'POST', body: payload });
+                alert('Product published successfully!');
+            } catch (error) {
+                alert(`Publishing failed: ${error.message}`);
+            } finally {
+                hideLoading('productsContainer');
+            }
+        }
+
+        // Opens image selection UI and updates product.images[] via PUT
+        async function handleImageSelectionAndUpdate(shop, productId, productDetails) {
+            const currentImages = Array.isArray(productDetails?.images) ? productDetails.images : [];
+            // Always allow user to curate images before publishing
+            console.log('[publish] Opening image selection modal...');
+            const selection = await openImageSelectionModal(productDetails);
+            if (!selection || !selection.length) return false;
+
+            // Ensure one default
+            if (!selection.some(img => img.is_default)) {
+                selection[0].is_default = true;
+            }
+            console.log('[publish] PUT updating images[] before publish:', selection.map(i => ({src: i.src, is_default: i.is_default})));
+            try {
+                await makeApiCall(`/shops/${shop.id}/products/${productId}.json`, { method: 'PUT', body: { images: selection } });
+                return true;
+            } catch (err) {
+                alert(`Failed to update images before publishing: ${err.message}`);
+                return false;
+            }
+        }
+
+        // Minimal modal for selecting images to publish
+        function openImageSelectionModal(productDetails) {
+            return new Promise((resolve) => {
+                const existing = document.getElementById('imageSelectModal');
+                if (existing) existing.remove();
+
+                const container = document.createElement('div');
+                container.id = 'imageSelectModal';
+                container.style.position = 'fixed';
+                container.style.inset = '0';
+                container.style.background = 'rgba(0,0,0,0.5)';
+                container.style.zIndex = '9999';
+                container.style.display = 'flex';
+                container.style.justifyContent = 'center';
+                container.style.alignItems = 'center';
+
+                const modal = document.createElement('div');
+                modal.style.background = '#fff';
+                modal.style.borderRadius = '8px';
+                modal.style.width = 'min(800px, 95vw)';
+                modal.style.maxHeight = '80vh';
+                modal.style.overflow = 'auto';
+                modal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+
+                const header = document.createElement('div');
+                header.style.padding = '16px';
+                header.style.borderBottom = '1px solid #eee';
+                header.innerHTML = '<h5 style="margin:0">Select images to publish</h5><div style="font-size:12px;color:#666;margin-top:6px">Choose at least one mockup image. One will be marked as default.</div>';
+
+                const body = document.createElement('div');
+                body.style.padding = '12px 16px 0 16px';
+
+                const grid = document.createElement('div');
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(140px, 1fr))';
+                grid.style.gap = '12px';
+
+                const imgs = Array.isArray(productDetails?.images) ? productDetails.images : [];
+                if (!imgs.length) {
+                    const note = document.createElement('div');
+                    note.style.padding = '12px';
+                    note.style.color = '#a00';
+                    note.textContent = 'This product currently has no mockup images in Printify. Please generate mockups in Printify, then return to select.';
+                    body.appendChild(note);
+                } else {
+                    imgs.forEach((img, idx) => {
+                        const card = document.createElement('label');
+                        card.style.border = '1px solid #ddd';
+                        card.style.borderRadius = '6px';
+                        card.style.padding = '8px';
+                        card.style.display = 'flex';
+                        card.style.flexDirection = 'column';
+                        card.style.cursor = 'pointer';
+                        card.title = img.src;
+
+                        const imageEl = document.createElement('img');
+                        imageEl.src = img.src;
+                        imageEl.style.width = '100%';
+                        imageEl.style.height = '120px';
+                        imageEl.style.objectFit = 'cover';
+                        imageEl.alt = 'mockup';
+
+                        const controls = document.createElement('div');
+                        controls.style.display = 'flex';
+                        controls.style.justifyContent = 'space-between';
+                        controls.style.alignItems = 'center';
+                        controls.style.marginTop = '6px';
+
+                        const check = document.createElement('input');
+                        check.type = 'checkbox';
+                        check.checked = idx === 0; // preselect first
+
+                        const defaultWrap = document.createElement('label');
+                        defaultWrap.style.fontSize = '12px';
+                        defaultWrap.style.display = 'flex';
+                        defaultWrap.style.alignItems = 'center';
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'defaultImageRadio';
+                        radio.checked = img.is_default === true || idx === 0;
+                        const span = document.createElement('span');
+                        span.textContent = ' Default';
+                        span.style.marginLeft = '6px';
+                        defaultWrap.appendChild(radio);
+                        defaultWrap.appendChild(span);
+
+                        controls.appendChild(check);
+                        controls.appendChild(defaultWrap);
+
+                        card.appendChild(imageEl);
+                        card.appendChild(controls);
+
+                        // Store references for building selection
+                        card.dataset.src = img.src;
+                        card.dataset.variant_ids = JSON.stringify(img.variant_ids || []);
+                        card.dataset.position = img.position || undefined;
+                        card.dataset.initialDefault = String(img.is_default === true);
+                        card._refs = { check, radio };
+
+                        grid.appendChild(card);
+                    });
+                }
+
+                body.appendChild(grid);
+
+                const footer = document.createElement('div');
+                footer.style.padding = '12px 16px 16px 16px';
+                footer.style.display = 'flex';
+                footer.style.justifyContent = 'flex-end';
+                footer.style.gap = '8px';
+                footer.style.borderTop = '1px solid #eee';
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-outline-secondary btn-sm';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.onclick = () => { container.remove(); resolve(null); };
+
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn btn-primary btn-sm';
+                saveBtn.textContent = 'Save Selection';
+                saveBtn.onclick = () => {
+                    const cards = Array.from(grid.children);
+                    const selected = cards.filter(c => c._refs && c._refs.check.checked);
+                    if (!selected.length) {
+                        alert('Select at least one image.');
+                        return;
+                    }
+                    // Determine default
+                    let defaultSet = false;
+                    const selection = selected.map(c => {
+                        const isDefault = c._refs.radio.checked && !defaultSet;
+                        if (isDefault) defaultSet = true;
+                        return {
+                            src: c.dataset.src,
+                            is_default: isDefault,
+                            position: c.dataset.position || 'front',
+                            variant_ids: JSON.parse(c.dataset.variant_ids || '[]')
+                        };
+                    });
+                    if (!defaultSet) selection[0].is_default = true;
+                    container.remove();
+                    resolve(selection);
+                };
+
+                footer.appendChild(cancelBtn);
+                footer.appendChild(saveBtn);
+
+                modal.appendChild(header);
+                modal.appendChild(body);
+                modal.appendChild(footer);
+                container.appendChild(modal);
+                document.body.appendChild(container);
+            });
+        }
+
+        // Utility Functions
+        function showLoading(containerId, message) {
+            const container = document.getElementById(containerId);
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-overlay';
+            loadingDiv.innerHTML = `<div class="spinner-border" role="status"></div><span>${message}</span>`;
+            container.prepend(loadingDiv);
+        }
+
+        function hideLoading(containerId) {
+            const overlay = document.getElementById(containerId)?.querySelector('.loading-overlay');
+            if (overlay) overlay.remove();
+        }
+
+        // AI Content Generation Functions
+        async function generateAITitle(product) {
+            return `Premium ${product.blueprint?.title || 'Product'} - ${product.title || 'Custom Design'}`;
+        }
+
+        async function generateAIDescription(product) {
+            const baseDescription = product.description || `High-quality ${product.blueprint?.title || 'product'} with premium features.`;
+            
+            if (baseDescription.length < 100) {
+                return baseDescription + '\n\n✨ Premium Quality Guaranteed\n🚚 Fast & Free Shipping\n💯 Satisfaction Guaranteed';
+            }
+            return 'High-quality product with premium features. Fast shipping and satisfaction guaranteed.';
+        }
+
+        async function generateAITags(product) {
+            // Generate AI-powered tags based on product data
+            const tags = ['premium', 'quality', 'fast-shipping', 'guaranteed'];
+            
+            // Add product-specific tags
+            if (product.title) {
+                const titleWords = product.title.toLowerCase().split(' ');
+                tags.push(...titleWords.filter(word => word.length > 3));
+            }
+            
+            return tags.slice(0, 13); // Etsy allows max 13 tags
+        }
+
+        async function generateBulkAIContent() {
+            const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+                .map(checkbox => checkbox.value);
+            
+            if (selectedProducts.length === 0) {
+                alert('Please select at least one product');
+                return;
+            }
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('aiContentModal'));
+            modal.hide();
+
+            try {
+                showLoading('productsContainer', `Generating AI content for ${selectedProducts.length} products...`);
+
+                const generateTitles = document.getElementById('generateTitles').checked;
+                const generateDescriptions = document.getElementById('generateDescriptions').checked;
+                const generateTags = document.getElementById('generateTags').checked;
+
+                for (const productId of selectedProducts) {
+                    const product = AppState.products.find(p => p.id == productId);
+                    if (!product) continue;
+
+                    const updates = {};
+                    
+                    if (generateTitles) {
+                        updates.title = await generateAITitle(product);
+                    }
+                    
+                    if (generateDescriptions) {
+                        updates.description = await generateAIDescription(product);
+                    }
+                    
+                    if (generateTags) {
+                        updates.tags = await generateAITags(product);
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        await makeApiCall(`/shops/${AppState.selectedShop.id}/products/${productId}.json`, {
+                            method: 'PUT',
+                            body: updates
+                        });
+                    }
+                }
+
+                alert(`AI content generated for ${selectedProducts.length} products!`);
+                await loadProducts();
+            } catch (error) {
+                console.error('Bulk AI generation failed:', error);
+                alert(`Failed to generate content: ${error.message}`);
+            } finally {
+                hideLoading('productsContainer');
+            }
+        }
+
+        function applyBulkMarkup() {
+            console.log('applyBulkMarkup function called');
+            const markup = parseInt(bulkMarkupInput.value) / 100;
+            console.log('Markup value:', markup, 'from input:', bulkMarkupInput.value);
+            
+            if (isNaN(markup) || markup <= 0) {
+                alert('Please enter a valid markup percentage');
+                return;
+            }
+
+            const selectedProductIds = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+                .map(checkbox => checkbox.value);
+            console.log('Selected product IDs:', selectedProductIds);
+
+            if (selectedProductIds.length === 0) {
+                alert('Please select at least one product');
+                return;
+            }
+
+            selectedProductIds.forEach(productId => {
+                const markupInputs = document.querySelectorAll(`.product-card[data-product-id="${productId}"] .variant-markup-input`);
+                console.log(`Found ${markupInputs.length} markup inputs for product ${productId}`);
+                markupInputs.forEach(input => {
+                    const oldValue = input.value;
+                    input.value = Math.round(markup * 100);
+                    console.log(`Updated input from ${oldValue} to ${input.value}`);
+                    
+                    // Manually trigger the price calculation instead of relying on event
+                    handleVariantInputChange(input);
+                });
+            });
+
+            alert(`Applied ${Math.round(markup * 100)}% markup to ${selectedProductIds.length} products`);
+        }
+
+        async function saveProductPrices(productId) {
+            const product = AppState.products.find(p => p.id === productId);
+            if (!product) return;
+
+            const shopId = AppState.selectedShop.id;
+            const updatedVariants = [];
+
+            product.variants.forEach(variant => {
+                const key = `${productId}-${variant.id}`;
+                if (AppState.priceChanges[key]) {
+                    updatedVariants.push({
+                        id: variant.id,
+                        price: AppState.priceChanges[key],
+                        is_enabled: variant.is_enabled
+                    });
+                    AppState.originalPrices[key] = AppState.priceChanges[key];
+                    delete AppState.priceChanges[key];
+                }
+            });
+
+            if (updatedVariants.length === 0) {
+                alert('No price changes to save');
+                return;
+            }
+
+            try {
+                showLoading('productsContainer', 'Saving prices...');
+
+                const allVariants = product.variants.map(variant => {
+                    const key = `${productId}-${variant.id}`;
+                    return {
+                        id: variant.id,
+                        price: AppState.priceChanges[key] || variant.price,
+                        is_enabled: variant.is_enabled
+                    };
+                });
+
+                await makeApiCall(`/shops/${shopId}/products/${productId}.json`, {
+                    method: 'PUT',
+                    body: { variants: allVariants }
+                });
+
+                alert('Prices saved successfully!');
+                updateChangesUI();
+            } catch (error) {
+                console.error('Save failed:', error);
+                alert(`Failed to save prices: ${error.message}`);
+            } finally {
+                hideLoading('productsContainer');
+            }
+        }
+
+        async function saveAllPriceChanges() {
+            const changeCount = Object.keys(AppState.priceChanges).length;
+            if (changeCount === 0) {
+                alert('No price changes to save');
+                return;
+            }
+
+            if (!confirm(`Save ${changeCount} price changes?`)) return;
+
+            try {
+                showLoading('productsContainer', 'Saving all changes...');
+
+                const changesByProduct = {};
+                Object.keys(AppState.priceChanges).forEach(key => {
+                    const [productId, variantId] = key.split('-');
+                    if (!changesByProduct[productId]) changesByProduct[productId] = [];
+                    changesByProduct[productId].push({
+                        variantId: parseInt(variantId),
+                        newPrice: AppState.priceChanges[key]
+                    });
+                });
+
+                const savePromises = Object.keys(changesByProduct).map(async productId => {
+                    const product = AppState.products.find(p => p.id == productId);
+                    const allVariants = product.variants.map(variant => {
+                        const key = `${productId}-${variant.id}`;
+                        return {
+                            id: variant.id,
+                            price: AppState.priceChanges[key] || variant.price,
+                            is_enabled: variant.is_enabled
+                        };
+                    });
+
+                    await makeApiCall(`/shops/${AppState.selectedShop.id}/products/${productId}.json`, {
+                        method: 'PUT',
+                        body: { variants: allVariants }
+                    });
+                });
+
+                await Promise.all(savePromises);
+                alert('All changes saved successfully!');
+                AppState.priceChanges = {};
+                updateChangesUI();
+            } catch (error) {
+                console.error('Save all failed:', error);
+                alert(`Failed to save changes: ${error.message}`);
+            } finally {
+                hideLoading('productsContainer');
+            }
+        }
+
+        
+
+        // Add event delegation for dynamically created elements
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('variant-price-input') || e.target.classList.contains('variant-markup-input')) {
+                const productId = e.target.dataset.productId;
+                const variantId = e.target.dataset.variantId;
+                const cost = parseInt(e.target.dataset.cost);
+                
+                let newPrice;
+                if (e.target.classList.contains('variant-price-input')) {
+                    newPrice = Math.round(parseFloat(e.target.value) * 100);
+                    const newMarkup = Math.round((newPrice / cost - 1) * 100);
+                    e.target.closest('.variant-row').querySelector('.variant-markup-input').value = newMarkup;
+                } else {
+                    const markup = parseInt(e.target.value) / 100;
+                    newPrice = Math.round(cost * (1 + markup));
+                    e.target.closest('.variant-row').querySelector('.variant-price-input').value = (newPrice / 100).toFixed(2);
+                }
+                
+                trackPriceChange(productId, variantId, newPrice);
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
