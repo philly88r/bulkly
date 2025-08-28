@@ -184,24 +184,26 @@
             </div>
         </div>
 
-        <!-- Step 1: API Setup -->
+        <!-- Step 1: Authentication Check -->
         <div class="step-container active" id="step1-container">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="bi bi-key"></i> API Setup</h4>
+                    <h4><i class="bi bi-key"></i> Authentication Check</h4>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label for="apiKey" class="form-label">Printify API Key</label>
-                        <input type="password" class="form-control" id="apiKey" placeholder="Enter your Printify API key">
-                        <div class="form-text">
-                            Get your API key from <a href="https://printify.com/app/account/api" target="_blank">Printify Account → API</a>
+                    <div id="authCheckStatus">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Checking authentication...</p>
                         </div>
                     </div>
-                    <button class="btn btn-primary" id="verifyApiBtn">
-                        <i class="bi bi-shield-check"></i> Verify API Key
-                    </button>
-                    <div id="apiStatus" class="mt-3"></div>
+                    <div id="apiKeyStatus" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Please set up your Printify API key in your <a href="dashboard.html" class="alert-link">Dashboard Settings</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -260,7 +262,21 @@
                     
                     <div id="printAreasContainer" class="mt-4" style="display: none;">
                         <h5>Available Print Areas:</h5>
-                        <div id="printAreasList" class="row"></div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Print Area</th>
+                                        <th>Position</th>
+                                        <th>Image Size (px)</th>
+                                        <th>Product Sizes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="printAreasList">
+                                    <!-- Print areas will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     
                     <button class="btn btn-primary" id="selectProductBtn" disabled>
@@ -354,25 +370,12 @@
                             
                             <div id="generatedDesigns" class="mt-4">
                                 <h6>Available Designs: <span class="badge bg-secondary" id="designCount">0</span></h6>
-                                <div class="row" id="designsList"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h5>Print Areas</h5>
-                            <div id="printAreasAssignment"></div>
-                            
-                            <div class="mt-4">
-                                <button class="btn btn-primary" id="continueToProductBtn" disabled>
-                                    <i class="bi bi-arrow-right"></i> Continue to Product Creation
+                                </button>
+                                <button class="btn btn-outline-primary" id="savePromptBtn" onclick="savePrompt()">
+                                    <i class="bi bi-bookmark-plus"></i> Save Prompt
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Step 5: Product Creation -->
         <div class="step-container" id="step5-container">
             <div class="card">
@@ -420,6 +423,18 @@
                         </div>
                         
                         <div class="col-md-6">
+                            <h5>Print Areas & Sizes</h5>
+                            <div id="printAreasAssignment">
+                                <div class="alert alert-info">Loading print areas...</div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button class="btn btn-primary" id="continueToProductBtn" disabled>
+                                    <i class="bi bi-arrow-right"></i> Continue to Product Creation
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
                             <h5>Product Preview</h5>
                             <div id="productPreviewFinal"></div>
                             
@@ -433,7 +448,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/auth-guard.js"></script>
     <script>
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const token = localStorage.getItem('token');
         // --- GLOBAL STATE --- 
         const AppState = {
             apiKey: '',
@@ -527,7 +545,7 @@
 
         // --- API CALLS ---
         async function makeApiCall(endpoint, options = {}) {
-            const proxyUrl = 'https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/printify-proxy';
+            const proxyUrl = '/api/printify-proxy';
             const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -545,89 +563,97 @@
             return data.data;
         }
 
-        // --- STEP 1: API & SHOP --- 
-        async function verifyApiKeyAndLoadShops() {
-            const apiKeyInput = document.getElementById('apiKey');
-            const apiKey = apiKeyInput.value.trim();
-            if (!apiKey) {
-                alert('Please enter your Printify API Key.');
+        // --- JWT Token-based Authentication ---
+        async function initializeApp() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/auth.html';
                 return;
             }
-            AppState.apiKey = apiKey;
-            const statusDiv = document.getElementById('apiStatus');
-            showButtonLoading('verifyApiBtn', 'Verifying...');
+
             try {
-                const shops = await makeApiCall('/shops.json');
-                if (!shops || shops.length === 0) throw new Error('No shops found for this API key.');
-                
-                AppState.shops = shops;
-                localStorage.setItem('printifyApiKey', apiKey);
-                statusDiv.innerHTML = `<div class="alert alert-success">API Key is valid. Found ${shops.length} shop(s).</div>`;
-                
-                const shopSelect = document.getElementById('shopSelect');
-                shopSelect.innerHTML = '<option value="">-- Select a Shop --</option>';
-                shops.forEach(shop => {
-                    shopSelect.innerHTML += `<option value="${shop.id}">${shop.title}</option>`;
+                // Check if API key is saved in database
+                const response = await fetch('/.netlify/functions/get-api-key', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
                 });
-                setTimeout(() => showStep(2), 500);
+
+                const data = await response.json();
+                
+                if (data.apiKey) {
+                    // API key found, proceed to load shops
+                    document.getElementById('authCheckStatus').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Authentication verified!
+                        </div>
+                    `;
+                    
+                    // Store API key in AppState
+                    AppState.apiKey = data.apiKey;
+                    
+                    // Load shops using the API key from database
+                    await loadShopsFromDatabase(data.apiKey);
+                    
+                    // Move to next step
+                    setTimeout(() => showStep(2), 1000);
+                } else {
+                    // No API key found
+                    document.getElementById('authCheckStatus').style.display = 'none';
+                    document.getElementById('apiKeyStatus').style.display = 'block';
+                }
             } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-            } finally {
-                hideButtonLoading('verifyApiBtn', '<i class="bi bi-shield-check"></i> Verify API Key');
+                console.error('Error initializing app:', error);
+                document.getElementById('authCheckStatus').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle"></i> Error: ${error.message}
+                    </div>
+                `;
             }
         }
 
-        // --- STEP 2: PRODUCT --- 
-async function loadBlueprints() {
-    const blueprintSelect = document.getElementById('blueprintSelect');
-    blueprintSelect.innerHTML = '<option>Loading all products...</option>';
-    try {
-        // Fetch all blueprints without any filtering
-        const blueprints = await makeApiCall('/catalog/blueprints.json');
-        AppState.allBlueprints = blueprints;
-        
-        // Group by brand for better organization
-        const brandGroups = {};
-        blueprints.forEach(bp => {
-            const brand = bp.brand || 'Other';
-            if (!brandGroups[brand]) brandGroups[brand] = [];
-            brandGroups[brand].push(bp);
-        });
-        
-        blueprintSelect.innerHTML = '<option value="">-- Select a Product --</option>';
-        
-        // Add Bella+Canvas products first if available
-        if (brandGroups['Bella+Canvas'] || brandGroups['Bella Canvas']) {
-            const bellaProducts = brandGroups['Bella+Canvas'] || brandGroups['Bella Canvas'];
-            blueprintSelect.innerHTML += '<optgroup label="🎯 Bella+Canvas">';
-            bellaProducts.forEach(bp => {
-                blueprintSelect.innerHTML += `<option value="${bp.id}">${bp.title}</option>`;
-            });
-            blueprintSelect.innerHTML += '</optgroup>';
-            delete brandGroups['Bella+Canvas'];
-            delete brandGroups['Bella Canvas'];
-        }
-        
-        // Add other brands alphabetically
-        Object.keys(brandGroups).sort().forEach(brand => {
-            if (brandGroups[brand].length > 0) {
-                blueprintSelect.innerHTML += `<optgroup label="${brand}">`;
-                brandGroups[brand].forEach(bp => {
-                    blueprintSelect.innerHTML += `<option value="${bp.id}">${bp.title}</option>`;
+        async function loadShopsFromDatabase(apiKey) {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch('/.netlify/functions/printify-proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        endpoint: '/v1/shops.json',
+                        method: 'GET'
+                    })
                 });
-                blueprintSelect.innerHTML += '</optgroup>';
-            }
-        });
-        
-        console.log(`Loaded ${blueprints.length} products from ${Object.keys(brandGroups).length} brands`);
-        console.log('Available brands:', Object.keys(brandGroups));
-        
-    } catch (error) {
-        blueprintSelect.innerHTML = `<option>Error loading products: ${error.message}</option>`;
-        alert(`Error loading products: ${error.message}`);
-    }
-}
 
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const shops = data.data;
+                    if (shops.length > 0) {
+                        AppState.shops = shops;
+                        populateShops(shops);
+                    } else {
+                        showNotification('No shops found. Please check your Printify account.', 'warning');
+                    }
+                } else {
+                    showNotification('Error loading shops. Please check your API key in dashboard settings.', 'error');
+                }
+            } catch (error) {
+                showNotification('Error connecting to Printify API', 'error');
+            }
+        }
+
+        function populateShops(shops) {
+            const shopSelect = document.getElementById('shopSelect');
+            shopSelect.innerHTML = '<option value="">-- Select a Shop --</option>';
+            shops.forEach(shop => {
+                shopSelect.innerHTML += `<option value="${shop.id}">${shop.title}</option>`;
+            });
+        }
+
+        
         async function loadBlueprintDetails(blueprintId) {
             const providerSelect = document.getElementById('providerSelect');
             providerSelect.innerHTML = '<option>Loading details...</option>';
@@ -659,58 +685,68 @@ async function loadBlueprints() {
             AppState.selectedProvider = { id: parseInt(providerId, 10) };
             const blueprintId = AppState.selectedBlueprint.id;
             const printAreasList = document.getElementById('printAreasList');
-            printAreasList.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Loading variants...';
+            printAreasList.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Loading print areas and variants...';
 
             try {
                 const data = await makeApiCall(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`);
                 if (!data.variants || data.variants.length === 0) throw new Error('No variants found for this provider.');
 
                 AppState.variants = data.variants;
+                
+                // Extract unique print areas from variants with image dimensions
                 const printAreasMap = new Map();
                 data.variants.forEach(variant => {
-                    (variant.placeholders || []).forEach(p => {
-                        if (!printAreasMap.has(p.position)) {
-                            printAreasMap.set(p.position, { 
-                                id: p.position, 
-                                title: p.position.charAt(0).toUpperCase() + p.position.slice(1).replace('_', ' ')
+                    (variant.placeholders || []).forEach(placeholder => {
+                        if (!printAreasMap.has(placeholder.position)) {
+                            printAreasMap.set(placeholder.position, {
+                                id: placeholder.position,
+                                title: placeholder.position.charAt(0).toUpperCase() + placeholder.position.slice(1).replace('_', ' '),
+                                position: placeholder.position,
+                                width: placeholder.width,
+                                height: placeholder.height
                             });
                         }
                     });
                 });
                 AppState.printAreas = Array.from(printAreasMap.values());
 
+                // Display print areas in table format with proper columns
                 printAreasList.innerHTML = '';
                 AppState.printAreas.forEach(area => {
-                    printAreasList.innerHTML += `<div class="col-12 mb-2"><div class="p-3 border rounded bg-light">${area.title}</div></div>`;
+                    // Find variants that support this print area
+                    const compatibleVariants = AppState.variants.filter(variant => 
+                        variant.placeholders && 
+                        variant.placeholders.some(placeholder => placeholder.position === area.position)
+                    );
+                    
+                    // Get product sizes
+                    let productSizes = '';
+                    if (compatibleVariants.length > 0) {
+                        const sizes = [...new Set(compatibleVariants.map(v => v.title))];
+                        productSizes = sizes.join(', ');
+                    }
+
+                    // Format image dimensions
+                    let imageDimensions = '';
+                    if (area.width && area.height) {
+                        imageDimensions = `${area.width} × ${area.height}`;
+                    } else {
+                        imageDimensions = 'Not specified';
+                    }
+
+                    printAreasList.innerHTML += `
+                        <tr>
+                            <td><strong>${area.title}</strong></td>
+                            <td><code>${area.position}</code></td>
+                            <td><span class="badge bg-info">${imageDimensions}</span></td>
+                            <td><small class="text-muted">${productSizes}</small></td>
+                        </tr>`;
                 });
 
                 document.getElementById('printAreasContainer').style.display = 'block';
                 document.getElementById('selectProductBtn').disabled = false;
             } catch (error) {
                 printAreasList.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-                alert(`Failed to load provider data: ${error.message}`);
-            }
-        }
-
-        // --- STEP 3: DESIGN --- 
-        function setupDesignStep() {
-            const printAreasContainer = document.getElementById('printAreasAssignment');
-            printAreasContainer.innerHTML = '';
-            AppState.printAreas.forEach(area => {
-                printAreasContainer.innerHTML += `
-                    <div class="design-assignment mb-3" id="pa-assign-${area.id}" data-area-id="${area.id}">
-                        <h6>${area.title}</h6>
-                        <button class="btn btn-sm btn-outline-primary assign-btn">Assign Design</button>
-                    </div>`;
-            });
-            displayGeneratedDesigns();
-            showStep(4);
-        }
-
-        async function generateDesigns() {
-            const product = AppState.selectedBlueprint;
-            const design = AppState.selectedDesign;
-            const selectedVariantIds = Array.from(AppState.selectedVariants);
             const colors = selectedVariantIds.map(id => {
                 const variant = AppState.variants.find(v => v.id === id);
                 return variant?.name || '';
@@ -735,7 +771,7 @@ async function loadBlueprints() {
                 const promises = [];
                 for (let i = 0; i < numDesigns; i++) {
                     promises.push(
-                        fetch('https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/generate-image', { 
+                        fetch('/api/generate-image', { 
                             method: 'POST', 
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ prompt })
@@ -814,7 +850,7 @@ async function loadBlueprints() {
             
             try {
                 showButtonLoading('generateTitleBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
-                const response = await fetch('/.netlify/functions/generate-content', {
+                const response = await fetch('/api/generate-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt, contentType: 'title' })
@@ -859,7 +895,7 @@ async function loadBlueprints() {
             
             try {
                 showButtonLoading('generateDescriptionBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
-                const response = await fetch('/.netlify/functions/generate-content', {
+                const response = await fetch('/api/generate-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt, contentType: 'description' })
@@ -902,7 +938,7 @@ async function loadBlueprints() {
             
             try {
                 showButtonLoading('generateTagsBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
-                const response = await fetch('/.netlify/functions/generate-content', {
+                const response = await fetch('/api/generate-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt, contentType: 'tags' })
@@ -922,22 +958,110 @@ async function loadBlueprints() {
             }
         }
 
-        function displayGeneratedDesigns() {
-            const container = document.getElementById('designsList');
-            container.innerHTML = '';
-            AppState.generatedDesigns.forEach(design => {
-                container.innerHTML += `
-            <div class="col-6 col-md-4 mb-3">
-                <div class="card h-100">
-                    <img src="${design.preview_url}" class="card-img-top" style="object-fit: contain; height: 120px;">
-                    <div class="card-body p-2">
-                        <button class="btn btn-sm btn-primary w-100 assign-specific-btn" data-design-id="${design.id}">Assign</button>
-                    </div>
-                </div>
-            </div>`;
-            });
-            document.getElementById('designCount').textContent = AppState.generatedDesigns.length;
+async function generateProductDescription() {
+    const product = AppState.selectedBlueprint;
+    const design = AppState.selectedDesign;
+    const selectedVariantIds = Array.from(AppState.selectedVariants);
+    const colors = selectedVariantIds.map(id => {
+        const variant = AppState.variants.find(v => v.id === id);
+        return variant?.name || '';
+    }).filter(name => name);
+    const brand = product.brand || 'Generic';
+    
+    const targetAudienceEl = document.getElementById('targetAudience');
+    const toneEl = document.getElementById('toneSelect');
+    const designPromptEl = document.getElementById('designPrompt');
+    const targetAudience = targetAudienceEl ? targetAudienceEl.value || 'general' : 'general';
+    const tone = toneEl ? toneEl.value || 'professional' : 'professional';
+    const designDescription = designPromptEl ? designPromptEl.value.trim() : '';
+    
+    let prompt = `Generate a compelling product description for a ${product.title} by ${brand}. Colors: ${colors.join(', ')}. Target audience: ${targetAudience}. Tone: ${tone}. Brand: ${brand}.`;
+    if (designDescription) {
+        prompt += ` The design/image on the product is: ${designDescription}. Focus on why this specific design would appeal to the target audience and what message or feeling it conveys.`;
+    }
+    prompt += ` Make it 150-200 words.`;
+    
+    try {
+        showButtonLoading('generateDescriptionBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
+        const response = await fetch('/api/generate-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, contentType: 'description' })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            document.getElementById('productDescription').value = result.content;
+            showNotification('Description generated successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Failed to generate description');
         }
+    } catch (error) {
+        showNotification(`Error: ${error.message}`, 'danger');
+    } finally {
+        hideButtonLoading('generateDescriptionBtn', '<i class="bi bi-magic"></i> Generate');
+    }
+}
+
+async function generateProductTags() {
+    const product = AppState.selectedBlueprint;
+    const design = AppState.selectedDesign;
+    const selectedVariantIds = Array.from(AppState.selectedVariants);
+    const colors = selectedVariantIds.map(id => {
+        const variant = AppState.variants.find(v => v.id === id);
+        return variant?.name || '';
+    }).filter(name => name);
+    const brand = product.brand || 'Generic';
+    
+    const targetAudienceEl = document.getElementById('targetAudience');
+    const designPromptEl = document.getElementById('designPrompt');
+    const targetAudience = targetAudienceEl ? targetAudienceEl.value || 'general' : 'general';
+    const designDescription = designPromptEl ? designPromptEl.value.trim() : '';
+    
+    let prompt = `Generate 5-8 relevant product tags for a ${product.title} by ${brand}. Colors: ${colors.join(', ')}. Target audience: ${targetAudience}. Brand: ${brand}.`;
+    if (designDescription) {
+        prompt += ` The design/image on the product is: ${designDescription}. Include tags that relate to the design theme and would help people find this specific type of design.`;
+    }
+    prompt += ` Return as comma-separated values.`;
+    
+    try {
+        showButtonLoading('generateTagsBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
+        const response = await fetch('/api/generate-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, contentType: 'tags' })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            document.getElementById('productTags').value = result.content;
+            showNotification('Tags generated successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Failed to generate tags');
+        }
+    } catch (error) {
+        showNotification(`Error: ${error.message}`, 'danger');
+    } finally {
+        hideButtonLoading('generateTagsBtn', '<i class="bi bi-magic"></i> Generate');
+    }
+}
+
+function displayGeneratedDesigns() {
+    const container = document.getElementById('designsList');
+    container.innerHTML = '';
+    AppState.generatedDesigns.forEach(design => {
+        container.innerHTML += `
+        <div class="col-6 col-md-4 mb-3">
+            <div class="card h-100">
+                <img src="${design.preview_url}" class="card-img-top" style="object-fit: contain; height: 120px;">
+                <div class="card-body p-2">
+                    <button class="btn btn-sm btn-primary w-100 assign-specific-btn" data-design-id="${design.id}">Assign</button>
+                </div>
+            </div>
+        </div>`;
+    });
+    document.getElementById('designCount').textContent = AppState.generatedDesigns.length;
+}
 
         function openDesignModal(targetAreaId = null) {
             let modalHTML = `<div class="modal fade" id="designModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
@@ -1112,8 +1236,8 @@ async function loadBlueprints() {
 
         // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Step 1
-            document.getElementById('verifyApiBtn').addEventListener('click', verifyApiKeyAndLoadShops);
+            // Check authentication and load API key
+            initializeApp();
             
             // Step 2
             document.getElementById('shopSelect').addEventListener('change', (e) => {
@@ -1137,11 +1261,22 @@ async function loadBlueprints() {
             });
             document.getElementById('blueprintSelect').addEventListener('change', e => loadBlueprintDetails(e.target.value));
             document.getElementById('providerSelect').addEventListener('change', e => onProviderChange(e.target.value));
-            document.getElementById('selectProductBtn').addEventListener('click', setupDesignStep);
-
-            // Step 4
-            document.getElementById('generateDesignBtn').addEventListener('click', generateDesigns);
-            document.getElementById('imageUpload').addEventListener('change', e => uploadDesigns(e.target.files));
+            document.getElementById('selectProductBtn').addEventListener('click', () => {
+                console.log('Continue button clicked - print areas:', AppState.printAreas);
+                if (!AppState.printAreas || AppState.printAreas.length === 0) {
+                    alert('No print areas loaded. Please select a provider first.');
+                    return;
+                }
+                setupDesignStep();
+            });
+            
+            document.getElementById('createProductBtn').addEventListener('click', createProduct);
+            
+            // Individual generate button listeners
+            document.getElementById('generateTitleBtn').addEventListener('click', generateProductTitle);
+            document.getElementById('generateDescriptionBtn').addEventListener('click', generateProductDescription);
+            document.getElementById('generateTagsBtn').addEventListener('click', generateProductTags);
+            
             document.getElementById('printAreasAssignment').addEventListener('click', e => {
                 if (e.target.classList.contains('assign-btn')) {
                     const areaId = e.target.closest('.design-assignment').dataset.areaId;
@@ -1151,32 +1286,18 @@ async function loadBlueprints() {
                     removeDesignAssignment(e.target.dataset.areaId);
                 }
             });
+        }
             
             document.getElementById('designsList').addEventListener('click', e => {
                 if (e.target.classList.contains('assign-specific-btn')) {
                     const designId = e.target.dataset.designId;
-                    // Always show modal for area selection
-                    openDesignModalForAssignment(designId);
+                    const areaId = prompt('Enter print area ID to assign this design to:');
+                    if (areaId) {
+                        assignDesignToArea(areaId, designId);
+                    }
                 }
             });
-            document.getElementById('continueToProductBtn').addEventListener('click', setupFinalStep);
-
-            // Step 5
-            document.getElementById('variantsList').addEventListener('change', updateSelectedVariants);
-            document.getElementById('createProductBtn').addEventListener('click', createProduct);
-            
-            // Individual generate button listeners
-            document.getElementById('generateTitleBtn').addEventListener('click', generateProductTitle);
-            document.getElementById('generateDescriptionBtn').addEventListener('click', generateProductDescription);
-            document.getElementById('generateTagsBtn').addEventListener('click', generateProductTags);
-
-            // Load saved API key
-            const savedApiKey = localStorage.getItem('printifyApiKey');
-            if (savedApiKey) {
-                document.getElementById('apiKey').value = savedApiKey;
-                verifyApiKeyAndLoadShops();
-            }
-        });
+        }
 
         // --- DATABASE OPERATIONS --- 
         async function savePrompt() {
@@ -1228,7 +1349,7 @@ async function loadBlueprints() {
                     created_at: new Date().toISOString()
                 };
 
-                const response = await fetch('/.netlify/functions/save-prompt', {
+                const response = await fetch('/api/save-prompt', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1255,7 +1376,7 @@ async function loadBlueprints() {
 
         async function loadSavedPrompts(productId = null) {
             try {
-                const url = productId ? `/.netlify/functions/get-prompt?productId=${productId}` : '/.netlify/functions/get-prompt';
+                const url = productId ? `/api/get-prompt?productId=${productId}` : '/api/get-prompt';
                 const response = await fetch(url);
                 const result = await response.json();
 

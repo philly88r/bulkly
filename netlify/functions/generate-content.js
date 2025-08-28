@@ -34,9 +34,10 @@ export default async (req, context) => {
     const requestBody = await req.text();
     console.log('Raw request body:', requestBody);
     
-    const { prompt, contentType } = JSON.parse(requestBody);
+    const { prompt, contentType, productId } = JSON.parse(requestBody);
     console.log('Parsed data - prompt:', prompt);
     console.log('Parsed data - contentType:', contentType);
+    console.log('Parsed data - productId:', productId);
     
     if (!prompt || !contentType) {
       return new Response(
@@ -60,11 +61,22 @@ export default async (req, context) => {
 
     switch (contentType) {
       case 'title':
-        systemPrompt = `You are an expert e-commerce copywriter. Generate a compelling, SEO-optimized product title (max 100 characters) based on the provided product details. Make it engaging and include key selling points.`;
+        systemPrompt = `You are an expert e-commerce copywriter. Generate a compelling, SEO-optimized product title (max 100 characters) using the provided product details.
+
+Requirements:
+- Include the brand name unless it is "generic" or not provided.
+- Mention the key design details (e.g., motif, theme, style).
+- If the print location is provided (e.g., front, back, left chest, sleeve), include it succinctly.
+- Make it engaging and include key selling points.`;
         maxTokens = 50;
         break;
       case 'description':
-        systemPrompt = `You are an expert e-commerce copywriter. Write a compelling product description (2-3 paragraphs) that highlights benefits, appeals to the target audience, and includes relevant keywords. Make it persuasive but authentic.`;
+        systemPrompt = `You are an expert e-commerce copywriter. Write a compelling product description (2-3 short paragraphs) that:
+- Mentions the brand unless it is "generic" or not provided.
+- Speaks directly to the target audience specified by the user.
+- Clearly states where the design is printed (e.g., front, back, both, left chest, sleeve) when provided; do NOT invent details if unknown.
+- Explicitly describes the design (motif, style, inspiration) and why it appeals to the audience.
+- Includes relevant keywords naturally. Keep tone persuasive but authentic.`;
         maxTokens = 200;
         break;
       case 'tags':
@@ -72,7 +84,11 @@ export default async (req, context) => {
         maxTokens = 100;
         break;
       case 'product-content':
-        systemPrompt = `You are an expert e-commerce copywriter. Based on the user request, generate a JSON object with three keys: "title" (a compelling, SEO-optimized product title, max 100 chars), "description" (a persuasive 2-3 paragraph product description), and "tags" (an array of 5-8 relevant string keywords). Do not include any text outside of the JSON object.`;
+        systemPrompt = `You are an expert e-commerce copywriter. Based on the user request, generate a JSON object with exactly three keys:
+"title": A compelling, SEO-optimized product title (max 100 chars) that includes the brand unless it is "generic" or not provided, mentions key design details, and includes the print location if provided (e.g., front/back/left chest) without inventing details.
+"description": A persuasive 2-3 short paragraph product description that speaks to the specified target audience, explicitly states where the design is printed when provided, and describes the design's motif/style/inspiration without fabricating unknowns.
+"tags": An array of 5-8 relevant keyword strings.
+Return only the JSON object with these keys and values, no extra text or markdown.`;
         maxTokens = 500;
         break;
       default:
@@ -86,10 +102,53 @@ export default async (req, context) => {
     console.log('System prompt set for contentType:', contentType);
     console.log('Max tokens:', maxTokens);
 
+    // Optionally fetch stored context (brand, design, placements, audience)
+    let contextText = '';
+    try {
+      if (productId) {
+        const origin = new URL(req.url).origin;
+        const ctxUrl = `${origin}/.netlify/functions/get-context?productId=${encodeURIComponent(productId)}`;
+        console.log('Fetching context from:', ctxUrl);
+        const ctxRes = await fetch(ctxUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+        if (ctxRes.ok) {
+          const ctxJson = await ctxRes.json();
+          const ctx = ctxJson?.data || null;
+          if (ctx) {
+            const brand = ctx.brand || '';
+            const audience = ctx.audience || '';
+            const placements = ctx.placements || null;
+            const design_prompt = ctx.design_prompt || '';
+            const design_details = ctx.design_details || null;
+
+            // Build normalized placement string
+            let placementStr = '';
+            if (placements && typeof placements === 'object') {
+              const enabled = Object.entries(placements)
+                .filter(([, v]) => !!v)
+                .map(([k]) => k.replace(/_/g, ' '));
+              if (enabled.length) placementStr = enabled.join(', ');
+            }
+
+            contextText = [
+              brand ? `Brand: ${brand}` : '',
+              audience ? `Target audience: ${audience}` : '',
+              design_details ? `Design details: ${JSON.stringify(design_details)}` : '',
+              design_prompt ? `Design prompt: ${design_prompt}` : '',
+              placementStr ? `Print location(s): ${placementStr}` : ''
+            ].filter(Boolean).join('\n');
+          }
+        } else {
+          console.warn('Context fetch failed with status:', ctxRes.status);
+        }
+      }
+    } catch (e) {
+      console.warn('Context fetch error (non-fatal):', e.message);
+    }
+
     console.log('Making Gemini API request...');
     
-    // Combine system prompt and user prompt for Gemini
-    const fullPrompt = `${systemPrompt}\n\nUser request: ${prompt}`;
+    // Combine system prompt, stored context (if any), and user prompt for Gemini
+    const fullPrompt = `${systemPrompt}\n\n${contextText ? `Context (do not fabricate missing info):\n${contextText}\n\n` : ''}User request: ${prompt}`;
     
     const geminiPayload = {
       contents: [

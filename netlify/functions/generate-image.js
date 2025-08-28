@@ -13,7 +13,7 @@ exports.handler = async (event) => {
       return { statusCode: 405, headers, body: JSON.stringify({ success: false, error: 'Method not allowed' }) };
   
     try {
-      const { prompt, numImages = 1, model = 'flux-dev', size = '1024x1024' } = JSON.parse(event.body || '{}');
+      const { prompt, numImages = 1, model = 'flux-dev', size = '1024x1024', imageUrl = null, maskUrl = null } = JSON.parse(event.body || '{}');
       if (!prompt) return badRequest('Missing prompt');
   
       const sanitizedPrompt = prompt.trim().slice(0, 1000);
@@ -23,7 +23,7 @@ exports.handler = async (event) => {
       /* ───── fal.ai (primary) ───── */
       if (process.env.FAL_KEY) {
         try {
-          const falResult = await generateWithFal(sanitizedPrompt, numImages, model, width, height);
+          const falResult = await generateWithFal(sanitizedPrompt, numImages, model, width, height, imageUrl, maskUrl);
           if (falResult.success) return ok(falResult);
         } catch (falError) {
           console.error('fal.ai error:', falError);
@@ -89,21 +89,27 @@ exports.handler = async (event) => {
     'flux-pro':     'fal-ai/flux-pro',
     'recraft-v3':   'fal-ai/recraft-v3',
     'ideogram-v2':  'fal-ai/ideogram-v2',
-    'flux-lora':    'fal-ai/flux/dev/lora'
+    'flux-lora':    'fal-ai/flux/dev/lora',
+    'nano-banana':  'fal-ai/recraft-v3',
+    'nano-banana/edit': 'fal-ai/recraft-v3/edit'  // Edit endpoint for image editing
   };
   
-  async function generateWithFal(prompt, numImages, modelKey, width, height) {
+  async function generateWithFal(prompt, numImages, modelKey, width, height, imageUrl = null, maskUrl = null) {
     const selectedModel = MODEL_ENDPOINTS[modelKey] || MODEL_ENDPOINTS['flux-dev'];
+    
+    const isEditModel = modelKey === 'nano-banana/edit';
     const body = {
       prompt: enhancePromptForPOD(prompt, modelKey),
-      image_size: { width, height },     // <-- FIX: always object
+      image_size: { width, height },
       num_images: numImages,
       guidance_scale: 7.5,
       num_inference_steps: modelKey === 'flux-schnell' ? 4 : 28,
       seed: Math.floor(Math.random() * 1e6),
       enable_safety_checker: true,
       format: 'png',
-      transparent: true
+      transparent: true,
+      ...(isEditModel && imageUrl && { image_url: imageUrl }),
+      ...(isEditModel && maskUrl && { mask_url: maskUrl })
     };
   
     const res = await fetch(`https://fal.run/${selectedModel}`, {
@@ -153,7 +159,8 @@ exports.handler = async (event) => {
       'ideogram-v2': 'logo design, typography focus, commercial use, ',
       'flux-dev': 'high resolution, print quality, commercial design, ',
       'flux-pro': 'premium quality, professional design, commercial use, ',
-      'flux-schnell': 'clean design, print ready, '
+      'flux-schnell': 'clean design, print ready, ',
+      'nano-banana': 'nano-banana style, minimalist design, clean lines, commercial use, '
     }[model] || 'print-on-demand design, ';
     
     // Add transparent background instruction without showing it in the prompt

@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI Product Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1a1a1a;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            padding: 2rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding: 0 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 2rem;
+            color: #6b7280;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: #f3f4f6;
+            color: #667eea;
+        }
+
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .subscription-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .subscription-badge.starter {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .subscription-badge.professional {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .subscription-badge.enterprise {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .product-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-image {
+            height: 200px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+
+        .product-info {
+            padding: 1rem;
+        }
+
+        .product-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .usage-bar {
+            background: #e5e7eb;
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .usage-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #d1d5db;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .logout-btn {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            right: 2rem;
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .logout-btn:hover {
+            background: #fecaca;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="logo">AI Product Gen</div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" data-section="overview">
+                            <i class="fas fa-chart-pie"></i>
+                            Overview
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-section="products">
+                            <i class="fas fa-box"></i>
+                            Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-section="generate">
+                            <i class="fas fa-magic"></i>
+                            Generate
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-section="analytics">
+                            <i class="fas fa-chart-line"></i>
+                            Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-section="settings">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1 id="pageTitle">Dashboard Overview</h1>
+                    <p id="pageSubtitle">Welcome back! Here's what's happening with your business.</p>
+                </div>
+                <div class="user-info">
+                    <div class="subscription-badge" id="subscriptionBadge">Free Trial</div>
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div>
+                        <div id="userName">Loading...</div>
+                        <div style="font-size: 0.8rem; color: #6b7280;" id="userEmail">Loading...</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Overview Section -->
+            <div id="overviewSection" class="section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <i class="fas fa-box"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number" id="totalProducts">0</div>
+                        <div class="stat-label">Total Products</div>
+                        <div class="usage-bar">
+                            <div class="usage-fill" id="productsUsage" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number" id="aiGenerations">0</div>
+                        <div class="stat-label">AI Generations</div>
+                        <div class="usage-bar">
+                            <div class="usage-fill" id="aiUsage" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number">$0</div>
+                        <div class="stat-label">Revenue (Est.)</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number" id="daysLeft">14</div>
+                        <div class="stat-label">Trial Days Left</div>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Quick Actions</h2>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <a href="#" class="btn btn-primary" data-section="generate">
+                            <i class="fas fa-magic"></i>
+                            Generate Products
+                        </a>
+                        <a href="#" class="btn btn-secondary" data-section="products">
+                            <i class="fas fa-box"></i>
+                            View Products
+                        </a>
+                        <a href="#" class="btn btn-secondary">
+                            <i class="fas fa-upload"></i>
+                            Bulk Upload
+                        </a>
+                        <a href="#" class="btn btn-secondary">
+                            <i class="fas fa-chart-line"></i>
+                            View Analytics
+                        </a>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Products</h2>
+                        <a href="#" class="btn btn-secondary" data-section="products">View All</a>
+                    </div>
+                    <div id="recentProducts">
+                        <div class="empty-state">
+                            <i class="fas fa-box"></i>
+                            <h3>No products yet</h3>
+                            <p>Start by generating your first product with AI</p>
+                            <a href="#" class="btn btn-primary" data-section="generate" style="margin-top: 1rem;">
+                                <i class="fas fa-magic"></i>
+                                Generate Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <div id="productsSection" class="section" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Your Products</h2>
+                        <a href="#" class="btn btn-primary" data-section="generate">
+                            <i class="fas fa-plus"></i>
+                            New Product
+                        </a>
+                    </div>
+                    <div id="productsGrid" class="products-grid">
+                        <div class="empty-state">
+                            <i class="fas fa-box"></i>
+                            <h3>No products found</h3>
+                            <p>Create your first product to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Section -->
+            <div id="generateSection" class="section" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">AI Product Generator</h2>
+                    </div>
+                    <div style="text-align: center; padding: 3rem;">
+                        <i class="fas fa-magic" style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;"></i>
+                        <h3>Generate Products with AI</h3>
+                        <p style="color: #6b7280; margin-bottom: 2rem;">This will redirect to your existing product generation tool</p>
+                        <a href="/index.html" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt"></i>
+                            Open Generator
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analyticsSection" class="section" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Analytics</h2>
+                    </div>
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Analytics Coming Soon</h3>
+                        <p>Detailed analytics and insights will be available here</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settingsSection" class="section" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Account Settings</h2>
+                    </div>
+                    <div style="max-width: 600px;">
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin-bottom: 1rem;">Subscription</h3>
+                            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 600;" id="currentPlan">Free Trial</div>
+                                        <div style="color: #6b7280; font-size: 0.9rem;">14 days remaining</div>
+                                    </div>
+                                    <a href="/landing.html#pricing" class="btn btn-primary">Upgrade</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin-bottom: 1rem;">API Keys</h3>
+                            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <div style="margin-bottom: 1.5rem;">
+                                    <h4 style="margin-bottom: 0.5rem;">Printify API Key</h4>
+                                    <p style="color: #6b7280; margin-bottom: 1rem; font-size: 0.9rem;">Your Printify API key is required to access your shops and products</p>
+                                    <div style="display: grid; gap: 0.75rem;">
+                                        <input type="password" id="printifyApiKey" placeholder="Enter your Printify API key" 
+                                               style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem;">
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button class="btn btn-primary" onclick="savePrintifyApiKey()" style="flex: 1;">
+                                                <i class="fas fa-save"></i> Save Key
+                                            </button>
+                                            <button class="btn btn-secondary" onclick="testPrintifyConnection()" style="flex: 1;">
+                                                <i class="fas fa-plug"></i> Test Connection
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="printifyStatus" style="margin-top: 0.5rem; font-size: 0.85rem;"></div>
+                                </div>
+                                
+                                <div style="margin-bottom: 1.5rem;">
+                                    <h4 style="margin-bottom: 0.5rem;">Etsy API</h4>
+                                    <button class="btn btn-secondary" style="width: 100%;">
+                                        <i class="fas fa-cog"></i> Configure Etsy Integration
+                                    </button>
+                                </div>
+                                
+                                <div>
+                                    <h4 style="margin-bottom: 0.5rem;">Shopify API</h4>
+                                    <button class="btn btn-secondary" style="width: 100%;">
+                                        <i class="fas fa-cog"></i> Configure Shopify Integration
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/auth-guard.js"></script>
+    <script>
+
+        // Get user data from localStorage
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+            loadDashboardData();
+            loadPrintifyApiKey();
+        });
+
+        // Printify API Key Functions
+        async function loadPrintifyApiKey() {
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    window.location.href = '/auth.html';
+                    return;
+                }
+
+                const response = await fetch('/api/get-api-key', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                if (data.apiKey) {
+                    document.getElementById('printifyApiKey').value = data.apiKey;
+                    updatePrintifyStatus('API key loaded successfully', 'success');
+                } else {
+                    updatePrintifyStatus('No API key found - please add your Printify API key', 'warning');
+                }
+            } catch (error) {
+                console.error('Error loading Printify API key:', error);
+                updatePrintifyStatus('Error loading API key', 'error');
+            }
+        }
+
+        async function savePrintifyApiKey() {
+            const apiKey = document.getElementById('printifyApiKey').value.trim();
+            if (!apiKey) {
+                updatePrintifyStatus('Please enter your Printify API key', 'error');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    window.location.href = '/auth.html';
+                    return;
+                }
+
+                updatePrintifyStatus('Saving API key...', 'info');
+
+                const response = await fetch('/.netlify/functions/update-api-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ apiKey })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    updatePrintifyStatus('API key saved successfully!', 'success');
+                    // Reload to reflect changes
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    updatePrintifyStatus(data.error || 'Failed to save API key', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving Printify API key:', error);
+                updatePrintifyStatus('Error saving API key', 'error');
+            }
+        }
+
+        async function testPrintifyConnection() {
+            const apiKey = document.getElementById('printifyApiKey').value.trim();
+            if (!apiKey) {
+                updatePrintifyStatus('Please enter your Printify API key first', 'warning');
+                return;
+            }
+
+            try {
+                updatePrintifyStatus('Testing connection...', 'info');
+
+                const response = await fetch('/.netlify/functions/test-printify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    },
+                    body: JSON.stringify({ apiKey })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    updatePrintifyStatus(`Connected successfully! Found ${data.shops || 0} shops`, 'success');
+                } else {
+                    updatePrintifyStatus(data.error || 'Failed to connect to Printify', 'error');
+                }
+            } catch (error) {
+                console.error('Error testing Printify connection:', error);
+                updatePrintifyStatus('Error testing connection', 'error');
+            }
+        }
+
+        function updatePrintifyStatus(message, type) {
+            const statusDiv = document.getElementById('printifyStatus');
+            const colors = {
+                success: '#10b981',
+                error: '#ef4444',
+                warning: '#f59e0b',
+                info: '#6b7280'
+            };
+            
+            statusDiv.innerHTML = message;
+            statusDiv.style.color = colors[type] || colors.info;
+        }
+
+        function loadUserInfo() {
+            if (user.firstName && user.lastName) {
+                document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
+                document.getElementById('userAvatar').textContent = (user.firstName[0] + user.lastName[0]).toUpperCase();
+            } else {
+                document.getElementById('userName').textContent = user.email || 'User';
+                document.getElementById('userAvatar').textContent = (user.email?.[0] || 'U').toUpperCase();
+            }
+            
+            document.getElementById('userEmail').textContent = user.email || '';
+            
+            // Set subscription badge
+            const subscription = user.subscription || {};
+            const badge = document.getElementById('subscriptionBadge');
+            const plan = document.getElementById('currentPlan');
+            
+            if (subscription.status === 'active' && subscription.plan) {
+                badge.textContent = subscription.plan;
+                badge.className = `subscription-badge ${subscription.plan.toLowerCase()}`;
+                plan.textContent = subscription.plan;
+            } else {
+                badge.textContent = 'Free Trial';
+                badge.className = 'subscription-badge starter';
+                plan.textContent = 'Free Trial';
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Load user products and usage data
+                // This would typically come from your API
+                updateUsageStats();
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        function updateUsageStats() {
+            // Mock data - replace with actual API calls
+            const limits = user.subscription?.limits || { products_per_month: 50, ai_generations: 200 };
+            const usage = { products: 12, ai_generations: 45 }; // Mock current usage
+
+            document.getElementById('totalProducts').textContent = usage.products;
+            document.getElementById('aiGenerations').textContent = usage.ai_generations;
+
+            // Update usage bars
+            const productsPercent = (usage.products / limits.products_per_month) * 100;
+            const aiPercent = (usage.ai_generations / limits.ai_generations) * 100;
+
+            document.getElementById('productsUsage').style.width = `${Math.min(productsPercent, 100)}%`;
+            document.getElementById('aiUsage').style.width = `${Math.min(aiPercent, 100)}%`;
+        }
+
+        // Navigation handling
+        document.querySelectorAll('.nav-link, [data-section]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = e.target.closest('[data-section]').dataset.section;
+                if (section) {
+                    showSection(section);
+                }
+            });
+        });
+
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Remove active class from nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + 'Section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+
+            // Add active class to nav link
+            const navLink = document.querySelector(`[data-section="${sectionName}"].nav-link`);
+            if (navLink) {
+                navLink.classList.add('active');
+            }
+
+            // Update page title
+            const titles = {
+                overview: { title: 'Dashboard Overview', subtitle: "Welcome back! Here's what's happening with your business." },
+                products: { title: 'Your Products', subtitle: 'Manage and organize your product catalog.' },
+                generate: { title: 'AI Generator', subtitle: 'Create new products with artificial intelligence.' },
+                analytics: { title: 'Analytics', subtitle: 'Track your performance and growth metrics.' },
+                settings: { title: 'Settings', subtitle: 'Manage your account and preferences.' }
+            };
+
+            if (titles[sectionName]) {
+                document.getElementById('pageTitle').textContent = titles[sectionName].title;
+                document.getElementById('pageSubtitle').textContent = titles[sectionName].subtitle;
+            }
+        }
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            window.location.href = '/auth.html';
+        });
+
+        // Handle Stripe checkout success
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        if (sessionId) {
+            // Handle successful checkout
+            alert('Subscription activated successfully!');
+            // Refresh user data
+            window.location.href = '/dashboard.html';
+        }
+    </script>
+</body>
+</html>

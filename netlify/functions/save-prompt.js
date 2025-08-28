@@ -1,9 +1,7 @@
-// Save AI prompts and product data to Neon database
-import { Client } from 'https://deno.land/x/postgres@v0.17.0/mod.ts';
+// Save AI prompts and product data to Supabase
+const { getSupabase } = require('./_supabase_node.js');
 
-const DATABASE_URL = Deno.env.get('NETLIFY_DATABASE_URL') || Deno.env.get('DATABASE_URL');
-
-export default async (req, context) => {
+exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
     'Content-Type': 'application/json',
@@ -12,50 +10,62 @@ export default async (req, context) => {
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers });
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ success: false, error: 'Method not allowed' }) };
   }
 
   try {
-    const client = new Client(DATABASE_URL);
-    await client.connect();
+    const body = JSON.parse(event.body);
 
-    const { productId, prompt, response, metadata, brand } = await req.json();
+    const { productId, prompt, response, metadata } = body;
 
-    // Create prompts table if it doesn't exist
-    await client.queryObject(`
-      CREATE TABLE IF NOT EXISTS prompts (
-        id SERIAL PRIMARY KEY,
-        product_id VARCHAR(255),
-        prompt TEXT NOT NULL,
-        response JSONB,
-        metadata JSONB,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    // Extract additional data from metadata
+    const {
+      brand,
+      designDetails,
+      placements,
+      audience,
+      extra
+    } = metadata || {};
 
-    // Insert the prompt and response
-    const result = await client.queryObject(`
-      INSERT INTO prompts (product_id, prompt, response, metadata)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [productId, prompt, JSON.stringify(response), JSON.stringify(metadata)]);
+    const supabase = getSupabase(true);
+    
+    // Upsert into product_contexts table
+    const { data, error } = await supabase
+      .from('product_contexts')
+      .upsert({
+        product_id: productId,
+        brand: brand || response?.brand || '',
+        design_prompt: prompt,
+        design_details: designDetails || response?.designDetails || null,
+        placements: placements || response?.placements || null,
+        audience: audience || response?.audience || null,
+        extra: {
+          ...extra,
+          response: response,
+          metadata: metadata
+        }
+      }, {
+        onConflict: 'product_id'
+      })
+      .select('*')
+      .single();
 
-    await client.end();
+    if (error) throw new Error(error.message);
 
-    return new Response(JSON.stringify({
+    return { statusCode: 200, headers, body: JSON.stringify({
       success: true,
-      data: result.rows[0]
-    }), { headers });
+      data
+    }) };
 
   } catch (error) {
     console.error('Save prompt error:', error);
-    return new Response(JSON.stringify({ 
+    return { statusCode: 500, headers, body: JSON.stringify({ 
       error: error.message 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }) };
   }
 };

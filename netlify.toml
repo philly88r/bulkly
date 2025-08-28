@@ -4,20 +4,15 @@
   functions = "netlify/functions"
   publish = "."
 
+[functions]
+  node_bundler = "esbuild"
+
 [build.environment]
   # Node.js version
   NODE_VERSION = "18"
 
-[[redirects]]
-  # SPA fallback for client-side routing
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false # Do not overwrite Netlify's own paths like /netlify/functions/
+# Redirects are managed in the _redirects file to avoid duplication
 
-[dev]
-  command = "npm start"
-  port = 8888
 
 [build.ignore]
   paths = ["node_modules/**", "package-lock.json", "node_modules/web-streams-polyfill/**"]
@@ -32,7 +27,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "credentialless"
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: cdn.jsdelivr.net cdnjs.cloudflare.com esm.sh cdn.skypack.dev; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' blob: cdn.jsdelivr.net cdnjs.cloudflare.com esm.sh cdn.skypack.dev; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' cdn.jsdelivr.net fonts.gstatic.com; img-src 'self' data: https: blob: via.placeholder.com; connect-src 'self' blob: api.printify.com fal.run api.openai.com api.stability.ai cdn.jsdelivr.net fonts.googleapis.com fonts.gstatic.com esm.sh cdn.skypack.dev staticimgly.com;"
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: cdn.jsdelivr.net cdnjs.cloudflare.com esm.sh cdn.skypack.dev; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' blob: cdn.jsdelivr.net cdnjs.cloudflare.com esm.sh cdn.skypack.dev; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; font-src 'self' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.gstatic.com; img-src 'self' data: https: blob: via.placeholder.com; connect-src 'self' blob: api.printify.com fal.run api.openai.com api.stability.ai cdn.jsdelivr.net fonts.googleapis.com fonts.gstatic.com esm.sh cdn.skypack.dev staticimgly.com;"
 
 [[headers]]
   # Cache static assets

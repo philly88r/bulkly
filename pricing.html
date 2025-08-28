@@ -724,12 +724,14 @@
                 if (isEtsyStore) payload.shipping_template = true;
                 console.log('[publish] Outgoing payload to proxy:', payload);
 
-                await makeApiCall(`/shops/${shop.id}/products/${productId}/publish.json`, { method: 'POST', body: payload });
+                const publishResult = await makeApiCall(`/shops/${shop.id}/products/${productId}/publish.json`, { method: 'POST', body: payload });
+                console.log('[publish] Publish API response:', publishResult);
+                hideLoading('productsContainer');
                 alert('Product published successfully!');
             } catch (error) {
-                alert(`Publishing failed: ${error.message}`);
-            } finally {
+                console.error('[publish] Error:', error);
                 hideLoading('productsContainer');
+                alert(`Publishing failed: ${error.message}`);
             }
         }
 
@@ -755,159 +757,284 @@
             }
         }
 
-        // Minimal modal for selecting images to publish
+        // Enhanced image selection modal with model filtering
         function openImageSelectionModal(productDetails) {
             return new Promise((resolve) => {
                 const existing = document.getElementById('imageSelectModal');
                 if (existing) existing.remove();
 
-                const container = document.createElement('div');
-                container.id = 'imageSelectModal';
-                container.style.position = 'fixed';
-                container.style.inset = '0';
-                container.style.background = 'rgba(0,0,0,0.5)';
-                container.style.zIndex = '9999';
-                container.style.display = 'flex';
-                container.style.justifyContent = 'center';
-                container.style.alignItems = 'center';
-
-                const modal = document.createElement('div');
-                modal.style.background = '#fff';
-                modal.style.borderRadius = '8px';
-                modal.style.width = 'min(800px, 95vw)';
-                modal.style.maxHeight = '80vh';
-                modal.style.overflow = 'auto';
-                modal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
-
-                const header = document.createElement('div');
-                header.style.padding = '16px';
-                header.style.borderBottom = '1px solid #eee';
-                header.innerHTML = '<h5 style="margin:0">Select images to publish</h5><div style="font-size:12px;color:#666;margin-top:6px">Choose at least one mockup image. One will be marked as default.</div>';
-
-                const body = document.createElement('div');
-                body.style.padding = '12px 16px 0 16px';
-
-                const grid = document.createElement('div');
-                grid.style.display = 'grid';
-                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(140px, 1fr))';
-                grid.style.gap = '12px';
-
-                const imgs = Array.isArray(productDetails?.images) ? productDetails.images : [];
-                if (!imgs.length) {
-                    const note = document.createElement('div');
-                    note.style.padding = '12px';
-                    note.style.color = '#a00';
-                    note.textContent = 'This product currently has no mockup images in Printify. Please generate mockups in Printify, then return to select.';
-                    body.appendChild(note);
-                } else {
-                    imgs.forEach((img, idx) => {
-                        const card = document.createElement('label');
-                        card.style.border = '1px solid #ddd';
-                        card.style.borderRadius = '6px';
-                        card.style.padding = '8px';
-                        card.style.display = 'flex';
-                        card.style.flexDirection = 'column';
-                        card.style.cursor = 'pointer';
-                        card.title = img.src;
-
-                        const imageEl = document.createElement('img');
-                        imageEl.src = img.src;
-                        imageEl.style.width = '100%';
-                        imageEl.style.height = '120px';
-                        imageEl.style.objectFit = 'cover';
-                        imageEl.alt = 'mockup';
-
-                        const controls = document.createElement('div');
-                        controls.style.display = 'flex';
-                        controls.style.justifyContent = 'space-between';
-                        controls.style.alignItems = 'center';
-                        controls.style.marginTop = '6px';
-
-                        const check = document.createElement('input');
-                        check.type = 'checkbox';
-                        check.checked = idx === 0; // preselect first
-
-                        const defaultWrap = document.createElement('label');
-                        defaultWrap.style.fontSize = '12px';
-                        defaultWrap.style.display = 'flex';
-                        defaultWrap.style.alignItems = 'center';
-                        const radio = document.createElement('input');
-                        radio.type = 'radio';
-                        radio.name = 'defaultImageRadio';
-                        radio.checked = img.is_default === true || idx === 0;
-                        const span = document.createElement('span');
-                        span.textContent = ' Default';
-                        span.style.marginLeft = '6px';
-                        defaultWrap.appendChild(radio);
-                        defaultWrap.appendChild(span);
-
-                        controls.appendChild(check);
-                        controls.appendChild(defaultWrap);
-
-                        card.appendChild(imageEl);
-                        card.appendChild(controls);
-
-                        // Store references for building selection
-                        card.dataset.src = img.src;
-                        card.dataset.variant_ids = JSON.stringify(img.variant_ids || []);
-                        card.dataset.position = img.position || undefined;
-                        card.dataset.initialDefault = String(img.is_default === true);
-                        card._refs = { check, radio };
-
-                        grid.appendChild(card);
-                    });
+                const images = Array.isArray(productDetails?.images) ? productDetails.images : [];
+                if (!images.length) {
+                    alert('No mockup images available for this product.');
+                    return resolve(null);
                 }
 
-                body.appendChild(grid);
+                // Analyze images for filtering options
+                const analysis = analyzeImageCollection(images, productDetails);
 
-                const footer = document.createElement('div');
-                footer.style.padding = '12px 16px 16px 16px';
-                footer.style.display = 'flex';
-                footer.style.justifyContent = 'flex-end';
-                footer.style.gap = '8px';
-                footer.style.borderTop = '1px solid #eee';
+                const container = document.createElement('div');
+                container.id = 'imageSelectModal';
+                container.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(0,0,0,0.8); z-index: 10000; display: flex;
+                    align-items: center; justify-content: center; padding: 20px;
+                `;
 
-                const cancelBtn = document.createElement('button');
-                cancelBtn.className = 'btn btn-outline-secondary btn-sm';
-                cancelBtn.textContent = 'Cancel';
-                cancelBtn.onclick = () => { container.remove(); resolve(null); };
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    background: white; border-radius: 12px; max-width: 95vw; max-height: 95vh;
+                    overflow-y: auto; padding: 24px; position: relative; min-width: 800px;
+                `;
 
-                const saveBtn = document.createElement('button');
-                saveBtn.className = 'btn btn-primary btn-sm';
-                saveBtn.textContent = 'Save Selection';
-                saveBtn.onclick = () => {
-                    const cards = Array.from(grid.children);
-                    const selected = cards.filter(c => c._refs && c._refs.check.checked);
-                    if (!selected.length) {
-                        alert('Select at least one image.');
-                        return;
-                    }
-                    // Determine default
-                    let defaultSet = false;
-                    const selection = selected.map(c => {
-                        const isDefault = c._refs.radio.checked && !defaultSet;
-                        if (isDefault) defaultSet = true;
-                        return {
-                            src: c.dataset.src,
-                            is_default: isDefault,
-                            position: c.dataset.position || 'front',
-                            variant_ids: JSON.parse(c.dataset.variant_ids || '[]')
-                        };
-                    });
-                    if (!defaultSet) selection[0].is_default = true;
-                    container.remove();
-                    resolve(selection);
-                };
+                modal.innerHTML = `
+                    <h3 style="margin: 0 0 20px 0; color: #333;">Select images and models to publish</h3>
+                    
+                    <!-- Filter Controls -->
+                    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #555;">Filter Options</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            
+                            <!-- Model Type Filter -->
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 8px;">Model Type:</label>
+                                <select id="model-filter" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="all">All Models</option>
+                                    ${analysis.modelTypes.map(type => `<option value="${type}">${type}</option>`).join('')}
+                                </select>
+                            </div>
 
-                footer.appendChild(cancelBtn);
-                footer.appendChild(saveBtn);
+                            <!-- Position Filter -->
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 8px;">View Position:</label>
+                                <select id="position-filter" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="all">All Positions</option>
+                                    ${analysis.positions.map(pos => `<option value="${pos}">${pos.charAt(0).toUpperCase() + pos.slice(1)}</option>`).join('')}
+                                </select>
+                            </div>
 
-                modal.appendChild(header);
-                modal.appendChild(body);
-                modal.appendChild(footer);
-                container.appendChild(modal);
+                            <!-- Quick Actions -->
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 8px;">Quick Select:</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <button id="select-all" style="padding: 6px 12px; border: 1px solid #007bff; background: white; color: #007bff; border-radius: 4px; cursor: pointer; font-size: 12px;">All</button>
+                                    <button id="select-none" style="padding: 6px 12px; border: 1px solid #6c757d; background: white; color: #6c757d; border-radius: 4px; cursor: pointer; font-size: 12px;">None</button>
+                                    <button id="select-best" style="padding: 6px 12px; border: 1px solid #28a745; background: white; color: #28a745; border-radius: 4px; cursor: pointer; font-size: 12px;">Best</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image Grid -->
+                    <div id="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                        ${images.map((img, index) => createImageCard(img, index, analysis, productDetails)).join('')}
+                    </div>
+
+                    <!-- Selection Summary -->
+                    <div id="selection-summary" style="background: #e9ecef; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;">
+                        <span id="selection-count">0 images selected</span> | 
+                        <span id="default-status">No default set</span>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button id="cancel-selection" style="padding: 10px 20px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+                        <button id="save-selection" style="padding: 10px 20px; border: none; background: #007bff; color: white; border-radius: 6px; cursor: pointer;">Save Selection</button>
+                    </div>
+                `;
+
                 document.body.appendChild(container);
+                container.appendChild(modal);
+
+                // Initialize modal functionality
+                initializeImageSelectionModal(modal, images, analysis, productDetails, resolve, container);
             });
+        }
+
+        // Analyze image collection for filtering options
+        function analyzeImageCollection(images, productDetails) {
+            const analysis = {
+                modelTypes: [],
+                positions: []
+            };
+
+            // Extract positions
+            const positions = [...new Set(images.map(img => img.position).filter(Boolean))];
+            analysis.positions = positions.length ? positions : ['front', 'back'];
+
+            // Extract model types from URL patterns
+            const modelTypes = new Set();
+            images.forEach(img => {
+                const url = img.src.toLowerCase();
+                if (url.includes('male') && !url.includes('female')) modelTypes.add('Male Model');
+                else if (url.includes('female')) modelTypes.add('Female Model');
+                else if (url.includes('lifestyle')) modelTypes.add('Lifestyle');
+                else if (url.includes('flat')) modelTypes.add('Flat Lay');
+                else modelTypes.add('Standard Model');
+            });
+            analysis.modelTypes = Array.from(modelTypes);
+
+            return analysis;
+        }
+
+        // Create individual image card with metadata
+        function createImageCard(img, index, analysis, productDetails) {
+            const variantTitles = img.variant_ids?.length 
+                ? img.variant_ids.map(id => {
+                    const variant = productDetails.variants?.find(v => v.id === id);
+                    return variant ? variant.title : `Variant ${id}`;
+                  }).join(', ')
+                : 'All variants';
+
+            const modelType = detectModelType(img.src);
+            
+            return `
+                <div class="image-card" data-index="${index}" data-position="${img.position || 'front'}" data-model-type="${modelType}" 
+                     style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 12px; text-align: center; transition: all 0.2s;">
+                    <img src="${img.src}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;">
+                    
+                    <!-- Image Metadata -->
+                    <div style="font-size: 11px; color: #666; margin-bottom: 8px; text-align: left;">
+                        <div><strong>Model:</strong> ${modelType}</div>
+                        <div><strong>Position:</strong> ${img.position || 'front'}</div>
+                        <div><strong>Variants:</strong> ${variantTitles.substring(0, 30)}${variantTitles.length > 30 ? '...' : ''}</div>
+                    </div>
+                    
+                    <!-- Selection Controls -->
+                    <label style="display: block; margin-bottom: 8px;">
+                        <input type="checkbox" class="image-checkbox" data-index="${index}" style="margin-right: 8px;">
+                        Include in publish
+                    </label>
+                    <label style="display: block;">
+                        <input type="radio" name="default-image" class="default-radio" data-index="${index}" style="margin-right: 8px;">
+                        Set as default
+                    </label>
+                </div>
+            `;
+        }
+
+        // Detect model type from image URL
+        function detectModelType(url) {
+            const urlLower = url.toLowerCase();
+            if (urlLower.includes('male') && !urlLower.includes('female')) return 'Male Model';
+            if (urlLower.includes('female')) return 'Female Model';
+            if (urlLower.includes('lifestyle')) return 'Lifestyle';
+            if (urlLower.includes('flat')) return 'Flat Lay';
+            return 'Standard Model';
+        }
+
+        // Initialize modal functionality with filters and interactions
+        function initializeImageSelectionModal(modal, images, analysis, productDetails, resolve, overlay) {
+            const selectionCount = modal.querySelector('#selection-count');
+            const defaultStatus = modal.querySelector('#default-status');
+
+            // Update selection summary
+            function updateSelectionSummary() {
+                const selected = modal.querySelectorAll('.image-checkbox:checked');
+                const defaultRadio = modal.querySelector('.default-radio:checked');
+                
+                selectionCount.textContent = `${selected.length} images selected`;
+                defaultStatus.textContent = defaultRadio ? 'Default image set' : 'No default set';
+            }
+
+            // Filter images based on current filter settings
+            function applyFilters() {
+                const modelFilter = modal.querySelector('#model-filter').value;
+                const positionFilter = modal.querySelector('#position-filter').value;
+
+                modal.querySelectorAll('.image-card').forEach(card => {
+                    let show = true;
+
+                    if (modelFilter !== 'all' && card.dataset.modelType !== modelFilter) show = false;
+                    if (positionFilter !== 'all' && card.dataset.position !== positionFilter) show = false;
+
+                    card.style.display = show ? 'block' : 'none';
+                });
+            }
+
+            // Event listeners for filters
+            modal.querySelector('#model-filter').onchange = applyFilters;
+            modal.querySelector('#position-filter').onchange = applyFilters;
+
+            // Quick select buttons
+            modal.querySelector('#select-all').onclick = () => {
+                modal.querySelectorAll('.image-card:not([style*="display: none"]) .image-checkbox').forEach(cb => cb.checked = true);
+                updateSelectionSummary();
+            };
+
+            modal.querySelector('#select-none').onclick = () => {
+                modal.querySelectorAll('.image-checkbox').forEach(cb => cb.checked = false);
+                modal.querySelectorAll('.default-radio').forEach(radio => radio.checked = false);
+                updateSelectionSummary();
+            };
+
+            modal.querySelector('#select-best').onclick = () => {
+                // Select best images: front position, different model types
+                modal.querySelectorAll('.image-checkbox').forEach(cb => cb.checked = false);
+                
+                const frontImages = modal.querySelectorAll('.image-card[data-position="front"]:not([style*="display: none"])');
+                const selectedModels = new Set();
+                
+                frontImages.forEach(card => {
+                    const modelType = card.dataset.modelType;
+                    if (!selectedModels.has(modelType)) {
+                        card.querySelector('.image-checkbox').checked = true;
+                        selectedModels.add(modelType);
+                    }
+                });
+                
+                updateSelectionSummary();
+            };
+
+            // Selection change handlers
+            modal.addEventListener('change', (e) => {
+                if (e.target.classList.contains('image-checkbox') || e.target.classList.contains('default-radio')) {
+                    updateSelectionSummary();
+                    
+                    // Highlight selected cards
+                    modal.querySelectorAll('.image-card').forEach(card => {
+                        const checkbox = card.querySelector('.image-checkbox');
+                        card.style.borderColor = checkbox.checked ? '#007bff' : '#e0e0e0';
+                        card.style.backgroundColor = checkbox.checked ? '#f8f9ff' : 'white';
+                    });
+                }
+            });
+
+            // Action buttons
+            modal.querySelector('#cancel-selection').onclick = () => {
+                document.body.removeChild(overlay);
+                resolve(null);
+            };
+
+            modal.querySelector('#save-selection').onclick = () => {
+                const selectedImages = [];
+                const checkboxes = modal.querySelectorAll('.image-checkbox:checked');
+                const defaultRadio = modal.querySelector('.default-radio:checked');
+                
+                if (!checkboxes.length) {
+                    alert('Please select at least one image.');
+                    return;
+                }
+
+                checkboxes.forEach(cb => {
+                    const index = parseInt(cb.dataset.index);
+                    const isDefault = defaultRadio && parseInt(defaultRadio.dataset.index) === index;
+                    selectedImages.push({
+                        ...images[index],
+                        is_default: isDefault
+                    });
+                });
+
+                // Ensure one default if none selected
+                if (!selectedImages.some(img => img.is_default)) {
+                    selectedImages[0].is_default = true;
+                }
+
+                document.body.removeChild(overlay);
+                resolve(selectedImages);
+            };
+
+            // Initialize
+            updateSelectionSummary();
         }
 
         // Utility Functions

@@ -9,108 +9,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .step-container {
-            display: none;
-        }
-        .step-container.active {
-            display: block;
-        }
-        .product-checkbox {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 10;
-        }
-        .product-card {
-            position: relative;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .product-card {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            height: 100%;
-            text-align: center;
-        }
-
-        .product-image {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            background-color: transparent;
-            border: 1px solid #dee2e6;
-        }
-
-        .product-info h6 {
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-            line-height: 1.2;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
-        }
-
-        .product-info small {
-            font-size: 0.75rem;
-        }
-        .product-card:hover {
-            border-color: #007bff;
-            box-shadow: 0 4px 8px rgba(0,123,255,0.2);
-        }
-        .product-card.selected {
-            border-color: #28a745;
-            background-color: #f8fff9;
-        }
-        .bulk-print-area-table {
-            overflow-x: auto;
-        }
-        .print-area-cell {
-            min-width: 120px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .design-preview-small {
-            max-width: 50px;
-            max-height: 50px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-        .bulk-design-assignment {
-            background-color: transparent;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
-        }
-        .selected-products-count {
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 100;
-            padding: 10px;
-            border-bottom: 1px solid #dee2e6;
-        }
-    </style>
-    <style>
         :root {
-            --primary: #0ea5e9;      /* teal sky */
-            --primary-600: #0284c7;  /* deeper sky */
-            --secondary: #14b8a6;    /* teal */
-            --success: #22c55e;      /* emerald */
+            --primary: #0ea5e9;
+            --primary-600: #0284c7;
+            --secondary: #14b8a6;
+            --success: #22c55e;
             --surface: #ffffff;
-            --muted: #64748b;        /* slate-500 */
+            --muted: #64748b;
             --radius: 12px;
             --shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
         }
@@ -119,6 +24,13 @@
             background: linear-gradient(180deg, #f8fafc, #ffffff 50%);
             font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             color: #0f172a;
+        }
+
+        .step-container {
+            display: none;
+        }
+        .step-container.active {
+            display: block;
         }
 
         .navbar {
@@ -149,14 +61,6 @@
             background: linear-gradient(135deg, #22c55e, #16a34a);
             border: none;
         }
-        .btn-outline-primary {
-            color: var(--primary-600);
-            border-color: var(--primary-600);
-        }
-        .btn-outline-primary:hover {
-            background: var(--primary-600);
-            color: #fff;
-        }
 
         .form-control:focus,
         .form-select:focus {
@@ -164,13 +68,20 @@
             box-shadow: 0 0 0 .14rem rgba(14, 165, 233, .28);
         }
 
-        .step-indicator { gap: 12px; }
+        .step-indicator { 
+            gap: 12px; 
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
         .step-indicator .step {
             background: #f1f5f9;
             border-radius: var(--radius);
             border: 1px solid #e2e8f0;
             padding: 14px;
             transition: all .2s ease;
+            text-align: center;
+            min-width: 120px;
         }
         .step-indicator .step.active {
             background: linear-gradient(135deg, var(--primary), var(--primary-600));
@@ -182,86 +93,31 @@
             color: #fff;
         }
 
-        .product-card {
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius);
-            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-        }
-        .product-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 26px rgba(2, 6, 23, 0.08);
-            border-color: #bae6fd; /* light sky */
-        }
-        .product-card.selected {
-            border-color: #22c55e;
-            background: linear-gradient(180deg, #f0fdf4, #ffffff);
-        }
-
-        .product-image {
-            border-radius: 10px;
-            background: #fff;
-        }
-
-        .bulk-design-assignment {
-            background: #ffffff;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-        }
-
-        .selected-products-count {
-            border-bottom: 1px solid #e5e7eb;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: saturate(1.1) blur(6px);
-        }
-
         .loading-spinner {
-            border-color: #e5e7eb;
-            border-top-color: var(--primary);
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
         }
 
-        .badge.bg-secondary {
-            background: linear-gradient(135deg, #94a3b8, #64748b) !important;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .mockup-preview img {
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
+        h1, h4, h5 { 
+            letter-spacing: -0.015em; 
         }
-
-        .table {
-            --bs-table-striped-bg: #f8fafc;
-            --bs-table-hover-bg: #f1f5f9;
+        h1 { 
+            font-weight: 700; 
         }
-        .table thead th {
-            background: #f1f5f9;
-            color: #0f172a;
-            font-weight: 600;
-            border-bottom: 2px solid #e2e8f0;
+        h4, h5 { 
+            font-weight: 600; 
+            color: #0f172a; 
         }
-        .table tbody tr + tr td {
-            border-top-color: #eef2f7;
-        }
-
-        #generateStatus .alert {
-            border-radius: 10px;
-            box-shadow: 0 8px 18px rgba(2, 6, 23, 0.08);
-        }
-
-        .small-muted { color: #64748b; }
-
-        /* Headings polish without changing markup */
-        h1, h4, h5 { letter-spacing: -0.015em; }
-        h1 { font-weight: 700; }
-        h4 { font-weight: 600; }
-        h5 { font-weight: 600; color: #0f172a; }
-
-        /* Subtle custom scrollbar for modern feel (non-functional change) */
-        ::-webkit-scrollbar { width: 10px; height: 10px; }
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--primary), var(--primary-600));
-            border-radius: 999px;
-        }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
     </style>
 </head>
 <body>
@@ -286,6 +142,12 @@
                         <a class="nav-link" href="inspiration.html">Search Inspiration</a>
                     </li>
                 </ul>
+                <div class="navbar-nav ms-auto">
+                    <span class="navbar-text me-3" id="userGreeting">Welcome!</span>
+                    <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
@@ -294,56 +156,34 @@
         <h1 class="mb-4"><i class="bi bi-layers"></i> Bulk Product Creator</h1>
         
         <!-- Step Indicator -->
-        <div class="step-indicator">
-            <div class="step active" id="step1">
-                <i class="bi bi-key"></i><br>
-                <small>API Setup</small>
-            </div>
-            <div class="step" id="step2">
+        <div class="step-indicator mb-4">
+            <div class="step active" id="step-indicator-1">
                 <i class="bi bi-shop"></i><br>
-                <small>Select Shop</small>
+                <small>1. Shop</small>
             </div>
-            <div class="step" id="step3">
+            <div class="step" id="step-indicator-2">
                 <i class="bi bi-check-square"></i><br>
-                <small>Select Products</small>
+                <small>2. Products</small>
             </div>
-            <div class="step" id="step4">
+            <div class="step" id="step-indicator-3">
+                <i class="bi bi-palette"></i><br>
+                <small>3. Assign Designs</small>
+            </div>
+            <div class="step" id="step-indicator-4">
                 <i class="bi bi-magic"></i><br>
-                <small>Generate Designs</small>
+                <small>4. Generate</small>
             </div>
-            <div class="step" id="step5">
-                <i class="bi bi-table"></i><br>
-                <small>Assign Print Areas</small>
+            <div class="step" id="step-indicator-5">
+                <i class="bi bi-check-circle"></i><br>
+                <small>5. Create</small>
             </div>
         </div>
 
-        <!-- Step 1: API Setup -->
+        <!-- Step 1: Shop Selection -->
         <div class="step-container active" id="step1-container">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="bi bi-key"></i> API Setup</h4>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="apiKey" class="form-label">Printify API Key</label>
-                        <input type="password" class="form-control" id="apiKey" placeholder="Enter your Printify API key">
-                        <div class="form-text">
-                            Get your API key from <a href="https://printify.com/app/account/api" target="_blank">Printify Account → API</a>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" id="verifyApiBtn">
-                        <i class="bi bi-shield-check"></i> Verify API Key
-                    </button>
-                    <div id="apiStatus" class="mt-3"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 2: Shop Selection -->
-        <div class="step-container" id="step2-container">
-            <div class="card">
-                <div class="card-header">
-                    <h4><i class="bi bi-shop"></i> Select Shop</h4>
+                    <h4><i class="bi bi-shop"></i> Step 1: Select Shop</h4>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
@@ -353,36 +193,22 @@
                         </select>
                     </div>
                     <button class="btn btn-primary" id="selectShopBtn" disabled>
-                        <i class="bi bi-arrow-right"></i> Continue
+                        <i class="bi bi-arrow-right"></i> Continue to Product Selection
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Step 3: Product Selection -->
-        <div class="step-container" id="step3-container">
+        <!-- Step 2: Product Selection -->
+        <div class="step-container" id="step2-container">
             <div class="card">
                 <div class="card-header">
                     <h4><i class="bi bi-box"></i> Select Products</h4>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="input-group" style="max-width: 300px;">
-                            <input type="text" class="form-control" id="productSearch" placeholder="Search products...">
-                            <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">
-                                <i class="bi bi-x"></i>
-                            </button>
-                        </div>
-                        <div>
-                            <button class="btn btn-outline-primary btn-sm" id="selectAllBtn">Select All</button>
-                            <button class="btn btn-outline-secondary btn-sm" id="clearAllBtn">Clear All</button>
-                        </div>
-                    </div>
-                    
                     <div id="productsGrid" class="row">
                         <!-- Products will be loaded here -->
                     </div>
-                    <div id="paginationControls" class="d-flex justify-content-center mt-4"></div>
                     
                     <div class="mt-3">
                         <p><strong>Selected:</strong> <span id="selectedCount">0</span> products</p>
@@ -394,1524 +220,1617 @@
             </div>
         </div>
 
-        <!-- Step 4: Bulk Design Generation -->
+        <!-- Step 3: Design Assignment -->
+        <div class="step-container" id="step3-container">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-palette"></i> Step 3: Assign Designs & Print Areas</h4>
+                </div>
+                <div class="card-body">
+                    <div id="step3-content">
+                        <!-- Product table will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Generate Products -->
         <div class="step-container" id="step4-container">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="bi bi-magic"></i> Generate Designs for Bulk Creation</h4>
+                    <h4><i class="bi bi-magic"></i> Step 4: Generate Products</h4>
                 </div>
                 <div class="card-body">
-                    <ul class="nav nav-tabs" id="designTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-content" type="button">AI Generation</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-content" type="button">Upload Images</button>
-                        </li>
-                    </ul>
-                    
-                    <div class="tab-content mt-3">
-                        <div class="tab-pane fade show active" id="ai-content">
-                            <div class="mb-3">
-                                <label for="designPrompt" class="form-label">Design Description</label>
-                                <textarea class="form-control" id="designPrompt" rows="3" placeholder="Enter design prompt for all products..."></textarea>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label for="numDesigns" class="form-label">Number of Designs</label>
-                                    <select class="form-select" id="numDesigns">
-                                        <option value="1">1 Design</option>
-                                        <option value="3" selected>3 Designs</option>
-                                        <option value="5">5 Designs</option>
-                                        <option value="10">10 Designs</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="aiModel" class="form-label">AI Model</label>
-                                    <select class="form-select" id="aiModel">
-                                        <option value="flux-pro">Flux Pro</option>
-                                        <option value="flux-dev" selected>Flux Dev</option>
-                                        <option value="recraft-v3">Recraft V3</option>
-                                        <option value="imagen4-preview">Imagen 4 Preview</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button class="btn btn-primary" id="generateBulkDesignsBtn">
-                                <i class="bi bi-stars"></i> Generate All Designs
-                            </button>
-                        </div>
-                        
-                        <div class="tab-pane fade" id="upload-content">
-                            <div class="mb-3">
-                                <label for="bulkImageUpload" class="form-label">Upload Your Images</label>
-                                <input class="form-control" type="file" id="bulkImageUpload" accept="image/*" multiple>
-                                <div class="form-text">Images will be used across all selected products.</div>
-                            </div>
-                            <button class="btn btn-primary" id="bulkUploadBtn">
-                                <i class="bi bi-cloud-arrow-up"></i> Upload Images
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div id="bulkGenerateStatus" class="mt-3"></div>
-                    
-                    <div class="row" id="bulkDesignsList"></div>
-                    
-                    <button class="btn btn-primary" id="continueToAssignmentBtn" disabled>
-                        <i class="bi bi-arrow-right"></i> Continue to Print Area Assignment
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 5: Print Area Assignment -->
-        <div class="step-container" id="step5-container">
-            <div class="card">
-                <div class="card-header">
-                    <h4><i class="bi bi-check-circle"></i> Print Area Assignment</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Product Details</h5>
-                            <div class="mb-3">
-                                <label for="bulkProductTitle" class="form-label">Product Title Template</label>
-                                <input type="text" class="form-control" id="bulkProductTitle" placeholder="e.g., {product_name} - Custom Design">
-                                <div class="form-text">Use {product_name} as placeholder for product type</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="bulkProductDescription" class="form-label">Product Description Template</label>
-                                <textarea class="form-control" id="bulkProductDescription" rows="4" placeholder="Enter product description template..."></textarea>
-                                <div class="form-text">Use {product_name} as placeholder for product type</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="bulkProductTags" class="form-label">Product Tags</label>
-                                <input type="text" class="form-control" id="bulkProductTags" placeholder="Enter tags separated by commas">
-                            </div>
-                            
-                            <div class="mb-3">
-                                <button class="btn btn-primary" id="generateAiContentBtn_step5">
-                                    <i class="bi bi-robot"></i> Generate AI Content for All Products
-                                </button>
-                            </div>
-                            
-                            <h5>Variants & Pricing</h5>
-                            <div id="bulkVariantsList"></div>
-                            
-                            <button class="btn btn-success" id="createBulkProductsBtn" disabled>
-                                <i class="bi bi-plus-circle"></i> Create All Products
-                            </button>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            
-                            <h5>Product Preview</h5>
-                            <div id="bulkProductPreview"></div>
-                            
-                            <h5>Design Assignments</h5>
-                            <div id="bulkDesignAssignmentsSummary"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="table-responsive mt-4">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Print Areas</th>
-                                    <th>Design</th>
-                                                </tr>
-                            </thead>
-                            <tbody id="assignmentTableBody">
-                                <!-- Assignment rows will be populated here -->
-                            </tbody>
-                        </table>
+                    <div id="step4-content">
+                        <!-- Generation interface will be populated here -->
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global state for bulk operations
+        const BulkAppState = {
+            selectedShop: null,
+            selectedProducts: new Set(),
+            allBlueprints: [],
+            shops: []
+        };
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script>
-            // --- API HELPER FUNCTION ---
-            async function makeApiCall(endpoint, options = {}) {
-                const { method = 'GET', body } = options;
+        // Utility functions
+        function showError(message) {
+            alert('Error: ' + message);
+        }
+
+        function showSuccess(message) {
+            alert('Success: ' + message);
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            window.location.href = 'auth.html';
+        }
+
+        // --- JWT Token-based Authentication (matching index.html) ---
+        async function initializeBulkApp() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/auth.html';
+                return;
+            }
+
+            try {
+                // Check if API key is saved in database
+                const response = await fetch('/.netlify/functions/get-api-key', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
                 
+                if (data.apiKey) {
+                    // API key found, proceed to load shops
+                    BulkAppState.apiKey = data.apiKey;
+                    
+                    // Load shops using the API key from database
+                    await loadShopsFromDatabase(data.apiKey);
+                } else {
+                    // No API key found
+                    showError('Please set up your Printify API key in your dashboard settings first.');
+                }
+            } catch (error) {
+                console.error('Error initializing bulk app:', error);
+                showError('Authentication error: ' + error.message);
+            }
+        }
+
+        async function loadShopsFromDatabase(apiKey) {
+            try {
+                const token = localStorage.getItem('authToken');
                 const response = await fetch('/.netlify/functions/printify-proxy', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${BulkAppState.apiKey}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        endpoint,
-                        method,
-                        body
+                        endpoint: '/v1/shops.json',
+                        method: 'GET'
                     })
                 });
+
+                const data = await response.json();
                 
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || `API Error: ${response.status}`);
+                if (data.success && data.data) {
+                    const shops = data.data;
+                    if (shops.length > 0) {
+                        BulkAppState.shops = shops;
+                        populateShops(shops);
+                    } else {
+                        showError('No shops found. Please check your Printify account.');
+                    }
+                } else {
+                    showError('Error loading shops. Please check your API key in dashboard settings.');
                 }
-                
-                return result.data;
+            } catch (error) {
+                showError('Error connecting to Printify API');
             }
+        }
 
-            // --- GLOBAL STATE --- 
-            const BulkAppState = {
-                apiKey: '',
-                shops: [],
-                selectedShop: null,
-                allBlueprints: [],
-                filteredBlueprints: [],
-                currentPage: 1,
-                pageSize: 24, // 4 rows of 6 products
-                selectedBlueprint: null,
-                selectedProvider: null,
-                variants: [],
-                selectedVariants: new Set(),
-                generatedDesigns: [],
-                selectedDesign: null,
-                printAreas: [],
-                designAssignments: new Map(),
-                selectedProducts: new Set(), // Track selected products
-                productAssignments: new Map(), // Track product-provider mappings
-                bulkSettings: {
-                    titleTemplate: '',
-                    descriptionTemplate: '',
-                    tags: []
-                }
-            };
-
-        // --- UTILITY FUNCTIONS ---
-        function showStep(stepNumber) {
-            document.querySelectorAll('.step-container').forEach(container => container.classList.remove('active'));
-            document.getElementById(`step${stepNumber}-container`).classList.add('active');
-            document.querySelectorAll('.step-indicator .step').forEach((step, index) => {
-                step.classList.remove('active', 'completed');
-                if (index + 1 === stepNumber) step.classList.add('active');
-                else if (index + 1 < stepNumber) step.classList.add('completed');
+        function populateShops(shops) {
+            const shopSelect = document.getElementById('shopSelect');
+            shopSelect.innerHTML = '<option value="">-- Select a Shop --</option>';
+            shops.forEach(shop => {
+                shopSelect.innerHTML += `<option value="${shop.id}">${shop.title}</option>`;
             });
+            
+            // Enable shop selection
+            shopSelect.disabled = false;
+            
+            // Handle shop selection change
+            shopSelect.addEventListener('change', function() {
+                if (this.value) {
+                    BulkAppState.selectedShop = this.value;
+                    document.getElementById('selectShopBtn').disabled = false;
+                } else {
+                    document.getElementById('selectShopBtn').disabled = true;
+                }
+            });
+
+            // Handle continue button click
+            document.getElementById('selectShopBtn').addEventListener('click', function() {
+                if (BulkAppState.selectedShop) {
+                    proceedToStep2();
+                }
+            });
+        }
+
+        function proceedToStep2() {
+            // Hide step 1, show step 2
+            document.getElementById('step1-container').classList.remove('active');
+            document.getElementById('step2-container').classList.add('active');
+            
+            // Update step indicator
+            document.getElementById('step-indicator-1').classList.remove('active');
+            document.getElementById('step-indicator-1').classList.add('completed');
+            document.getElementById('step-indicator-2').classList.add('active');
+            
+            // Load products for the selected shop
+            loadProductsForShop();
+        }
+
+        async function loadProductsForShop() {
+            console.log('Loading products for shop:', BulkAppState.selectedShop);
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch('/.netlify/functions/printify-proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        endpoint: `/v1/catalog/blueprints.json`,
+                        method: 'GET'
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Products response:', data);
+                
+                if (data.success && data.data) {
+                    // Handle paginated response format
+                    const products = Array.isArray(data.data) ? data.data : data.data.data || [];
+                    populateProducts(products);
+                } else {
+                    populateProducts([]);
+                    showNotification('No products found for this shop', 'info');
+                }
+            } catch (error) {
+                showError('Error connecting to Printify API');
+                console.error('Error:', error);
+            }
+        }
+
+        // Pagination state
+        let currentPage = 1;
+        const productsPerPage = 12;
+        let allProducts = [];
+
+        function populateProducts(products) {
+            // Ensure each product has a blueprint_id
+            allProducts = products.map(product => ({
+                ...product,
+                // Use the product's id as blueprint_id if not already present
+                blueprint_id: product.blueprint_id || product.id
+            }));
+            currentPage = 1;
+            renderProductsPage();
         }
 
         function updateSelectedCount() {
             const count = BulkAppState.selectedProducts.size;
             document.getElementById('selectedCount').textContent = count;
-            document.getElementById('selectProductsBtn').disabled = count === 0;
-            // document.getElementById('summaryProductCount').textContent = count;
+            
+            const continueBtn = document.getElementById('selectProductsBtn');
+            continueBtn.disabled = count === 0;
+            
+            // Update button text based on selection
+            if (count > 0) {
+                continueBtn.innerHTML = `<i class="bi bi-arrow-right"></i> Continue with ${count} product${count === 1 ? '' : 's'}`;
+            } else {
+                continueBtn.innerHTML = '<i class="bi bi-arrow-right"></i> Continue to Design';
+            }
         }
 
-        function showError(message) {
-            const statusDiv = document.getElementById('apiStatus');
-            statusDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
-        }
-
-        function validateApiKey() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const verifyBtn = document.getElementById('verifyApiBtn');
-            verifyBtn.disabled = !apiKey;
-        }
-
-        // --- STEP 1: API & SHOP --- 
-        async function verifyApiKeyAndLoadShops() {
-            const apiKeyInput = document.getElementById('apiKey');
-            const apiKey = apiKeyInput.value.trim();
-            if (!apiKey) {
-                alert('Please enter your Printify API Key.');
+        function renderProductsPage() {
+            const productsGrid = document.getElementById('productsGrid');
+            const startIndex = (currentPage - 1) * productsPerPage;
+            const endIndex = startIndex + productsPerPage;
+            const pageProducts = allProducts.slice(startIndex, endIndex);
+            
+            productsGrid.innerHTML = '';
+            
+            if (allProducts.length === 0) {
+                productsGrid.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="text-muted">
+                            <i class="fas fa-box-open fa-3x mb-3"></i>
+                            <h5>No products found</h5>
+                            <p>Try selecting a different shop or check your connection.</p>
+                        </div>
+                    </div>
+                `;
                 return;
             }
-            BulkAppState.apiKey = apiKey;
-            const statusDiv = document.getElementById('apiStatus');
+            
+            pageProducts.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'col-lg-3 col-md-4 col-sm-6 mb-4';
+                
+                // Get the first image or use a placeholder
+                const imageUrl = product.images && product.images.length > 0 
+                    ? product.images[0] 
+                    : 'https://via.placeholder.com/300x300?text=No+Image';
+                
+                productCard.innerHTML = `
+                    <div class="card h-100 shadow-sm product-card" style="transition: all 0.3s ease; border: none; border-radius: 12px;">
+                        <div class="position-relative overflow-hidden" style="border-radius: 12px 12px 0 0;">
+                            <img src="${imageUrl}" class="card-img-top" alt="${product.title}" 
+                                 style="height: 200px; object-fit: cover; transition: transform 0.3s ease;"
+                                 onmouseover="this.style.transform='scale(1.05)'"
+                                 onmouseout="this.style.transform='scale(1)'">
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <div class="form-check">
+                                    <input class="form-check-input product-checkbox" type="checkbox" 
+                                           value="${product.id}" id="product-${product.id}"
+                                           style="transform: scale(1.2);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <div class="mb-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary small">${product.brand || 'Printify'}</span>
+                            </div>
+                            <h6 class="card-title fw-bold mb-2" style="color: #2c3e50; line-height: 1.3;">
+                                ${product.title || 'Untitled Product'}
+                            </h6>
+                            <p class="card-text text-muted small mb-3 flex-grow-1" style="line-height: 1.4;">
+                                ${product.description ? (product.description.length > 80 ? product.description.substring(0, 80) + '...' : product.description) : 'Premium quality product ready for customization'}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <small class="text-muted">ID: ${product.id}</small>
+                                <button class="btn btn-outline-primary btn-sm" onclick="selectProduct(${product.id})" style="border-radius: 20px;">
+                                    <i class="fas fa-plus me-1"></i>Select
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                productsGrid.appendChild(productCard);
+            });
+            
+            // Add pagination controls
+            renderPagination();
+            
+            // Add event listeners for checkboxes and restore selection state
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                // Ensure consistent string comparison for product IDs
+                const productId = String(checkbox.value);
+                checkbox.checked = BulkAppState.selectedProducts.has(productId);
+                checkbox.addEventListener('change', function() {
+                    const id = String(this.value);
+                    if (this.checked) {
+                        BulkAppState.selectedProducts.add(id);
+                    } else {
+                        BulkAppState.selectedProducts.delete(id);
+                    }
+                    updateSelectedCount();
+                });
+            });
+            
+            // Add hover effects
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                });
+            });
+        }
+
+        function renderPagination() {
+            const totalPages = Math.ceil(allProducts.length / productsPerPage);
+            const paginationContainer = document.getElementById('paginationContainer') || createPaginationContainer();
+            
+            if (totalPages <= 1) {
+                paginationContainer.style.display = 'none';
+                return;
+            }
+            
+            paginationContainer.style.display = 'block';
+            
+            let paginationHTML = `
+                <nav aria-label="Product pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" style="border-radius: 8px 0 0 8px;">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+            `;
+            
+            // Show page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                    </li>
+                `;
+            }
+            
+            paginationHTML += `
+                        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" style="border-radius: 0 8px 8px 0;">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        Showing ${((currentPage - 1) * productsPerPage) + 1}-${Math.min(currentPage * productsPerPage, allProducts.length)} of ${allProducts.length} products
+                    </small>
+                </div>
+            `;
+            
+            paginationContainer.innerHTML = paginationHTML;
+        }
+
+        function createPaginationContainer() {
+            const container = document.createElement('div');
+            container.id = 'paginationContainer';
+            container.className = 'mt-4';
+            document.getElementById('productsGrid').parentNode.appendChild(container);
+            return container;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(allProducts.length / productsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderProductsPage();
+                // Scroll to top of products
+                document.getElementById('productsGrid').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function selectProduct(productId) {
+            const checkbox = document.getElementById(`product-${productId}`);
+            checkbox.checked = !checkbox.checked;
+            updateSelectedCount();
+        }
+
+        // Load shops on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeBulkApp();
+            
+            // Add event listener for continue button
+            document.getElementById('selectProductsBtn').addEventListener('click', function() {
+                if (BulkAppState.selectedProducts.size > 0) {
+                    proceedToStep3();
+                }
+            });
+        });
+        
+        function proceedToStep3() {
+            // Get complete product data for selected products
+            const selectedProductsData = allProducts.filter(p => 
+                BulkAppState.selectedProducts.has(p.id.toString())
+            );
+            
+            // Store selected products in session storage for next step
+            sessionStorage.setItem('bulkSelectedProducts', JSON.stringify(selectedProductsData.map(p => p.id)));
+            sessionStorage.setItem('bulkSelectedShop', BulkAppState.selectedShop);
+            
+            // Navigate to the next step (step 3: design assignment)
+            document.getElementById('step2-container').classList.remove('active');
+            document.getElementById('step3-container').classList.add('active');
+            
+            // Update step indicator
+            document.getElementById('step-indicator-2').classList.remove('active');
+            document.getElementById('step-indicator-2').classList.add('completed');
+            document.getElementById('step-indicator-3').classList.add('active');
+            
+            // Populate step 3 with selected products
+            populateStep3(selectedProductsData);
+        }
+        
+        async function populateStep3(selectedProducts) {
+            const step3Content = document.getElementById('step3-content');
+            if (!step3Content) {
+                console.error('Step 3 content element not found');
+                return;
+            }
+            
+            if (!Array.isArray(selectedProducts) || selectedProducts.length === 0) {
+                console.error('No products selected or invalid product data');
+                step3Content.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        No products selected or invalid product data. Please go back and try again.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show loading state
+            step3Content.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading print areas...</span>
+                    </div>
+                    <p class="text-muted">Loading print areas for ${selectedProducts.length} product${selectedProducts.length === 1 ? '' : 's'}...</p>
+                </div>
+            `;
             
             try {
-                const shops = await makeApiCall('/shops.json');
-                if (!shops || shops.length === 0) throw new Error('No shops found for this API key.');
+                // Process the selected products
+                const printAreaData = {};
                 
-                BulkAppState.shops = shops;
-                localStorage.setItem('printifyApiKey', apiKey);
-                statusDiv.innerHTML = `<div class="alert alert-success">API Key is valid. Found ${shops.length} shop(s).</div>`;
+                for (const product of selectedProducts) {
+                    if (!product || !product.blueprint_id) {
+                        console.warn('Skipping product with missing blueprint_id:', product);
+                        continue;
+                    }
+                    
+                    try {
+                        console.log('Fetching print areas for product:', product.id, 'Blueprint ID:', product.blueprint_id);
+                        const areas = await fetchProductPrintAreas(product);
+                        printAreaData[product.id] = areas;
+                    } catch (error) {
+                        console.error(`Error fetching print areas for product ${product.id}:`, error);
+                        // Use default print areas if there's an error
+                        printAreaData[product.id] = [
+                            {
+                                id: 'front',
+                                name: 'Front',
+                                dimensions: '3000×3000px (10×10")',
+                                width: 3000,
+                                height: 3000,
+                                icon: 'bi-square'
+                            },
+                            {
+                                id: 'back',
+                                name: 'Back',
+                                dimensions: '3000×3000px (10×10")',
+                                width: 3000,
+                                height: 3000,
+                                icon: 'bi-square'
+                            }
+                        ];
+                    }
+                }
                 
-                const shopSelect = document.getElementById('shopSelect');
-                shopSelect.innerHTML = '<option value="">-- Select a Shop --</option>';
-                shops.forEach(shop => {
-                    shopSelect.innerHTML += `<option value="${shop.id}">${shop.title}</option>`;
+                let html = `
+                    <div class="mb-4">
+                        <p class="lead">Configure designs and print areas for your <strong>${selectedProducts.length} selected product${selectedProducts.length === 1 ? '' : 's'}</strong></p>
+                        <p class="text-muted small">Actual dimensions loaded from Printify API</p>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                            <thead class="table-dark" style="background: linear-gradient(135deg, #0f172a, #1e293b);">
+                                <tr>
+                                    <th scope="col" style="padding: 1rem; font-weight: 600;">Product</th>
+                                    <th scope="col" style="padding: 1rem; font-weight: 600;">Print Areas (Max 2)</th>
+                                    <th scope="col" style="padding: 1rem; font-weight: 600;">Preview</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${selectedProducts.map((product, index) => {
+                                    const areas = printAreaData[product.id] || [];
+                                    return `
+                                        <tr style="border: none; background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                                            <td style="padding: 1.5rem 1rem;">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="product-image-container me-3" style="width: 80px; height: 80px; border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; background: #f8fafc;">
+                                                        <img src="${product.images && product.images[0] ? product.images[0] : 'https://via.placeholder.com/80x80/e5e7eb/64748b?text=No+Image'}" 
+                                                             alt="${product.title}" 
+                                                             class="img-fluid" 
+                                                             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
+                                                             onmouseover="this.style.transform='scale(1.1)'" 
+                                                             onmouseout="this.style.transform='scale(1)'">
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-1 fw-bold" style="color: #1e293b; font-size: 0.95rem;">${product.title}</h6>
+                                                        <p class="mb-0 text-muted small">ID: ${product.id}</p>
+                                                        <span class="badge bg-primary bg-opacity-10 text-primary small">${product.brand || 'Printify'}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="padding: 1.5rem 1rem;">
+                                                <div class="print-areas-container" data-product-id="${product.id}">
+                                                    ${areas.map(area => `
+                                                        <div class="form-check form-check-inline mb-2">
+                                                            <input class="form-check-input print-area-checkbox" 
+                                                                   type="checkbox" 
+                                                                   id="area-${product.id}-${area.id}" 
+                                                                   value="${area.id}"
+                                                                   data-product-id="${product.id}"
+                                                                   onchange="limitPrintAreas(this)"
+                                                                   style="transform: scale(1.1);">
+                                                            <label class="form-check-label small fw-medium" for="area-${product.id}-${area.id}" style="color: #374151;">
+                                                                <i class="bi ${area.icon} me-1"></i>${area.name} 
+                                                                <span class="text-muted">(${area.dimensions})</span>
+                                                            </label>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </td>
+                                            <td style="padding: 1.5rem 1rem;">
+                                                <div class="preview-container" data-product-id="${product.id}">
+                                                    <div class="preview-placeholder d-flex align-items-center justify-content-center" 
+                                                         style="width: 60px; height: 60px; border-radius: 8px; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border: 2px dashed #cbd5e1;">
+                                                        <i class="bi bi-eye text-muted"></i>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        <div class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Select up to 2 print areas per product
+                        </div>
+                        <button class="btn btn-primary btn-lg" onclick="proceedToStep4()" style="border-radius: 25px; padding: 0.75rem 2rem;">
+                            <i class="bi bi-arrow-right me-2"></i>Continue to Generate
+                        </button>
+                    </div>
+                `;
+                
+                step3Content.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading print areas:', error);
+                step3Content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error loading print areas: ${error.message}
+                        <br><br>
+                        <button class="btn btn-outline-primary" onclick="populateStep3()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
+        async function fetchProductPrintAreas(product) {
+            try {
+                if (!product || !product.blueprint_id) {
+                    throw new Error('Invalid product data: missing blueprint_id');
+                }
+
+                // Use the proxy endpoint to avoid CORS issues
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // First, get print providers for this blueprint
+                const printProvidersResponse = await fetch('/.netlify/functions/printify-proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        endpoint: `/v1/catalog/blueprints/${product.blueprint_id}/print_providers.json`,
+                        method: 'GET'
+                    })
                 });
                 
-                // Enable the shop selection button
-                document.getElementById('selectShopBtn').disabled = false;
+                if (!printProvidersResponse.ok) {
+                    const error = await printProvidersResponse.text();
+                    throw new Error(`Failed to fetch print providers: ${printProvidersResponse.status} ${error}`);
+                }
                 
-                setTimeout(() => showStep(2), 500);
+                const result = await printProvidersResponse.json();
+                const printProviders = result.data;
+                
+                if (!printProviders || printProviders.length === 0) {
+                    throw new Error('No print providers found for this product');
+                }
+                
+                // Get variants for the first print provider
+                const printProviderId = printProviders[0].id;
+                const variantsResponse = await fetch('/.netlify/functions/printify-proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        endpoint: `/v1/catalog/blueprints/${product.blueprint_id}/print_providers/${printProviderId}/variants.json`,
+                        method: 'GET'
+                    })
+                });
+                
+                if (!variantsResponse.ok) {
+                    const error = await variantsResponse.text();
+                    throw new Error(`Failed to fetch variants: ${variantsResponse.status} ${error}`);
+                }
+                
+                const variantsResult = await variantsResponse.json();
+                const variants = variantsResult.data;
+                
+                if (!variants || variants.length === 0) {
+                    throw new Error('No variants found for this product');
+                }
+                
+                // Extract print areas from the first variant
+                const firstVariant = variants[0];
+                const placeholders = firstVariant.placeholders || [];
+                
+                // Convert placeholders to print area format
+                return placeholders.map((placeholder, index) => {
+                    const widthInches = (placeholder.width / 300).toFixed(1);
+                    const heightInches = (placeholder.height / 300).toFixed(1);
+                    
+                    return {
+                        id: placeholder.position,
+                        name: placeholder.position.charAt(0).toUpperCase() + placeholder.position.slice(1),
+                        dimensions: `${placeholder.width}×${placeholder.height}px (${widthInches}×${heightInches}")`,
+                        width: placeholder.width,
+                        height: placeholder.height,
+                        icon: getPrintAreaIcon(placeholder.position)
+                    };
+                });
+                
             } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                console.error('Error fetching print areas:', error);
+                
+                // Fallback to mock data if API fails
+                return [
+                    {
+                        id: 'front',
+                        name: 'Front',
+                        dimensions: '3000×3000px (10×10")',
+                        width: 3000,
+                        height: 3000,
+                        icon: 'bi-square'
+                    },
+                    {
+                        id: 'back',
+                        name: 'Back',
+                        dimensions: '3000×3000px (10×10")',
+                        width: 3000,
+                        height: 3000,
+                        icon: 'bi-square'
+                    }
+                ];
             }
         }
+        
+        function getPrintAreaIcon(position) {
+            const iconMap = {
+                'front': 'bi-front',
+                'back': 'bi-back',
+                'left': 'bi-arrow-left-square',
+                'right': 'bi-arrow-right-square',
+                'center': 'bi-record-circle',
+                'top': 'bi-arrow-up-square',
+                'bottom': 'bi-arrow-down-square'
+            };
+            return iconMap[position] || 'bi-square';
+        }
 
-        // --- STEP 2: PRODUCT SELECTION ---
-        async function loadBulkBlueprints() {
-            const productsGrid = document.getElementById('productsGrid');
-            productsGrid.innerHTML = '<div class="text-center"><div class="spinner-border"></div> Loading products...</div>';
+        function limitPrintAreas(checkbox) {
+            const productId = checkbox.dataset.productId;
+            const container = document.querySelector(`[data-product-id="${productId}"].print-areas-container`);
+            const checkedBoxes = container.querySelectorAll('input[type="checkbox"]:checked');
             
-            try {
-                const blueprints = await makeApiCall('/catalog/blueprints.json');
-                BulkAppState.allBlueprints = blueprints;
-                BulkAppState.filteredBlueprints = blueprints;
+            if (checkedBoxes.length > 2) {
+                checkbox.checked = false;
+                // Show a subtle notification
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+                notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 300px;';
+                notification.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Maximum 2 print areas per product
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(notification);
                 
-                displayProductsPage(1);
-                setupProductSelectionEvents();
-                
-            } catch (error) {
-                productsGrid.innerHTML = `<div class="alert alert-danger">Error loading products: ${error.message}</div>`;
-                alert(`Error loading products: ${error.message}`);
+                // Auto-remove after 3 seconds
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 3000);
             }
         }
 
-        function createProductGroup(brandName, products) {
-            return `
-                <div class="col-12 mb-3">
-                    <h5>${brandName}</h5>
-                    <div class="row">
-                        ${products.map(product => `
-                            <div class="col-md-3 col-lg-2 mb-3">
-                                <div class="product-card" data-product-id="${product.id}" data-product-title="${product.title}">
-                                    <input type="checkbox" class="product-checkbox form-check-input" data-product-id="${product.id}">
-                                    <img src="${product.thumbnail_url || product.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEw0NSAzNUw1MCA0MEw0NSA0NUw0MCA0MFoiIGZpbGw9IiM5Qjk5OUIiLz4KPC9zdmc+Cg=='}" 
-                                 alt="${product.title}" class="product-image" 
-                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEw0NSAzNUw1MCA0MEw0NSA0NUw0MCA0MFoiIGZpbGw9IiM5Qjk5OUIiLz4KPC9zdmc+Cg=='">
-                                    <div class="product-info">
-                                        <h6>${product.title}</h6>
-                                        <small class="text-muted">${product.brand || 'Generic'}</small>
+        function proceedToStep4() {
+            // Collect print areas for each selected product
+            const selectedProductIds = Array.from(BulkAppState.selectedProducts);
+            const designs = selectedProductIds.map(productId => {
+                const printAreaCheckboxes = document.querySelectorAll(`input[data-product-id="${productId}"].print-area-checkbox:checked`);
+                const selectedAreas = Array.from(printAreaCheckboxes).map(cb => cb.value);
+                
+                return {
+                    productId: productId,
+                    printAreas: selectedAreas
+                };
+            });
+            
+            sessionStorage.setItem('bulkDesigns', JSON.stringify(designs));
+            
+            // Show final step
+            document.getElementById('step3-container').classList.remove('active');
+            document.getElementById('step4-container').classList.add('active');
+            
+            document.getElementById('step-indicator-3').classList.remove('active');
+            document.getElementById('step-indicator-3').classList.add('completed');
+            document.getElementById('step-indicator-4').classList.add('active');
+            
+            // Show generation interface
+            populateStep4();
+        }
+        
+        function populateStep4() {
+            const step4Container = document.getElementById('step4-container');
+            const selectedProductIds = JSON.parse(sessionStorage.getItem('bulkSelectedProducts') || '[]');
+            const designs = JSON.parse(sessionStorage.getItem('bulkDesigns') || '[]');
+            
+            // Convert product IDs to full product objects
+            const selectedProducts = allProducts.filter(p => selectedProductIds.includes(p.id.toString()));
+            
+            // Group print areas by similar sizes
+            const printAreaSizes = groupPrintAreaSizes(designs, selectedProducts);
+            
+            step4Container.innerHTML = `
+                <div class="row">
+                    <!-- Design Generation Panel -->
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <h4><i class="bi bi-magic"></i> AI Design Generation</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <label class="form-label fw-bold">Design Prompt</label>
+                                        <textarea class="form-control mb-3" id="bulkPrompt" rows="3" 
+                                                  placeholder="Describe your design idea... (e.g., 'Minimalist mountain landscape with geometric shapes')"
+                                                  style="border-radius: 12px; border: 2px solid #e5e7eb; resize: vertical;"></textarea>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Print Area Sizes</label>
+                                        <div class="size-selection">
+                                            ${printAreaSizes.map(sizeGroup => `
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="size-${sizeGroup.id}" value="${sizeGroup.dimensions}" checked>
+                                                    <label class="form-check-label small" for="size-${sizeGroup.id}">
+                                                        <strong>${sizeGroup.dimensions}</strong><br>
+                                                        <span class="text-muted">${sizeGroup.count} area${sizeGroup.count > 1 ? 's' : ''}</span>
+                                                    </label>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Style</label>
+                                        <select class="form-select" id="bulkStyle">
+                                            <option value="modern">Modern</option>
+                                            <option value="vintage">Vintage</option>
+                                            <option value="minimalist">Minimalist</option>
+                                            <option value="artistic">Artistic</option>
+                                            <option value="trendy">Trendy</option>
+                                            <option value="abstract">Abstract</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Colors</label>
+                                        <select class="form-select" id="bulkColors">
+                                            <option value="vibrant">Vibrant</option>
+                                            <option value="pastel">Pastel</option>
+                                            <option value="monochrome">Monochrome</option>
+                                            <option value="earth">Earth Tones</option>
+                                            <option value="neon">Neon</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Target</label>
+                                        <select class="form-select" id="bulkAudience">
+                                            <option value="young-adults">Young Adults</option>
+                                            <option value="adults">Adults</option>
+                                            <option value="mature">Mature</option>
+                                            <option value="unisex">Unisex</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Model</label>
+                                        <select class="form-select" id="bulkModel">
+                                            <option value="flux-dev">Flux Dev</option>
+                                            <option value="flux-schnell">Flux Schnell</option>
+                                            <option value="flux-pro">Flux Pro</option>
+                                            <option value="recraft-v3">Recraft V3</option>
+                                            <option value="ideogram-v2">Ideogram V2</option>
+                                            <option value="flux-lora">Flux LoRA</option>
+                                            <option value="imagen4-preview">Imagen4 Preview</option>
+                                            <option value="nano-banana">Nano Banana</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <button class="btn btn-primary btn-lg" onclick="generateDesigns()" id="generateBtn">
+                                        <i class="bi bi-magic"></i> Generate Designs
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="savePrompt()" id="savePromptBtn">
+                                        <i class="bi bi-bookmark"></i> Save Prompt
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Generated Images Display -->
+                        <div class="card" id="generatedImagesCard" style="display: none;">
+                            <div class="card-header">
+                                <h5><i class="bi bi-images"></i> Generated Designs</h5>
+                            </div>
+                            <div class="card-body" id="generatedImagesContainer">
+                                <!-- Generated images will appear here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Design Assignment Table -->
+                        <div class="card mt-4" id="assignmentTableCard" style="display: none;">
+                            <div class="card-header">
+                                <h5><i class="bi bi-grid-3x3-gap"></i> Assign Designs to Print Areas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="assignmentTable">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>Print Area</th>
+                                                <th>Size</th>
+                                                <th>Assigned Design</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="assignmentTableBody">
+                                            <!-- Assignment rows will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-center mt-4">
+                                    <button class="btn btn-success btn-lg" onclick="createBulkProducts()" id="createProductsBtn" disabled>
+                                        <i class="bi bi-check-circle"></i> Create All Products
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Sidebar -->
+                    <div class="col-lg-4">
+                        <div class="card sticky-top" style="top: 20px;">
+                            <div class="card-header bg-light">
+                                <h6><i class="bi bi-info-circle"></i> Project Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>Products:</strong> ${selectedProducts.length}
+                                    <div class="small text-muted">
+                                        ${selectedProducts.map(p => p.title).join(', ')}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Shop:</strong> ${sessionStorage.getItem('bulkSelectedShop') || 'Not selected'}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Print Areas:</strong> ${designs.reduce((total, d) => total + d.printAreas.length, 0)}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Unique Sizes:</strong> ${printAreaSizes.length}
+                                    <div class="small text-muted">
+                                        ${printAreaSizes.map(s => s.dimensions).join(', ')}
                                     </div>
                                 </div>
                             </div>
-                        `).join('')}
+                        </div>
+                        
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h6><i class="bi bi-lightbulb"></i> Pro Tips</h6>
+                            </div>
+                            <div class="card-body">
+                                <small>
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Be specific in your prompts</li>
+                                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Generate multiple sizes for versatility</li>
+                                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Use edit tools to perfect designs</li>
+                                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Save prompts for future use</li>
+                                    </ul>
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }
-
-        function displayProductsPage(page) {
-            BulkAppState.currentPage = page;
-            const productsGrid = document.getElementById('productsGrid');
-            const { filteredBlueprints, pageSize } = BulkAppState;
-
-            const startIndex = (page - 1) * pageSize;
-            const endIndex = startIndex + pageSize;
-            const pageBlueprints = filteredBlueprints.slice(startIndex, endIndex);
-
-            const brandGroups = {};
-            pageBlueprints.forEach(bp => {
-                const brand = bp.brand || 'Other';
-                if (!brandGroups[brand]) brandGroups[brand] = [];
-                brandGroups[brand].push(bp);
-            });
-
-            productsGrid.innerHTML = '';
-            Object.keys(brandGroups).sort().forEach(brand => {
-                if (brandGroups[brand].length > 0) {
-                    const groupHtml = createProductGroup(brand, brandGroups[brand]);
-                    productsGrid.innerHTML += groupHtml;
-                }
-            });
-
-            setupPaginationControls();
-        }
-
-        function setupPaginationControls() {
-            const { currentPage, pageSize, filteredBlueprints } = BulkAppState;
-            const totalPages = Math.ceil(filteredBlueprints.length / pageSize);
-            const paginationControls = document.getElementById('paginationControls');
-
-            if (totalPages <= 1) {
-                paginationControls.innerHTML = '';
-                return;
-            }
-
-            let paginationHtml = '<nav><ul class="pagination">';
-
-            // Previous button
-            paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="displayProductsPage(${currentPage - 1})">Previous</a></li>`;
-
-            // Page numbers
-            for (let i = 1; i <= totalPages; i++) {
-                paginationHtml += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="displayProductsPage(${i})">${i}</a></li>`;
-            }
-
-            // Next button
-            paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="displayProductsPage(${currentPage + 1})">Next</a></li>`;
-
-            paginationHtml += '</ul></nav>';
-            paginationControls.innerHTML = paginationHtml;
-        }
-
-        function setupProductSelectionEvents() {
-            // Use event delegation for dynamic content
-            document.getElementById('productsGrid').addEventListener('click', function(e) {
-                if (e.target.classList.contains('product-checkbox')) {
-                    handleProductSelection(e.target);
-                } else if (e.target.closest('.product-card')) {
-                    const card = e.target.closest('.product-card');
-                    const checkbox = card.querySelector('.product-checkbox');
-                    if (!e.target.classList.contains('product-checkbox')) {
-                        checkbox.checked = !checkbox.checked;
-                        handleProductSelection(checkbox);
-                    }
-                }
-            });
-
-            // Select/Clear All buttons
-            document.getElementById('selectAllBtn').addEventListener('click', () => {
-                document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                    checkbox.checked = true;
-                    handleProductSelection(checkbox);
-                });
-            });
-
-            document.getElementById('clearAllBtn').addEventListener('click', () => {
-                document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                    checkbox.checked = false;
-                    handleProductSelection(checkbox);
-                });
-            });
-
-            // Product search
-            document.getElementById('productSearch').addEventListener('input', function(e) {
-                const searchTerm = e.target.value.toLowerCase();
-                BulkAppState.filteredBlueprints = BulkAppState.allBlueprints.filter(bp => {
-                    const title = bp.title.toLowerCase();
-                    const brand = (bp.brand || 'Other').toLowerCase();
-                    return title.includes(searchTerm) || brand.includes(searchTerm);
-                });
-                displayProductsPage(1);
-            });
-
-            // Clear search
-            document.getElementById('clearSearchBtn').addEventListener('click', () => {
-                document.getElementById('productSearch').value = '';
-                BulkAppState.filteredBlueprints = BulkAppState.allBlueprints;
-                displayProductsPage(1);
-            });
-        }
-
-        async function loadProvidersForSelectedProducts() {
-            const selectedProducts = Array.from(BulkAppState.selectedProducts);
-            if (selectedProducts.length === 0) {
-                alert('Please select at least one product');
-                return;
-            }
-
-            const statusDiv = document.createElement('div');
-            statusDiv.innerHTML = '<div class="text-center"><div class="spinner-border"></div> Loading providers for selected products...</div>';
-            document.getElementById('step3-container').appendChild(statusDiv);
-
-            BulkAppState.productAssignments.clear();
-
-            try {
-                for (const productId of selectedProducts) {
-                    const blueprint = await makeApiCall(`/catalog/blueprints/${productId}.json`);
-                    const providers = await makeApiCall(`/catalog/blueprints/${productId}/print_providers.json`);
+        
+        // Global state for generated images
+        let generatedImages = [];
+        let assignmentData = {};
+        
+        function groupPrintAreaSizes(designs, selectedProducts) {
+            const sizeGroups = new Map();
+            
+            designs.forEach(design => {
+                const product = selectedProducts.find(p => p.id.toString() === design.productId.toString());
+                if (!product) return;
+                
+                design.printAreas.forEach(areaId => {
+                    // Get actual print area dimensions from cached API data
+                    const printAreaData = JSON.parse(sessionStorage.getItem('printAreaData') || '{}');
+                    const productAreas = printAreaData[design.productId] || [];
                     
-                    if (providers.length === 0) {
-                        console.warn(`No providers found for product ${productId}`);
-                        continue;
-                    }
-
-                    // Auto-select first provider
-                    const provider = providers[0];
-                    const variants = await makeApiCall(`/catalog/blueprints/${productId}/print_providers/${provider.id}/variants.json`);
+                    const area = productAreas.find(a => a.id === areaId);
+                    const dimensions = area ? `${area.width}×${area.height}px` : '3000×3000px';
                     
-                    if (!variants.variants || variants.variants.length === 0) {
-                        console.warn(`No variants found for product ${productId} with provider ${provider.id}`);
-                        continue;
-                    }
-
-                    // Extract print areas from variants
-                    const printAreasMap = new Map();
-                    variants.variants.forEach(variant => {
-                        (variant.placeholders || []).forEach(p => {
-                            if (!printAreasMap.has(p.position)) {
-                                printAreasMap.set(p.position, {
-                                    id: p.position,
-                                    title: p.position.charAt(0).toUpperCase() + p.position.slice(1).replace('_', ' ')
-                                });
-                            }
+                    if (!sizeGroups.has(dimensions)) {
+                        sizeGroups.set(dimensions, {
+                            id: dimensions.replace(/[^\w]/g, ''),
+                            dimensions: dimensions,
+                            count: 0,
+                            areas: [],
+                            width: area ? area.width : 3000,
+                            height: area ? area.height : 3000
                         });
-                    });
-
-                    BulkAppState.productAssignments.set(productId, {
-                        blueprint: blueprint,
-                        provider: provider,
-                        variants: variants.variants,
-                        printAreas: Array.from(printAreasMap.values()),
-                        designAssignments: new Map()
-                    });
-                }
-
-                console.log(`Loaded providers for ${selectedProducts.length} products`);
-                showStep(4);
-                
-            } catch (error) {
-                alert(`Error loading providers: ${error.message}`);
-                console.error('Error loading providers:', error);
-            } finally {
-                statusDiv.remove();
-            }
-        }
-
-        function handleProductSelection(checkbox) {
-            const productId = checkbox.dataset.productId;
-            const productCard = checkbox.closest('.product-card');
-            
-            if (checkbox.checked) {
-                BulkAppState.selectedProducts.add(productId);
-                productCard.classList.add('selected');
-            } else {
-                BulkAppState.selectedProducts.delete(productId);
-                productCard.classList.remove('selected');
-            }
-            
-            updateSelectedCount();
-        }
-
-        // --- INITIALIZATION ---
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing bulk creator...');
-            
-            // Load saved API key
-            const savedApiKey = localStorage.getItem('printifyApiKey');
-            if (savedApiKey) {
-                const apiKeyInput = document.getElementById('apiKey');
-                if (apiKeyInput) apiKeyInput.value = savedApiKey;
-                validateApiKey();
-            }
-            
-            // --- SINGLE, PERMANENT LISTENER FOR STEP-2 CONTINUE BUTTON ---
-            document.addEventListener('click', function (e) {
-              if (e.target.id === 'selectShopBtn') {
-                e.preventDefault();
-                const shopId = document.getElementById('shopSelect').value;
-                if (!shopId) { alert('Please select a shop.'); return; }
-
-                const selectedShop = BulkAppState.shops.find(s => s.id == shopId);
-                if (!selectedShop) { alert('Selected shop not found.'); return; }
-
-                BulkAppState.selectedShop = selectedShop;
-                loadBulkBlueprints();
-                showStep(3);
-              }
+                    }
+                    
+                    const group = sizeGroups.get(dimensions);
+                    group.count++;
+                    group.areas.push({ 
+                        productId: design.productId, 
+                areaId, 
+                productTitle: product.title,
+                width: area ? area.width : 3000,
+                height: area ? area.height : 3000
             });
-
-            // Helper function to safely add event listeners
-            function safeAddEventListener(elementId, event, handler) {
-                const element = document.getElementById(elementId);
-                if (element) {
-                    element.addEventListener(event, handler);
-                } else {
-                    console.warn(`Element not found: ${elementId}`);
-                }
-            }
-
-            // Step 1: API Setup
-            safeAddEventListener('apiKey', 'input', validateApiKey);
-            safeAddEventListener('verifyApiBtn', 'click', verifyApiKeyAndLoadShops);
-            safeAddEventListener('apiKey', 'keypress', function(e) {
-                if (e.key === 'Enter') {
-                    verifyApiKeyAndLoadShops();
-                }
-            });
-
-            // Step 3: Product Selection
-            safeAddEventListener('selectProductsBtn', 'click', () => {
-                loadProvidersForSelectedProducts();
-                showStep(4);
-            });
-
-            // Step 4: Design Generation
-            safeAddEventListener('generateBulkDesignsBtn', 'click', generateBulkDesigns);
-            safeAddEventListener('bulkUploadBtn', 'click', handleBulkImageUpload);
-            safeAddEventListener('continueToAssignmentBtn', 'click', () => {
-                showStep(5);
-                buildAssignmentTable();
-            });
-
-            // Step 5: Print Area Assignment & Product Creation
-            safeAddEventListener('generateAiContentBtn_step5', 'click', generateAiContentForProducts);
-            safeAddEventListener('createBulkProductsBtn', 'click', createBulkProducts);
-
-            console.log('Bulk creator initialized with full functionality');
         });
-
-        // --- STEP 4: BULK DESIGN GENERATION ---
-        async function generateBulkDesigns() {
-            const prompt = document.getElementById('designPrompt').value.trim();
-            const numDesigns = parseInt(document.getElementById('numDesigns').value);
-            const model = document.getElementById('aiModel').value;
-            
+    });
+    
+    return Array.from(sizeGroups.values()).sort((a, b) => b.count - a.count);
+}
+        
+        async function generateDesigns() {
+            const prompt = document.getElementById('bulkPrompt').value.trim();
             if (!prompt) {
-                alert('Please enter a design prompt.');
+                alert('Please enter a design prompt');
                 return;
             }
-
-            const statusDiv = document.getElementById('bulkGenerateStatus');
-            const generateBtn = document.getElementById('generateBulkDesignsBtn');
             
+            const generateBtn = document.getElementById('generateBtn');
+            const originalText = generateBtn.innerHTML;
             generateBtn.disabled = true;
-            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
-
+            generateBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
+            
             try {
-                const response = await fetch('https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/generate-image', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, numImages: numDesigns, model })
-                });
-                const result = await response.json();
+                // Get selected sizes
+                const selectedSizes = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+                    .map(cb => cb.value);
                 
-                if (result.success && result.images) {
-                    // Upload generated images to Printify (same as index.html)
-                    const promises = [];
-                    for (let i = 0; i < result.images.length; i++) {
-                        const imgData = result.images[i];
-                        promises.push(
-                            makeApiCall('/uploads/images.json', {
-                                method: 'POST',
-                                body: { file_name: `${prompt.slice(0, 20)}_${i}.png`, url: imgData.url }
-                            })
-                        );
-                    }
-                    const uploadedImages = await Promise.all(promises);
-                    uploadedImages.forEach(img => BulkAppState.generatedDesigns.push(img));
-                    displayGeneratedDesigns();
-                    statusDiv.innerHTML = `<div class="alert alert-success">Successfully generated and uploaded ${result.images.length} design(s) to Printify!</div>`;
-                    document.getElementById('continueToAssignmentBtn').disabled = false;
-                } else {
-                    throw new Error(result.error || 'Generation failed');
+                const style = document.getElementById('bulkStyle').value;
+                const colors = document.getElementById('bulkColors').value;
+                const audience = document.getElementById('bulkAudience').value;
+                
+                // Generate designs for each selected size
+                const imagePromises = selectedSizes.map(size => 
+                    generateImageForSize(prompt, size, style, colors, audience)
+                );
+                
+                const results = await Promise.all(imagePromises);
+                generatedImages = results.filter(r => r && r.image_url).map(r => ({ ...r, size: r.requestedSize }));
+                
+                console.log('Generated images:', generatedImages);
+                displayGeneratedImages();
+                populateAssignmentTable();
+                
+                // Automatically save generated images
+                if (generatedImages.length > 0) {
+                    await saveGeneratedImages();
                 }
+                
             } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                console.error('Generation error:', error);
+                alert('Error generating designs. Please try again.');
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="bi bi-stars"></i> Generate All Designs';
+                generateBtn.innerHTML = originalText;
             }
         }
-
-        // --- CLIENT-SIDE BACKGROUND REMOVAL HELPER ---
-        async function removeBgClientSide(inputDataUrl) {
-            // Dynamically load the library from CDN to avoid bundling
-            // Try multiple CDNs to improve reliability
-            let removeBackground;
+        
+        async function generateImageForSize(prompt, size, style, colors, audience) {
             try {
-                ({ removeBackground } = await import('https://cdn.skypack.dev/@imgly/background-removal'));
-            } catch (e1) {
-                try {
-                    ({ removeBackground } = await import('https://esm.sh/@imgly/background-removal@2?bundle'));
-                } catch (e2) {
-                    ({ removeBackground } = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@2/+esm'));
-                }
-            }
-            // Convert input to Blob without violating CSP (no fetch for data: URLs)
-            let inputBlob;
-            if (typeof inputDataUrl === 'string' && inputDataUrl.startsWith('data:')) {
-                const commaIdx = inputDataUrl.indexOf(',');
-                const header = inputDataUrl.substring(0, commaIdx);
-                const base64 = inputDataUrl.substring(commaIdx + 1);
-                const mimeMatch = header.match(/^data:(.*?);base64$/i);
-                const contentType = (mimeMatch && mimeMatch[1]) ? mimeMatch[1] : 'image/png';
-                const byteChars = atob(base64);
-                const byteNums = new Array(byteChars.length);
-                for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
-                const byteArray = new Uint8Array(byteNums);
-                inputBlob = new Blob([byteArray], { type: contentType });
-            } else {
-                inputBlob = await (await fetch(inputDataUrl)).blob();
-            }
-            // Run background removal (returns a Blob - PNG with alpha)
-            const outputBlob = await removeBackground(inputBlob);
-            // Convert Blob back to Data URL for UI usage
-            return await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(outputBlob);
-            });
-        }
-
-        async function removeBackgroundFromDesign(designIndex) {
-            const design = BulkAppState.generatedDesigns[designIndex];
-            const statusDiv = document.getElementById('bulkGenerateStatus');
-            const removeBgBtn = document.querySelector(`.design-card[data-design-index="${designIndex}"] .remove-bg-btn`);
-
-            if (!design || !design.preview_url) {
-                alert('Could not find the selected design or its image URL.');
-                return;
-            }
-
-            removeBgBtn.disabled = true;
-            removeBgBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Removing...';
-            statusDiv.innerHTML = '<div class="text-info">Removing background...</div>';
-
-            try {
-                // Use proxy to fetch image to bypass CSP restrictions
-                const imageResponse = await fetch('/.netlify/functions/fetch-image', {
+                const selectedModel = document.getElementById('bulkModel')?.value || 'flux-dev';
+                const response = await fetch('/.netlify/functions/generate-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: design.preview_url })
+                    body: JSON.stringify({
+                        prompt: `${prompt}, ${style} style, ${colors} colors, for ${audience}, optimized for ${size} print area`,
+                        model: selectedModel,
+                        size: '1024x1024'
+                    })
                 });
                 
-                if (!imageResponse.ok) {
-                    throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+                const result = await response.json();
+                if (result.success && result.images) {
+                    // Map the response format to expected format
+                    return {
+                        id: result.images[0]?.id || `bulk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        image_url: result.images[0]?.url,
+                        prompt: result.images[0]?.prompt,
+                        width: result.images[0]?.width,
+                        height: result.images[0]?.height,
+                        requestedSize: size,
+                        model: result.model
+                    };
                 }
-                
-                const blob = await imageResponse.blob();
-                const dataUrl = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-
-                // Run client-side background removal using IMG.LY
-                const processedDataUrl = await removeBgClientSide(dataUrl);
-                const designToUpdate = BulkAppState.generatedDesigns[designIndex];
-                if (designToUpdate) {
-                    // Update preview for UI immediately
-                    designToUpdate.preview_url = processedDataUrl;
-                    designToUpdate.source = `${design.source || 'Generated'} (BG Removed)`;
-
-                    // Upload processed image to Printify to obtain a new image ID for final printing
-                    try {
-                        const base64 = processedDataUrl.split(',')[1];
-                        if (base64) {
-                            const uploaded = await makeApiCall('/uploads/images.json', {
-                                method: 'POST',
-                                body: { file_name: `bg-removed-${Date.now()}.png`, contents: base64 }
-                            });
-                            // Persist uploaded image metadata for creation API
-                            if (uploaded && uploaded.id) {
-                                designToUpdate.id = uploaded.id;
-                            }
-                            if (uploaded && uploaded.url) {
-                                designToUpdate.url = uploaded.url;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Failed to upload processed image to Printify; will attempt upload later during creation.', e);
-                    }
-
-                    displayGeneratedDesigns();
-                }
-                statusDiv.innerHTML = `<div class="alert alert-success">Background removed successfully!</div>`;
+                return null;
             } catch (error) {
-                console.error('Error removing background:', error);
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-            } finally {
-                if (removeBgBtn) {
-                    removeBgBtn.disabled = false;
-                    removeBgBtn.innerHTML = '<i class="bi bi-eraser"></i> Remove BG';
-                }
+                console.error('Error generating image for size', size, error);
+                return null;
             }
         }
-
-        // --- BACKGROUND REMOVAL FUNCTION ---
-        async function removeBackgroundsFromDesigns() {
-            if (BulkAppState.generatedDesigns.length === 0) {
-                alert('No designs to process. Generate designs first.');
+        
+        function displayGeneratedImages() {
+            console.log('displayGeneratedImages called with:', generatedImages.length, 'images');
+            const container = document.getElementById('generatedImagesContainer');
+            const card = document.getElementById('generatedImagesCard');
+            
+            if (!container || !card) {
+                console.error('Container or card not found');
                 return;
             }
-
-            const removeBtn = document.getElementById('removeBackgroundsBtn');
-            const statusDiv = document.getElementById('bulkGenerateStatus');
             
-            removeBtn.disabled = true;
-            removeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Removing Backgrounds...';
-            
-            try {
-                statusDiv.innerHTML = `<div class="alert alert-info">Processing ${BulkAppState.generatedDesigns.length} designs for background removal...</div>`;
-                
-                const processedDesigns = [];
-                
-                for (let i = 0; i < BulkAppState.generatedDesigns.length; i++) {
-                    const design = BulkAppState.generatedDesigns[i];
-                    statusDiv.innerHTML = `<div class="alert alert-info">Removing background from design ${i + 1}/${BulkAppState.generatedDesigns.length}...</div>`;
-                    
-                    try {
-                        // Use proxy to fetch image to bypass CSP restrictions
-                        const fetchResponse = await fetch('/.netlify/functions/fetch-image', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: design.preview_url })
-                        });
-                        
-                        if (!fetchResponse.ok) {
-                            throw new Error(`Failed to fetch image: ${fetchResponse.status}`);
-                        }
-                        
-                        const blob = await fetchResponse.blob();
-                        const dataUrl = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result);
-                            reader.onerror = reject;
-                            reader.readAsDataURL(blob);
-                        });
-
-                        // Run client-side background removal using IMG.LY
-                        const processedDataUrl = await removeBgClientSide(dataUrl);
-                        processedDesigns.push({
-                            ...design,
-                            preview_url: processedDataUrl,
-                            source: `${design.source || 'AI Generated'} (Background Removed)`
-                        });
-                    } catch (error) {
-                        console.error('Error removing background from design', i, error);
-                        processedDesigns.push(design); // Keep original if removal fails
-                    }
-                }
-                
-                BulkAppState.generatedDesigns = processedDesigns;
-                displayGeneratedDesigns();
-                statusDiv.innerHTML = `<div class="alert alert-success">Background removal completed! Processed ${processedDesigns.length} designs.</div>`;
-                
-            } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error during background removal: ${error.message}</div>`;
-            } finally {
-                removeBtn.disabled = false;
-                removeBtn.innerHTML = '<i class="bi bi-eraser"></i> Remove Backgrounds';
+            if (generatedImages.length === 0) {
+                console.log('No images to display');
+                card.style.display = 'none';
+                return;
             }
-        }
-
-        function displayGeneratedDesigns() {
-            const designsList = document.getElementById('bulkDesignsList');
-            designsList.innerHTML = '';
             
-            BulkAppState.generatedDesigns.forEach((design, index) => {
-                // Handle both original AI images and uploaded Printify images
-                const imageUrl = design.preview_url || design.url;
-                const dataUrl = design.url || design.preview_url;
-                
-                const designCard = `
-                    <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card design-card" data-design-index="${index}" data-design-url="${dataUrl}">
-                            <img src="${imageUrl}" class="card-img-top" alt="Generated design ${index + 1}" style="height: 200px; object-fit: cover;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzZjNzU3ZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkRlc2lnbjwvdGV4dD48L3N2Zz4=';">
-                            <div class="card-body">
-                                <small class="text-muted">${design.file_name ? 'Uploaded to Printify' : (design.source || 'AI Generated')}</small>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-primary select-design-btn" onclick="selectDesign(${index})">
-                                        <i class="bi bi-check-circle"></i> Select
-                                    </button>
-                                    ${design.preview_url ? `
-                                        <button class="btn btn-sm btn-warning ms-1 remove-bg-btn" onclick="removeBackgroundFromDesign(${index})">
-                                            <i class="bi bi-eraser"></i> Remove Background
+            console.log('Showing card and displaying', generatedImages.length, 'images');
+            card.style.display = 'block';
+            
+            container.innerHTML = `
+                <div class="row g-3">
+                    ${generatedImages.map((img, index) => {
+                        console.log('Processing image', index, ':', img);
+                        return `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm border">
+                                <div class="position-relative">
+                                    <img src="${img.image_url}" class="card-img-top" alt="Generated design" 
+                                         style="height: 200px; object-fit: cover; border-radius: 8px 8px 0 0;"
+                                         onerror="console.error('Failed to load image:', this.src)">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-primary">${img.size || 'Unknown'}</span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="d-flex gap-2 mb-2">
+                                        <button class="btn btn-sm btn-outline-primary flex-fill" 
+                                                onclick="editImage(${index})">
+                                            <i class="bi bi-pencil"></i> Edit
                                         </button>
-                                    ` : ''}
+                                        <button class="btn btn-sm btn-outline-secondary flex-fill" 
+                                                onclick="removeBackground(${index})">
+                                            <i class="bi bi-scissors"></i> Remove BG
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">ID: ${img.id || index}</small>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
-                designsList.innerHTML += designCard;
-            });
+                    `}).join('')}
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-success" onclick="saveGeneratedImages()">
+                        <i class="bi bi-save"></i> Save All Images
+                    </button>
+                </div>
+            `;
+            
+            console.log('Images displayed successfully');
         }
 
-        function selectDesign(index) {
-            BulkAppState.selectedDesign = BulkAppState.generatedDesigns[index];
-
-            // Clear previous selections
-            document.querySelectorAll('.design-card').forEach(card => {
-                card.classList.remove('selected');
-                card.style.border = '';
-                const removeBgBtn = card.querySelector('.remove-bg-btn');
-                if (removeBgBtn) removeBgBtn.style.display = 'none';
-            });
-            
-            // Select current design
-            const selectedCard = document.querySelector(`[data-design-index="${index}"]`);
-            if (selectedCard) {
-                selectedCard.classList.add('selected');
-                selectedCard.style.border = '3px solid #28a745';
-                const removeBgBtn = selectedCard.querySelector('.remove-bg-btn');
-                if (removeBgBtn) removeBgBtn.style.display = 'inline-block';
-            }
-
-            // Enable final creation button if a design is selected
-            document.getElementById('createBulkProductsBtn').disabled = !BulkAppState.selectedDesign;
-        }
-
-        async function handleBulkImageUpload() {
-            const fileInput = document.getElementById('bulkImageUpload');
-            const files = Array.from(fileInput.files);
-            
-            if (files.length === 0) {
-                alert('Please select images to upload.');
+        async function editImage(index) {
+            if (!generatedImages[index]) {
+                alert('Image not found');
                 return;
             }
-
-            const statusDiv = document.getElementById('bulkGenerateStatus');
-            const uploadBtn = document.getElementById('bulkUploadBtn');
             
-            uploadBtn.disabled = true;
-            uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Uploading...';
-
+            const image = generatedImages[index];
+            const newPrompt = prompt('Enter new prompt for editing:', image.prompt || '');
+            if (!newPrompt) return;
+            
+            const editBtn = event.target;
+            const originalText = editBtn.innerHTML;
+            editBtn.disabled = true;
+            editBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Editing...';
+            
             try {
-                const uploadPromises = files.map(file => {
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.readAsDataURL(file);
-                        reader.onload = () => {
-                            // Upload to Printify using the same method as index.html
-                            makeApiCall('/uploads/images.json', { 
-                                method: 'POST', 
-                                body: { file_name: file.name, contents: reader.result.split(',')[1] }
-                            }).then(resolve).catch(reject);
-                        };
-                        reader.onerror = reject;
-                    });
+                console.log('Sending edit request:', {
+                    imageUrl: image.image_url,
+                    prompt: newPrompt
                 });
-
-                const uploadedImages = await Promise.all(uploadPromises);
-                BulkAppState.generatedDesigns.push(...uploadedImages);
-                displayGeneratedDesigns();
-                statusDiv.innerHTML = `<div class="alert alert-success">Successfully uploaded ${uploadedImages.length} image(s) to Printify!</div>`;
-                document.getElementById('continueToAssignmentBtn').disabled = false;
                 
-                // Clear file input
-                fileInput.value = '';
+                const response = await fetch('/.netlify/functions/edit-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    },
+                    body: JSON.stringify({
+                        imageUrl: image.image_url,
+                        prompt: newPrompt
+                    })
+                });
+                
+                console.log('Edit response status:', response.status);
+                console.log('Edit response headers:', response.headers);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Edit response error:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    generatedImages[index] = { ...image, ...result.data, prompt: newPrompt };
+                    displayGeneratedImages();
+                    alert('Image edited successfully!');
+                } else {
+                    alert('Error editing image: ' + (result.error || 'Unknown error'));
+                }
             } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error uploading images: ${error.message}</div>`;
+                console.error('Error editing image:', error);
+                alert('Error editing image: ' + error.message);
             } finally {
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Upload Images';
+                editBtn.disabled = false;
+                editBtn.innerHTML = originalText;
             }
         }
 
-        function downloadDesign(url, filename) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // --- STEP 5: PRINT AREA ASSIGNMENT ---
-
-        function selectPrintAreaForProduct(productId, areaId) {
-            const assignment = BulkAppState.productAssignments.get(productId);
-            if (assignment && assignment.printAreas) {
-                const selectedArea = assignment.printAreas.find(area => area.id === areaId);
-                if (selectedArea) {
-                    assignment.selectedPrintArea = selectedArea;
-                    console.log(`Selected print area ${selectedArea.title} for product ${productId}`);
-                }
-            }
-        }
-
-        function assignDesignToProduct(productId) {
-            if (!BulkAppState.selectedDesign) {
-                alert('Please select a design first.');
+        async function removeBackground(index) {
+            if (!generatedImages[index]) {
+                alert('Image not found');
                 return;
             }
             
-            const assignment = BulkAppState.productAssignments.get(productId);
-            if (assignment && assignment.selectedPrintArea) {
-                // Store the design assignment
-                if (!assignment.designAssignments) {
-                    assignment.designAssignments = new Map();
-                }
-                assignment.designAssignments.set(assignment.selectedPrintArea.id, BulkAppState.selectedDesign);
-                
-                // Update button to show success
-                const btn = document.querySelector(`[data-product-id="${productId}"].assign-design-btn`);
-                if (btn) {
-                    btn.classList.remove('btn-outline-primary');
-                    btn.classList.add('btn-success');
-                    btn.innerHTML = '<i class="bi bi-check-circle"></i> Assigned';
-                }
-                
-                console.log(`Assigned design to ${assignment.selectedPrintArea.title} for product ${productId}`);
-            } else {
-                alert('Please select a print area first.');
-            }
-        }
-
-        async function buildAssignmentTable() {
-            const tableBody = document.getElementById('assignmentTableBody');
-            tableBody.innerHTML = '<tr><td colspan="4"><div class="spinner-border"></div> Loading print areas...</td></tr>';
+            const image = generatedImages[index];
+            const removeBtn = event.target;
+            const originalText = removeBtn.innerHTML;
+            removeBtn.disabled = true;
+            removeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Removing...';
             
             try {
-                const selectedProducts = Array.from(BulkAppState.selectedProducts);
-                const productDetails = [];
-                
-                // Use existing print areas from productAssignments (already loaded in step 3)
-                for (const productId of selectedProducts) {
-                    const blueprint = BulkAppState.allBlueprints.find(bp => bp.id == productId);
-                    if (!blueprint) continue;
-                    
-                    const assignment = BulkAppState.productAssignments.get(productId);
-                    if (!assignment) {
-                        console.warn(`No assignment found for product ${productId}`);
-                        continue;
-                    }
-                    
-                    // Use the print areas that were already loaded
-                    let printAreas = assignment.printAreas || [];
-                    
-                    // Debug logging
-                    console.log(`Product ${productId} (${blueprint.title}) has ${printAreas.length} print areas:`, printAreas.map(p => p.title));
-                    
-                    // If no print areas found, use a default (this shouldn't happen if step 3 worked correctly)
-                    if (printAreas.length === 0) {
-                        console.warn(`No print areas found for product ${productId}, using default`);
-                        printAreas = [{ id: 'front', title: 'Front' }];
-                    }
-                    
-                    productDetails.push({
-                        productId,
-                        title: blueprint.title,
-                        image: blueprint.images[0],
-                        printAreas: printAreas // Use all print areas, not just first 3
-                    });
-                }
-                
-                console.log('Product details for assignment table:', productDetails);
-                displayAssignmentTable(productDetails);
-                
-            } catch (error) {
-                tableBody.innerHTML = `<tr><td colspan="4"><div class="alert alert-danger">Error loading print areas: ${error.message}</div></td></tr>`;
-            }
-        }
-
-        function displayAssignmentTable(productDetails) {
-            const tableBody = document.getElementById('assignmentTableBody');
-            tableBody.innerHTML = '';
-            
-            productDetails.forEach(product => {
-                const assignment = BulkAppState.productAssignments.get(product.productId);
-                const printAreas = product.printAreas || [];
-                const selectedPrintArea = assignment?.selectedPrintArea || (printAreas.length > 0 ? printAreas[0] : null);
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <img src="${product.image}" alt="${product.title}" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMSAxOSAyMSAxOSAyMiAxOUMyMyAxOSAyMyAxOSAyNCAxOUMyNSAxOSAyNSAxOSAyNiAxOUMyNyAxOSAyNyAxOSAyOCAxOUMyOSAxOSAyOSAxOSAzMCAxOSIgc3Ryb2tlPSIjOUI5QjlCIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K'">
-                            <div>
-                                <strong>${product.title}</strong>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <select class="form-select form-select-sm print-area-select" data-product-id="${product.productId}">
-                            ${printAreas.map(area => `
-                                <option value="${area.id}" ${selectedPrintArea?.id === area.id ? 'selected' : ''}>
-                                    ${area.title}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </td>
-                    <td>
-                        ${BulkAppState.selectedDesign ? `
-                            <div class="d-flex align-items-center">
-                                <img src="${BulkAppState.selectedDesign.preview_url || BulkAppState.selectedDesign.url}" style="width: 30px; height: 30px; object-fit: cover; margin-right: 5px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAzMCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNSAxNUwxOCAxMkwyMSAxNUwxOCAxOEwxNSAxNVoiIGZpbGw9IiM5Qjk5OUIiLz4KPC9zdmc+Cg=='">
-                                <small class="text-muted">Selected Design</small>
-                            </div>
-                        ` : '<small class="text-muted">No design selected</small>'}
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            });
-            
-            // Add event listeners for print area selection
-            document.querySelectorAll('.print-area-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const productId = this.dataset.productId;
-                    const areaId = this.value;
-                    selectPrintAreaForProduct(productId, areaId);
+                const response = await fetch('/.netlify/functions/remove-background', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    },
+                    body: JSON.stringify({
+                        imageUrl: image.image_url,
+                        designId: image.id
+                    })
                 });
-            });
-            
-            
-            document.getElementById('createBulkProductsBtn').disabled = !BulkAppState.selectedDesign;
-        }
-
-        function autoAssignDesigns(productId) {
-            if (BulkAppState.generatedDesigns.length === 0) {
-                alert('No designs available. Please generate or upload designs first.');
-                return;
-            }
-            
-            const randomDesign = BulkAppState.generatedDesigns[Math.floor(Math.random() * BulkAppState.generatedDesigns.length)];
-            assignDesign(productId, randomDesign.url);
-        }
-
-        function autoAssignDesigns(productId) {
-            if (BulkAppState.generatedDesigns.length === 0) {
-                alert('No designs available. Please generate or upload designs first.');
-                return;
-            }
-            
-            const randomDesign = BulkAppState.generatedDesigns[Math.floor(Math.random() * BulkAppState.generatedDesigns.length)];
-            assignDesign(productId, randomDesign.url);
-        }
-
-        // --- STEP 6: BULK PRODUCT CREATION ---
-        function prepareBulkCreationSummary() {
-            const selectedCount = BulkAppState.selectedProducts.size;
-            const designCount = BulkAppState.generatedDesigns.length;
-            
-            document.getElementById('summaryProductCount').textContent = selectedCount;
-            document.getElementById('summaryDesignCount').textContent = designCount;
-            
-            // Set default templates
-            document.getElementById('bulkProductTitle').value = '{product_name} - Custom Design';
-            document.getElementById('bulkProductDescription').value = 'High-quality custom design printed on premium {product_name}. Perfect for everyday wear with unique artwork.';
-            document.getElementById('bulkProductTags').value = 'custom, unique, premium, design, art';
-            
-            updateBulkProductPreview();
-        }
-
-        async function generateAiContentForProducts(event) {
-            const generateBtn = event.target.closest('button');
-            const selectedDesign = BulkAppState.selectedDesign;
-            
-            if (!selectedDesign) {
-                alert('Please select a design first.');
-                return;
-            }
-
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
-
-            try {
-                const selectedProducts = Array.from(BulkAppState.selectedProducts);
-                const aiContent = [];
-
-                for (const productId of selectedProducts) {
-                    const blueprint = BulkAppState.allBlueprints.find(bp => bp.id == productId);
-                    if (!blueprint) continue;
-
-                    const prompt = `Generate a compelling product title, description, and 5 relevant tags for a ${blueprint.title} with this design: ${selectedDesign.prompt || 'custom design'}. The product should appeal to modern consumers.`;
-
-                    const response = await fetch('/.netlify/functions/generate-content', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            prompt: prompt,
-                            contentType: 'product-content'
-                        })
-                    });
-
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        aiContent.push({
-                            productId,
-                            title: result.title || `${blueprint.title} - Custom Design`,
-                            description: result.description || `High-quality ${blueprint.title} with custom design.`,
-                            tags: result.tags || ['custom', 'unique', 'premium']
-                        });
-                    } else {
-                        aiContent.push({
-                            productId,
-                            title: `${blueprint.title} - Custom Design`,
-                            description: `High-quality ${blueprint.title} with unique custom design.`,
-                            tags: ['custom', 'unique', 'premium', 'design', 'art']
-                        });
-                    }
-                }
-
-                // Update UI with AI generated content
-                aiContent.forEach(content => {
-                    const product = BulkAppState.allBlueprints.find(bp => bp.id == content.productId);
-                    if (product) {
-                        product.aiTitle = content.title;
-                        product.aiDescription = content.description;
-                        product.aiTags = Array.isArray(content.tags) ? content.tags.join(', ') : content.tags;
-                    }
-                });
-
-                updateBulkProductPreview();
                 
-                // Update form fields with first product's content as template
-                if (aiContent.length > 0) {
-                    document.getElementById('bulkProductTitle').value = aiContent[0].title;
-                    document.getElementById('bulkProductDescription').value = aiContent[0].description;
-                    document.getElementById('bulkProductTags').value = aiContent[0].tags;
+                // First check if the response is OK (status 200-299)
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server responded with status ${response.status}: ${errorText}`);
                 }
-
-                alert(`AI content generated for ${aiContent.length} products!`);
-
+                
+                // Try to parse the response as JSON
+                let result;
+                try {
+                    const text = await response.text();
+                    result = text ? JSON.parse(text) : {};
+                } catch (parseError) {
+                    console.error('Error parsing response:', parseError);
+                    throw new Error('Invalid response from server. Please try again.');
+                }
+                
+                if (result && result.success && result.data && result.data.image_url) {
+                    generatedImages[index] = { ...image, image_url: result.data.image_url };
+                    displayGeneratedImages();
+                    alert('Background removed successfully!');
+                } else {
+                    throw new Error(result.error || 'Failed to process image. Please try again.');
+                }
             } catch (error) {
-                console.error('Error generating AI content:', error);
-                alert('Error generating AI content. Please try again.');
+                console.error('Error removing background:', error);
+                alert('Error removing background: ' + error.message);
             } finally {
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="bi bi-robot"></i> Generate AI Content';
+                removeBtn.disabled = false;
+                removeBtn.innerHTML = originalText;
             }
         }
-
-        function updateBulkProductPreview() {
-            const previewDiv = document.getElementById('bulkProductPreview');
-            const selectedProducts = Array.from(BulkAppState.selectedProducts);
+        
+        async function populateAssignmentTable() {
+            const tableBody = document.getElementById('assignmentTableBody');
+            const tableCard = document.getElementById('assignmentTableCard');
+            const selectedProducts = JSON.parse(sessionStorage.getItem('bulkSelectedProducts') || '[]');
+            const designs = JSON.parse(sessionStorage.getItem('bulkDesigns') || '[]');
             
-            if (selectedProducts.length === 0) {
-                previewDiv.innerHTML = '<p class="text-muted">No products selected</p>';
+            if (generatedImages.length === 0) {
+                tableCard.style.display = 'none';
                 return;
             }
             
-            let previewHtml = '<div class="row">';
+            tableCard.style.display = 'block';
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center"><div class="spinner-border"></div> Loading print area details...</td></tr>';
             
-            selectedProducts.slice(0, 6).forEach(productId => {
-                const blueprint = BulkAppState.allBlueprints.find(bp => bp.id == productId);
-                if (!blueprint) return;
-
-                const assignment = BulkAppState.productAssignments.get(productId);
-                const printAreas = assignment?.printAreas || [{id: 'front', title: 'Front'}];
-                const selectedDesign = BulkAppState.selectedDesign;
-                const titleTemplate = document.getElementById('bulkProductTitle').value || '{product_name} - Custom Design';
-                const generatedTitle = titleTemplate.replace(/{product_name}/g, blueprint.title);
-
-                previewHtml += `
-                    <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card h-100">
-                            <img src="${blueprint.images[0]}" class="card-img-top" alt="${blueprint.title}" style="height: 120px; object-fit: cover;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik02MCA2MEw2NSA1NUw3MCA2MEw2NSA2NUw2MCA2MFoiIGZpbGw9IiM5Qjk5OUIiLz4KPC9zdmc+Cg=='">
-                            <div class="card-body p-2">
-                                <h6 class="card-title" style="font-size: 0.85rem;">${generatedTitle}</h6>
-                                <small class="text-muted d-block">${printAreas.map(area => area.title).join(', ')}</small>
-                                ${selectedDesign ? `
-                                    <div class="mt-2 d-flex align-items-center">
-                                        <img src="${selectedDesign.preview_url || selectedDesign.url}" style="width: 20px; height: 20px; object-fit: cover; margin-right: 5px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMCAxMEwxMiA4TDE0IDEwTDEyIDEyTDEwIDEwWiIgZmlsbD0iIzlCOTk5QiIvPgo8L3N2Zz4K'">
-                                        <small class="text-success">Design assigned</small>
-                                    </div>
-                                ` : '<small class="text-warning">No design</small>'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            if (selectedProducts.length > 6) {
-                previewHtml += `
-                    <div class="col-12">
-                        <small class="text-muted">... and ${selectedProducts.length - 6} more products</small>
-                    </div>
-                `;
-            }
-            
-            previewHtml += '</div>';
-            previewDiv.innerHTML = previewHtml;
-        }
-
-        async function createBulkProducts() {
-            const titleTemplate = document.getElementById('bulkProductTitle').value.trim();
-            const descriptionTemplate = document.getElementById('bulkProductDescription').value.trim();
-            const tags = document.getElementById('bulkProductTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
-            
-            if (!titleTemplate || !descriptionTemplate) {
-                alert('Please fill in product title and description templates.');
-                return;
-            }
-
-            if (!BulkAppState.selectedDesign) {
-                alert('Please select a design first.');
-                return;
-            }
-
-            const createBtn = document.getElementById('createBulkProductsBtn');
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'mt-3';
-            createBtn.parentNode.insertBefore(statusDiv, createBtn.nextSibling);
-
-            createBtn.disabled = true;
-            createBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating Products...';
-
-            const selectedProducts = Array.from(BulkAppState.selectedProducts);
-            const createdProducts = [];
-            let successCount = 0;
-            let errorCount = 0;
-
             try {
-                statusDiv.innerHTML = `<div class="alert alert-info">Creating ${selectedProducts.length} products...</div>`;
-
-                for (const productId of selectedProducts) {
-                    const blueprint = BulkAppState.allBlueprints.find(bp => bp.id == productId);
-                    if (!blueprint) continue;
-
-                    const assignment = BulkAppState.productAssignments.get(productId);
-                    if (!assignment) continue;
-
+                const token = localStorage.getItem('authToken');
+                if (!token) throw new Error('Authentication required');
+                
+                // Fetch all print areas for all products in parallel
+                const printAreaPromises = designs.map(async (design) => {
+                    const product = selectedProducts.find(p => p.id === design.productId);
+                    if (!product || !product.blueprint_id) return [];
+                    
                     try {
-                        // Generate product title and description from templates
-                        const productTitle = titleTemplate.replace(/{product_name}/g, blueprint.title);
-                        const productDescription = descriptionTemplate.replace(/{product_name}/g, blueprint.title);
-
-                        // Prepare variants for API - match index.html structure
-                        const variantsForApi = [];
-                        assignment.variants.forEach(variant => {
-                            variantsForApi.push({
-                                id: variant.id,
-                                price: variant.price || 1000 // Use existing price or default to $10.00 (1000 cents)
-                            });
-                        });
-
-                        // Prepare print areas for API - match index.html structure
-                        const printAreasForApi = [];
-                        const selectedPrintArea = assignment.selectedPrintArea || (assignment.printAreas && assignment.printAreas[0]);
-                        const selectedDesign = BulkAppState.selectedDesign;
-
-                        // Safeguard: if the selected design is a data URL (background-removed preview) and lacks an uploaded id, upload it now
-                        if (selectedDesign && !selectedDesign.id && selectedDesign.preview_url && selectedDesign.preview_url.startsWith('data:')) {
-                            try {
-                                const base64 = selectedDesign.preview_url.split(',')[1];
-                                if (base64) {
-                                    const uploadedNow = await makeApiCall('/uploads/images.json', {
-                                        method: 'POST',
-                                        body: { file_name: `bg-removed-${Date.now()}.png`, contents: base64 }
-                                    });
-                                    if (uploadedNow && uploadedNow.id) selectedDesign.id = uploadedNow.id;
-                                    if (uploadedNow && uploadedNow.url) selectedDesign.url = uploadedNow.url;
-                                }
-                            } catch (e) {
-                                console.warn('On-the-fly upload of processed image failed:', e);
-                            }
-                        }
-
-                        if (selectedPrintArea && selectedDesign) {
-                            printAreasForApi.push({
-                                variant_ids: assignment.variants.map(v => v.id),
-                                placeholders: [{
-                                    position: selectedPrintArea.id,
-                                    images: [{
-                                        id: selectedDesign.id,
-                                        x: 0.5,
-                                        y: 0.5,
-                                        scale: 1,
-                                        angle: 0
-                                    }]
-                                }]
-                            });
-                        }
-
-                        // Create product data - match index.html structure exactly
-                        const productData = {
-                            title: productTitle,
-                            description: productDescription,
-                            blueprint_id: parseInt(productId),
-                            print_provider_id: assignment.provider.id,
-                            variants: variantsForApi,
-                            print_areas: printAreasForApi
-                        };
-
-                        // Add tags if provided
-                        if (tags.length > 0) {
-                            productData.tags = tags;
-                        }
-
-                        console.log(`Creating product: ${productTitle}`, productData);
-
-                        // Create the product using the same API call as index.html
-                        const result = await makeApiCall(`/shops/${BulkAppState.selectedShop.id}/products.json`, {
+                        // Fetch print providers for this blueprint
+                        const providersRes = await fetch('/.netlify/functions/printify-proxy', {
                             method: 'POST',
-                            body: productData
-                        });
-
-                        successCount++;
-                        createdProducts.push({
-                            productId: result.id,
-                            title: productTitle,
-                            status: 'success'
-                        });
-
-                        console.log(`Successfully created product: ${productTitle} (ID: ${result.id})`);
-
-                    } catch (error) {
-                        errorCount++;
-                        createdProducts.push({
-                            productId: null,
-                            title: blueprint.title,
-                            status: 'error',
-                            error: error.message
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({
+                                endpoint: `/v1/catalog/blueprints/${product.blueprint_id}/print_providers.json`,
+                                method: 'GET'
+                            })
                         });
                         
-                        console.error(`Error creating product ${blueprint.title}:`, error);
-                    }
-                }
-
-                // Display final results
-                const totalProducts = selectedProducts.length;
-                const summaryHtml = `
-                    <div class="alert ${successCount === totalProducts ? 'alert-success' : 'alert-warning'}">
-                        <h5>Bulk Creation Complete!</h5>
-                        <p><strong>Total Products:</strong> ${totalProducts}</p>
-                        <p><strong>Successfully Created:</strong> ${successCount}</p>
-                        ${errorCount > 0 ? `<p><strong>Errors:</strong> ${errorCount}</p>` : ''}
-                        ${successCount > 0 ? `
-                        <div class="mt-2">
-                            <a href="pricing.html" class="btn btn-outline-primary">
-                                <i class="bi bi-currency-dollar"></i> Manage Pricing
-                            </a>
-                        </div>` : ''}
-                    </div>
-                `;
-
-                statusDiv.innerHTML = summaryHtml;
-
-                if (successCount > 0) {
-                    // Show created products list
-                    const productsList = createdProducts
-                        .filter(p => p.status === 'success')
-                        .map(p => `<li>${p.title}</li>`)
-                        .join('');
-                    
-                    statusDiv.innerHTML += `
-                        <div class="alert alert-info">
-                            <h6>Created Products:</h6>
-                            <ul>${productsList}</ul>
-                        </div>
-                    `;
-                }
-
-                if (errorCount > 0) {
-                    // Show error details
-                    const errorsList = createdProducts
-                        .filter(p => p.status === 'error')
-                        .map(p => `<li>${p.title}: ${p.error}</li>`)
-                        .join('');
-                    
-                    statusDiv.innerHTML += `
-                        <div class="alert alert-danger">
-                            <h6>Errors:</h6>
-                            <ul>${errorsList}</ul>
-                        </div>
-                    `;
-                }
-
-                if (successCount === totalProducts) {
-                    alert(`All ${successCount} products created successfully!`);
-                } else if (successCount > 0) {
-                    alert(`Created ${successCount} out of ${totalProducts} products. Check details above.`);
-                } else {
-                    alert('No products were created. Please check the errors above.');
-                }
-
-            } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error during bulk creation: ${error.message}</div>`;
-                console.error('Bulk creation error:', error);
-                alert(`Error during bulk creation: ${error.message}`);
-            } finally {
-                createBtn.disabled = false;
-                createBtn.innerHTML = '<i class="bi bi-plus-circle"></i> Create All Products';
-            }
-        }
-
-        // Print provider selection functions
-        async function loadBlueprintDetails(blueprintId) {
-            const providerSelect = document.getElementById('bulkProviderSelect');
-            providerSelect.innerHTML = '<option>Loading details...</option>';
-            providerSelect.disabled = true;
-            document.getElementById('bulkPrintAreasContainer').style.display = 'none';
-            document.getElementById('selectProductBtn').disabled = true;
-            
-            try {
-                const blueprint = await makeApiCall(`/catalog/blueprints/${blueprintId}.json`);
-                const providers = await makeApiCall(`/catalog/blueprints/${blueprintId}/print_providers.json`);
-                BulkAppState.selectedBlueprint = blueprint;
-                
-                providerSelect.innerHTML = '<option value="">-- Select a Provider --</option>';
-                providers.forEach(p => {
-                    providerSelect.innerHTML += `<option value="${p.id}">${p.title}</option>`;
-                });
-                providerSelect.disabled = false;
-            } catch (error) {
-                providerSelect.innerHTML = '<option>Error loading details</option>';
-                alert(`Error loading blueprint details: ${error.message}`);
-            }
-        }
-
-        async function onProviderChange(providerId) {
-            document.getElementById('bulkPrintAreasContainer').style.display = 'none';
-            document.getElementById('selectProductBtn').disabled = true;
-            if (!providerId) return;
-
-            BulkAppState.selectedProvider = { id: parseInt(providerId, 10) };
-            const blueprintId = BulkAppState.selectedBlueprint.id;
-            const printAreasList = document.getElementById('bulkPrintAreasList');
-            printAreasList.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Loading variants...';
-
-            try {
-                const data = await makeApiCall(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`);
-                if (!data.variants || data.variants.length === 0) throw new Error('No variants found for this provider.');
-
-                BulkAppState.variants = data.variants;
-                const printAreasMap = new Map();
-                data.variants.forEach(variant => {
-                    (variant.placeholders || []).forEach(p => {
-                        if (!printAreasMap.has(p.position)) {
-                            printAreasMap.set(p.position, { 
-                                id: p.position, 
-                                title: p.position.charAt(0).toUpperCase() + p.position.slice(1).replace('_', ' ')
+                        if (!providersRes.ok) throw new Error('Failed to fetch print providers');
+                        const providers = await providersRes.json();
+                        if (!providers.length) return [];
+                        
+                        // Use the first provider's variants
+                        const providerId = providers[0].id;
+                        const variantsRes = await fetch('/.netlify/functions/printify-proxy', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({
+                                endpoint: `/v1/catalog/blueprints/${product.blueprint_id}/print_providers/${providerId}/variants.json`,
+                                method: 'GET'
+                            })
+                        });
+                        
+                        if (!variantsRes.ok) throw new Error('Failed to fetch variants');
+                        const variants = await variantsRes.json();
+                        
+                        // Get all unique print areas from variants
+                        const printAreas = new Map();
+                        variants.variants.forEach(variant => {
+                            variant.placements.forEach(placement => {
+                                if (placement.print_area_cover && placement.print_area_size) {
+                                    printAreas.set(placement.position, {
+                                        id: placement.position,
+                                        name: placement.position.replace(/_/g, ' ').toUpperCase(),
+                                        size: `${placement.print_area_size.width}×${placement.print_area_size.height} mm`,
+                                        width: placement.print_area_size.width,
+                                        height: placement.print_area_size.height
+                                    });
+                                }
                             });
-                        }
-                    });
+                        });
+                        
+                        // Only return print areas that were selected in the design
+                        return design.printAreas
+                            .filter(areaId => printAreas.has(areaId))
+                            .map(areaId => ({
+                                ...printAreas.get(areaId),
+                                productId: design.productId,
+                                productTitle: product?.title || 'Unknown Product',
+                                rowId: `${design.productId}-${areaId}`
+                            }));
+                        
+                    } catch (error) {
+                        console.error(`Error fetching print areas for product ${design.productId}:`, error);
+                        // Fallback to basic print area info if API fails
+                        return design.printAreas.map(areaId => ({
+                            id: areaId,
+                            name: areaId.replace('_', ' ').toUpperCase(),
+                            size: 'Size not available',
+                            width: 0,
+                            height: 0,
+                            productId: design.productId,
+                            productTitle: product?.title || 'Unknown Product',
+                            rowId: `${design.productId}-${areaId}`
+                        }));
+                    }
                 });
-                BulkAppState.printAreas = Array.from(printAreasMap.values());
-
-                printAreasList.innerHTML = '';
-                BulkAppState.printAreas.forEach(area => {
-                    printAreasList.innerHTML += `<div class="col-12 mb-2"><div class="p-3 border rounded bg-light">${area.title}</div></div>`;
-                });
-
-                document.getElementById('bulkPrintAreasContainer').style.display = 'block';
-                document.getElementById('selectProductBtn').disabled = false;
-            } catch (error) {
-                printAreasList.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-                alert(`Failed to load provider data: ${error.message}`);
-            }
-        }
-
-        // Load shops function
-        async function loadShops() {
-            try {
-                const apiKey = localStorage.getItem('printify_api_key');
-                if (!apiKey) {
-                    showError('Please enter your API key first');
+                
+                // Wait for all print area fetches to complete
+                const printAreaResults = await Promise.all(printAreaPromises);
+                const rows = printAreaResults.flat();
+                
+                if (rows.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No print areas found for selected products</td></tr>';
                     return;
                 }
-
-                const response = await fetch('https://api.printify.com/v1/shops.json', {
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
+                
+                // Render the table with the fetched print areas
+                tableBody.innerHTML = rows.map(row => `
+                    <tr>
+                        <td>
+                            <strong>${row.productTitle}</strong><br>
+                            <small class="text-muted">ID: ${row.productId}</small>
+                        </td>
+                        <td>${row.name}</td>
+                        <td><span class="badge bg-info">${row.size}</span></td>
+                        <td>
+                            <select class="form-select form-select-sm" id="assign-${row.id}" 
+                                    onchange="updateAssignment('${row.id}', this.value)">
+                                <option value="">Select Design...</option>
+                                ${generatedImages.map((img, index) => `
+                                    <option value="${index}" ${img.size === row.size ? 'selected' : ''}>
+                                        Design ${index + 1} (${img.size || 'Custom'})
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="previewAssignment('${row.id}')">
+                                <i class="bi bi-eye"></i> Preview
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // Auto-assign matching sizes if possible
+                rows.forEach(row => {
+                    const matchingImage = generatedImages.findIndex(img => img.size === row.size);
+                    if (matchingImage !== -1) {
+                        const selectEl = document.getElementById(`assign-${row.id}`);
+                        if (selectEl) {
+                            selectEl.value = matchingImage;
+                            updateAssignment(row.id, matchingImage);
+                        }
                     }
                 });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load shops');
-                }
-
-                const shops = await response.json();
-                const shopSelect = document.getElementById('shopSelect');
-                
-                shopSelect.innerHTML = '<option value="">-- Select a Shop --</option>';
-                shops.forEach(shop => {
-                    const option = document.createElement('option');
-                    option.value = shop.id;
-                    option.textContent = shop.title;
-                    shopSelect.appendChild(option);
-                });
-
-                // Re-enable select
-                shopSelect.disabled = false;
-                document.getElementById('selectShopBtn').disabled = false;
-                
             } catch (error) {
-                showError('Error loading shops: ' + error.message);
+                console.error('Error populating assignment table:', error);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            Error loading print area details. ${error.message || ''}
+                        </td>
+                    </tr>`;
             }
         }
-
+        
+        function updateAssignment(rowId, imageIndex) {
+            if (imageIndex === '') {
+                delete assignmentData[rowId];
+            } else {
+                assignmentData[rowId] = parseInt(imageIndex);
+            }
+            
+            // Enable/disable create button based on assignments
+            const totalRows = document.querySelectorAll('#assignmentTableBody tr').length;
+            const assignedRows = Object.keys(assignmentData).length;
+            const createBtn = document.getElementById('createProductsBtn');
+            
+            createBtn.disabled = assignedRows === 0;
+            createBtn.innerHTML = `<i class="bi bi-check-circle"></i> Create Products (${assignedRows}/${totalRows} assigned)`;
+        }
+        
+        async function savePrompt() {
+            const prompt = document.getElementById('bulkPrompt').value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt to save');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('savePromptBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/save-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        response: {
+                            title: 'Bulk Generation Prompt',
+                            description: `${document.getElementById('bulkStyle').value} style, ${document.getElementById('bulkColors').value} colors, for ${document.getElementById('bulkAudience').value}`,
+                            brand: 'Bulk Creator'
+                        },
+                        metadata: {
+                            style: document.getElementById('bulkStyle').value,
+                            colors: document.getElementById('bulkColors').value,
+                            audience: document.getElementById('bulkAudience').value,
+                            context: 'bulk-generation'
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                alert('Prompt saved successfully!');
+            } catch (error) {
+                console.error('Save prompt error:', error);
+                alert('Error saving prompt. Please try again.');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        }
+        
+        async function saveGeneratedImages() {
+            if (generatedImages.length === 0) {
+                alert('No images to save');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/.netlify/functions/save-generated-images', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        images: generatedImages,
+                        context: 'bulk-generation',
+                        metadata: {
+                            prompt: document.getElementById('bulkPrompt').value,
+                            style: document.getElementById('bulkStyle').value,
+                            colors: document.getElementById('bulkColors').value,
+                            audience: document.getElementById('bulkAudience').value
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                alert('Images saved successfully!');
+            } catch (error) {
+                console.error('Save images error:', error);
+                alert('Error saving images. Please try again.');
+            }
+        }
+        
+        function previewAssignment(rowId) {
+            const imageIndex = assignmentData[rowId];
+            if (imageIndex === undefined) {
+                alert('No design assigned to this print area');
+                return;
+            }
+            
+            const image = generatedImages[imageIndex];
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Design Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${image.image_url}" class="img-fluid" alt="Design preview">
+                            <p class="mt-3">Size: ${image.size}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                document.body.removeChild(modal);
+            });
+        }
+        
+        async function createBulkProducts() {
+            const assignedCount = Object.keys(assignmentData).length;
+            if (assignedCount === 0) {
+                alert('Please assign designs to print areas before creating products');
+                return;
+            }
+            
+            const createBtn = document.getElementById('createProductsBtn');
+            const originalText = createBtn.innerHTML;
+            createBtn.disabled = true;
+            createBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating Products...';
+            
+            try {
+                // Get selected shop and products
+                const shopId = sessionStorage.getItem('bulkSelectedShop');
+                const selectedProducts = JSON.parse(sessionStorage.getItem('bulkSelectedProducts') || '[]');
+                const designs = JSON.parse(sessionStorage.getItem('bulkDesigns') || '[]');
+                
+                // Fetch print providers for all products at once for efficiency
+                const providersResponse = await fetch('/.netlify/functions/get-print-providers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    },
+                    body: JSON.stringify({
+                        blueprintIds: selectedProducts
+                    })
+                });
+                
+                const providersData = await providersResponse.json();
+                const productsWithProviders = providersData.data || selectedProducts.map(productId => ({
+                    blueprintId: productId,
+                    printProviderId: null,
+                    printProviders: [],
+                    success: false
+                }));
+                
+                const response = await fetch('/.netlify/functions/save-bulk-project', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shop: shopId,
+                        products: productsWithProviders,
+                        designs: designs,
+                        assignments: assignmentData,
+                        generatedImages: generatedImages
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Successfully created ${assignedCount} product assignments!`);
+                    // Optionally redirect to dashboard or show success page
+                } else {
+                    throw new Error(result.error || 'Failed to create products');
+                }
+            } catch (error) {
+                console.error('Create products error:', error);
+                alert('Error creating products. Please try again.');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = originalText;
+            }
+        }
     </script>
 </body>
 </html>

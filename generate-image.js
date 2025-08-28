@@ -8,7 +8,8 @@ const FAL_ENDPOINTS = {
     'recraft-v3':   'fal-ai/recraft-v3',
     'ideogram-v2':  'fal-ai/ideogram-v2',
     'flux-lora':    'fal-ai/flux/dev/lora',
-    'imagen4-preview': 'fal-ai/imagen4/preview'
+    'imagen4-preview': 'fal-ai/imagen4/preview',
+    'nano-banana': 'fal-ai/flux/schnell'  // Use flux-schnell endpoint for nano-banana
   };
   
   exports.handler = async (event) => {
@@ -70,8 +71,17 @@ const FAL_ENDPOINTS = {
   
   async function tryFal(prompt, numImages, modelKey, width, height) {
     const model = FAL_ENDPOINTS[modelKey] || FAL_ENDPOINTS['flux-dev'];
+    
+    // Handle nano-banana specifically to avoid banana interpretation
+    const isNanoBanana = modelKey === 'nano-banana';
+    const baseStyle = '';
+    
+    const enhancedPrompt = isNanoBanana ? 
+      `${prompt.trim()}, transparent background, cutout style, high quality, professional design, print-ready` :
+      `${prompt.trim()}, vibrant colors, for commercial use, optimized for print area, transparent background, cutout style, high quality, professional design, print-ready`;
+    
     const body = {
-      prompt: enhancePromptForPOD(prompt, modelKey),
+      prompt: enhancedPrompt,
       negative_prompt: "background, white background, colored background, solid background, backdrop, scenery, environment, room, wall, floor, surface, gradient background, textured background",
       image_size: { width, height },
       num_images: numImages,
@@ -145,12 +155,6 @@ const FAL_ENDPOINTS = {
   
   /* ───── Prompt helper ───── */
   function enhancePromptForPOD(prompt, model) {
-    const style = {
-      'recraft-v3': 'vector art style, clean design, professional branding, ',
-      'ideogram-v2': 'logo design, typography focus, commercial use, ',
-      'flux-dev': 'high resolution, print quality, commercial design, ',
-      'flux-pro': 'premium quality, professional design, commercial use, ',
-      'flux-schnell': 'clean design, print ready, '
-    }[model] || 'print-on-demand design, ';
-    return `${style}high quality, detailed, professional, clean background, print ready, 300 DPI quality, commercial use, ${prompt}`;
+    // Remove model-specific styling to prevent model names from appearing in prompts
+    return `high quality, detailed, professional, clean background, print ready, 300 DPI quality, commercial use, ${prompt}`;
   }

@@ -1,8 +1,28 @@
 # Netlify _redirects file
 # This handles client-side routing for the single-page application
 
-# API routes should not be redirected
-/.netlify/functions/* /.netlify/functions/:splat 200
+# ----------------------------------------------------------------------
+# Redirects
+#
+# 1. Serve landing page for the root route
+# 2. Define public pages
+# 3. SPA fallback for the main app
+# 4. Passthrough for Netlify Functions
+# ----------------------------------------------------------------------
 
-# All other routes should serve the main app
+# [1] Root route -> Landing Page
+/ /landing.html 200!
+
+# [2] Public Pages
+/landing /landing.html 200
+/auth /auth.html 200
+/pricing /pricing.html 200
+/inspiration /inspiration.html 200
+
+# [4] Netlify Functions Passthrough (must come before SPA catch-all)
+/api/* /.netlify/functions/:splat 200
+
+# [3] SPA Fallback (Protected App)
+/index.html /index.html 200
+/dashboard.html /dashboard.html 200
 /* /index.html 200
