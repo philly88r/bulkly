@@ -141,10 +141,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.html">Create Products</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="bulk.html">Bulk Creator</a>
+                        <a class="nav-link" href="bulkly.html">Bulk Creator (Printful)</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="pricing.html">Manage Pricing</a>
@@ -370,12 +367,13 @@
                             
                             <div id="generatedDesigns" class="mt-4">
                                 <h6>Available Designs: <span class="badge bg-secondary" id="designCount">0</span></h6>
-                                </button>
-                                <button class="btn btn-outline-primary" id="savePromptBtn" onclick="savePrompt()">
-                                    <i class="bi bi-bookmark-plus"></i> Save Prompt
-                                </button>
+                                <!-- Buttons are provided above in the AI tab; no duplicate buttons here -->
                             </div>
                         </div>
+                        </div><!-- end row -->
+                    </div><!-- end card-body -->
+                </div><!-- end card -->
+            </div><!-- end step4-container -->
         <!-- Step 5: Product Creation -->
         <div class="step-container" id="step5-container">
             <div class="card">
@@ -747,52 +745,6 @@
                 document.getElementById('selectProductBtn').disabled = false;
             } catch (error) {
                 printAreasList.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-            const colors = selectedVariantIds.map(id => {
-                const variant = AppState.variants.find(v => v.id === id);
-                return variant?.name || '';
-            }).filter(name => name);
-            const brand = product.brand || 'Generic';
-            
-            const targetAudienceEl = document.getElementById('targetAudience');
-            const toneSelectEl = document.getElementById('toneSelect');
-            const targetAudience = targetAudienceEl ? targetAudienceEl.value : 'general';
-            const tone = toneSelectEl ? toneSelectEl.value : 'professional';
-            const userPrompt = document.getElementById('designPrompt').value.trim();
-            const prompt = userPrompt || `Create a visually appealing design with colors: ${colors.join(', ')}. Style: ${tone}. Target audience: ${targetAudience}.`;
-            
-            const numDesigns = parseInt(document.getElementById('numDesigns').value, 10);
-            if (!prompt) return alert('Please enter a design prompt.');
-
-            const statusDiv = document.getElementById('generateStatus');
-            showButtonLoading('generateDesignBtn', `Generating ${numDesigns}...`);
-            statusDiv.innerHTML = '';
-
-            try {
-                const promises = [];
-                for (let i = 0; i < numDesigns; i++) {
-                    promises.push(
-                        fetch('/api/generate-image', { 
-                            method: 'POST', 
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ prompt })
-                        })
-                        .then(res => res.json())
-                        .then(imgData => {
-                            if (!imgData.success) throw new Error(imgData.error || 'Image generation failed');
-                            return makeApiCall('/uploads/images.json', {
-                                method: 'POST',
-                                body: { file_name: `${prompt.slice(0, 20)}_${i}.png`, url: imgData.images[0].url }
-                            });
-                        })
-                    );
-                }
-                const uploadedImages = await Promise.all(promises);
-                uploadedImages.forEach(img => AppState.generatedDesigns.push(img));
-                displayGeneratedDesigns();
-            } catch (error) {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-            } finally {
-                hideButtonLoading('generateDesignBtn', '<i class="bi bi-stars"></i> Generate Designs');
             }
         }
         
@@ -852,7 +804,7 @@
                 showButtonLoading('generateTitleBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
                 const response = await fetch('/api/generate-content', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` },
                     body: JSON.stringify({ prompt, contentType: 'title' })
                 });
                 const result = await response.json();
@@ -897,7 +849,7 @@
                 showButtonLoading('generateDescriptionBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
                 const response = await fetch('/api/generate-content', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` },
                     body: JSON.stringify({ prompt, contentType: 'description' })
                 });
                 const result = await response.json();
@@ -940,7 +892,7 @@
                 showButtonLoading('generateTagsBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
                 const response = await fetch('/api/generate-content', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` },
                     body: JSON.stringify({ prompt, contentType: 'tags' })
                 });
                 const result = await response.json();
@@ -985,7 +937,7 @@ async function generateProductDescription() {
         showButtonLoading('generateDescriptionBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
         const response = await fetch('/api/generate-content', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` },
             body: JSON.stringify({ prompt, contentType: 'description' })
         });
         const result = await response.json();
@@ -1028,7 +980,7 @@ async function generateProductTags() {
         showButtonLoading('generateTagsBtn', '<i class="bi bi-hourglass-split"></i> Generating...');
         const response = await fetch('/api/generate-content', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` },
             body: JSON.stringify({ prompt, contentType: 'tags' })
         });
         const result = await response.json();
@@ -1286,18 +1238,19 @@ function displayGeneratedDesigns() {
                     removeDesignAssignment(e.target.dataset.areaId);
                 }
             });
-        }
             
-            document.getElementById('designsList').addEventListener('click', e => {
-                if (e.target.classList.contains('assign-specific-btn')) {
-                    const designId = e.target.dataset.designId;
-                    const areaId = prompt('Enter print area ID to assign this design to:');
-                    if (areaId) {
-                        assignDesignToArea(areaId, designId);
+            // Delegated click handler for generated designs grid
+            const designsListEl = document.getElementById('designsList');
+            if (designsListEl) {
+                designsListEl.addEventListener('click', (e) => {
+                    if (e.target.classList && e.target.classList.contains('assign-specific-btn')) {
+                        const designId = e.target.dataset.designId;
+                        const areaId = prompt('Enter print area ID to assign this design to:');
+                        if (areaId) assignDesignToArea(areaId, designId);
                     }
-                }
-            });
-        }
+                });
+            }
+        });
 
         // --- DATABASE OPERATIONS --- 
         async function savePrompt() {

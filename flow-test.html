@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick AI Process Flow Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .ok { color: green; font-weight: bold; }
+        .failed { color: red; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
+        .skipped { color: gray; font-weight: bold; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; margin: 5px; }
+        .step { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .auth-warning { background: #fff3cd; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Quick AI Process Flow Test</h1>
+    <p>This tests the actual Quick AI workflow step by step to find where it's breaking.</p>
+    
+    <div class="auth-warning">
+        <strong>⚠️ Auth Token Required:</strong> For full testing, you need to be logged in. 
+        <a href="/dashboard.html" target="_blank">Open Dashboard</a> first to login, then come back here.
+    </div>
+    
+    <button onclick="runFlowTest()">🚀 Test Full Process</button>
+    <button onclick="runFlowTest(true)">🔑 Test With Auth Token</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function runFlowTest(useAuth = false) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>🔄 Testing the actual Quick AI process flow...</p>';
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                
+                // Add auth token if requested and available
+                if (useAuth) {
+                    const token = localStorage.getItem('authToken');
+                    if (token) {
+                        headers.Authorization = 'Bearer ' + token;
+                    } else {
+                        resultsDiv.innerHTML = '<p class="failed">❌ No auth token found. <a href="/dashboard.html">Login first</a></p>';
+                        return;
+                    }
+                }
+                
+                const response = await fetch('/.netlify/functions/quick-ai-flow-test', {
+                    method: 'POST',
+                    headers: headers
+                });
+                
+                const data = await response.json();
+                
+                let html = '<h2>🔍 Process Flow Results:</h2>';
+                
+                // Overall status
+                if (data.overall === 'ALL_WORKING') {
+                    html += '<div class="step"><h3 class="ok">✅ ALL WORKING - Quick AI should work perfectly!</h3></div>';
+                } else if (data.overall === 'MOSTLY_WORKING') {
+                    html += '<div class="step"><h3 class="warning">⚠️ MOSTLY WORKING - Minor issues but should function</h3></div>';
+                } else if (data.overall === 'BROKEN') {
+                    html += '<div class="step"><h3 class="failed">❌ BROKEN - Found failures in the process</h3>';
+                    if (data.failedSteps) {
+                        html += '<p><strong>Failed at:</strong> ' + data.failedSteps.join(', ') + '</p>';
+                    }
+                    html += '</div>';
+                } else {
+                    html += '<div class="step"><h3 class="failed">❌ ERROR - ' + (data.error || 'Unknown error') + '</h3></div>';
+                }
+                
+                // Individual steps
+                html += '<h3>📋 Step-by-Step Results:</h3>';
+                const steps = data.steps || {};
+                
+                const stepOrder = [
+                    { key: 'auth', name: '🔐 Authentication' },
+                    { key: 'parse_intent', name: '🧠 Parse User Intent' },
+                    { key: 'generate_content', name: '📝 Generate Product Content' },
+                    { key: 'job_create', name: '📋 Create Job' },
+                    { key: 'job_status', name: '📊 Get Job Status' },
+                    { key: 'background_function', name: '⚙️ Background Function' }
+                ];
+                
+                for (const step of stepOrder) {
+                    const result = steps[step.key];
+                    if (!result) continue;
+                    
+                    const statusClass = result.status.toLowerCase();
+                    const icon = result.status === 'OK' ? '✅' : 
+                               result.status === 'FAILED' ? '❌' : 
+                               result.status === 'WARNING' ? '⚠️' : '⏭️';
+                    
+                    html += `<div class="step">
+                        <h4>${icon} ${step.name}</h4>
+                        <div class="${statusClass}">Status: ${result.status}</div>
+                        ${result.message ? `<div>Message: ${result.message}</div>` : ''}
+                        ${result.error ? `<div class="failed">Error: ${result.error}</div>` : ''}
+                        ${result.data ? `<div><small>Data: ${JSON.stringify(result.data)}</small></div>` : ''}
+                    </div>`;
+                }
+                
+                // What to do next
+                html += '<h3>🎯 What to do next:</h3>';
+                if (data.overall === 'ALL_WORKING') {
+                    html += '<p>✅ Try the actual Quick AI chat at <a href="/quick-ai.html">/quick-ai.html</a></p>';
+                } else {
+                    html += '<p>❌ Fix the failed steps above, then retest. Check Netlify function logs for detailed errors.</p>';
+                }
+                
+                // Raw data
+                html += `<details style="margin-top: 20px;">
+                    <summary>📄 Raw Test Data</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>`;
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="failed">❌ Test completely failed: ${error.message}</p>
+                    <p>This means there's a fundamental issue with the test function itself.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

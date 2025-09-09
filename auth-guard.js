@@ -18,6 +18,20 @@
       '/inspiration.html', '/inspiration'
     ]);
     
+    // If already authenticated and on root, index, or auth pages, redirect to dashboard
+    (function smartRedirectForAuthenticated() {
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            const redirectable = new Set(['/', '/index.html', '/index', '/auth.html', '/auth']);
+            if (redirectable.has(currentPath)) {
+                if (currentPath !== '/dashboard.html') {
+                    window.location.replace('/dashboard.html');
+                }
+            }
+        } catch (_) {}
+    })();
+
     // Check if current page is public
     const isPublicPage = publicPages.has(currentPath);
     

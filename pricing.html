@@ -52,9 +52,6 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link" href="index.html">Create Products</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link active" href="pricing.html">Manage Pricing</a>
                     </li>
                     <li class="nav-item">
@@ -168,6 +165,15 @@
         async function initialize() {
             await loadShops();
             setupEventListeners();
+            // Quick AI handoff: if created product IDs exist, auto-load them for pricing
+            try { await quickAIHandoff(); } catch (e) { console.warn('[pricing] Handoff failed:', e); }
+            // Prefill markup from Quick AI if available
+            try {
+                const mk = sessionStorage.getItem('quickaiMarkup');
+                if (mk && !isNaN(parseInt(mk))) {
+                    bulkMarkupInput.value = String(parseInt(mk));
+                }
+            } catch (e) {}
         }
 
         function setupEventListeners() {
@@ -190,13 +196,13 @@
 
         // API Functions
         async function makeApiCall(endpoint, options = {}) {
-            const proxyUrl = 'https://transcendent-licorice-60df1e.netlify.app/.netlify/functions/printify-proxy';
-            const response = await fetch(proxyUrl, {
+            const token = localStorage.getItem('authToken');
+            if (!token) throw new Error('Not authenticated');
+            const response = await fetch('/.netlify/functions/printify-proxy', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
                 body: JSON.stringify({ 
                     endpoint,
-                    apiKey: window.printifyApiToken,
                     method: options.method || 'GET',
                     body: options.body || null
                 })
@@ -367,6 +373,60 @@
         }
 
         // Product Functions
+        async function loadProductsByIds(shopId, ids) {
+            if (!shopId || !Array.isArray(ids) || !ids.length) return;
+            try {
+                showLoading('productsContainer', 'Loading selected products...');
+                const details = [];
+                for (const pid of ids) {
+                    try {
+                        const p = await makeApiCall(`/shops/${shopId}/products/${pid}.json`);
+                        if (p) details.push(p);
+                    } catch (e) { console.warn('Failed to fetch product', pid, e); }
+                }
+                AppState.products = details;
+                applyBulkMarkupBtn.disabled = details.length === 0;
+                saveAllPricesBtn.disabled = details.length === 0;
+                if (details.length) {
+                    displayProducts();
+                } else {
+                    productsContainer.innerHTML = '<div class="alert alert-warning">No products found for the handoff IDs.</div>';
+                }
+            } finally { hideLoading('productsContainer'); }
+        }
+
+        async function quickAIHandoff() {
+            const raw = sessionStorage.getItem('createdProducts');
+            const shopId = sessionStorage.getItem('bulkSelectedShop');
+            if (!raw || !shopId) return; // nothing to handoff
+            let ids = [];
+            try {
+                const parsed = JSON.parse(raw);
+                ids = (Array.isArray(parsed) ? parsed : []).map(x => (typeof x === 'string' || typeof x === 'number') ? String(x) : (x && x.id ? String(x.id) : null)).filter(Boolean);
+            } catch (e) { return; }
+            if (!ids.length) return;
+
+            // Select the shop in UI if present
+            const shop = (AppState.shops || []).find(s => String(s.id) === String(shopId));
+            if (shop) {
+                shopSelect.value = shop.id;
+                onShopChange();
+                await loadProductsByIds(shop.id, ids);
+                // Auto-select all loaded products for quick bulk actions
+                try {
+                    document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = true);
+                    selectAllProducts.checked = true;
+                    applyBulkMarkupBtn.disabled = false;
+                    saveAllPricesBtn.disabled = false;
+                    // If a markup was pref-filled, apply it now
+                    const mk = parseInt(sessionStorage.getItem('quickaiMarkup') || bulkMarkupInput.value || '0');
+                    if (!isNaN(mk) && mk > 0) {
+                        bulkMarkupInput.value = String(mk);
+                        applyBulkMarkup();
+                    }
+                } catch (e) {}
+            }
+        }
         async function loadProducts() {
             if (!AppState.selectedShop) return;
             
@@ -375,7 +435,7 @@
                 const shopId = AppState.selectedShop.id;
                 
                 console.log('Loading products for shop:', shopId);
-                console.log('API Token configured:', !!window.printifyApiToken);
+                console.log('Using internal proxy with JWT auth');
                 
                 // Try different API endpoint formats
                 const endpoints = [

@@ -37,6 +37,7 @@
             font-weight: 800;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             padding: 0 2rem;
             margin-bottom: 2rem;
@@ -212,112 +213,288 @@
             background: #e5e7eb;
         }
 
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .product-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .product-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .product-image {
-            height: 200px;
-            background: #f3f4f6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9ca3af;
-        }
-
-        .product-info {
-            padding: 1rem;
-        }
-
-        .product-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .product-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-
-        .usage-bar {
-            background: #e5e7eb;
-            border-radius: 8px;
-            height: 8px;
-            overflow: hidden;
-            margin-top: 0.5rem;
-        }
-
-        .usage-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s ease;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #6b7280;
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            color: #d1d5db;
-        }
-
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+        /* Responsive adjustments */
         @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                display: none;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
+          .products-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; }
+          .product-image { height: 100px; }
+          .product-image img { max-height: 80px; }
         }
-
-        .logout-btn {
-            position: absolute;
-            bottom: 2rem;
-            left: 2rem;
-            right: 2rem;
-            background: #fee2e2;
-            color: #dc2626;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
+        @media (max-width: 480px) {
+          .products-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; }
         }
-
-        .logout-btn:hover {
-            background: #fecaca;
+        .product-card { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; transition: all 0.3s ease; }
+        .product-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); }
+        .product-image { height: 120px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 8px; }
+        .product-image img { max-height: 100px; max-width: 85%; object-fit: contain; border-radius: 4px; }
+        .product-info { padding: 1rem; }
+        .product-title { font-weight: 600; margin-bottom: 0.5rem; }
+        .product-meta { display: flex; justify-content: space-between; align-items: center; color: #6b7280; font-size: 0.9rem; }
+        .usage-bar { background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden; margin-top: 0.5rem; }
+        .usage-fill { height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease; }
+        .empty-state { text-align: center; padding: 3rem; color: #6b7280; }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; color: #d1d5db; }
+        @media (max-width: 768px) {
+          .dashboard { grid-template-columns: 1fr; }
+          .sidebar { display: none; }
+          .stats-grid { grid-template-columns: 1fr; }
+          .products-grid { grid-template-columns: 1fr; }
         }
     </style>
+
+    <script>
+        // ---------- Printful Products Gallery ----------
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.nav-link');
+            if (!link) return;
+            const section = link.getAttribute('data-section');
+            if (section === 'printful-products') {
+                // Lazy load products when visiting the tab
+                setTimeout(loadPrintfulProducts, 0);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('refreshPrintfulBtn');
+            if (btn) btn.addEventListener('click', loadPrintfulProducts);
+        });
+
+        async function loadPrintfulProducts() {
+            try {
+                const grid = document.getElementById('printfulProductsGrid');
+                if (grid) grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><div>Loading Printful products...</div></div>';
+                const token = localStorage.getItem('authToken') || '';
+                const res = await fetch('/.netlify/functions/printful-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ endpoint: '/store/products', method: 'GET' })
+                });
+                const payload = await res.json().catch(()=>({}));
+                if (!res.ok || !payload.success) throw new Error(payload.error || `HTTP ${res.status}`);
+                const list = Array.isArray(payload.data?.result) ? payload.data.result : [];
+                renderPrintfulProducts(list);
+            } catch (e) {
+                const grid = document.getElementById('printfulProductsGrid');
+                if (grid) grid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>Failed to load products: ${e.message}</div></div>`;
+            }
+        }
+
+        function renderPrintfulProducts(items) {
+            const grid = document.getElementById('printfulProductsGrid');
+            if (!grid) return;
+            if (!items.length) {
+                grid.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><div>No Printful products yet</div></div>';
+                return;
+            }
+            grid.innerHTML = items.map(p => {
+                const id = p?.id || p?.sync_product?.id || '';
+                const title = p?.name || p?.sync_product?.name || 'Untitled';
+                const thumb = p?.thumbnail_url || p?.sync_product?.thumbnail_url || '/assets/placeholder.png';
+                return `
+                <div class="product-card">
+                    <div class="product-image"><img src="${thumb}" alt="${title}"></div>
+                    <div class="product-info">
+                        <div class="product-title">${title}</div>
+                        <div class="product-meta">
+                            <span>ID: ${id}</span>
+                            <div>
+                                <button class="btn btn-secondary btn-sm" onclick="openPfProduct('${id}')"><i class="fas fa-images"></i> View</button>
+                                <button class="btn btn-primary btn-sm" onclick="generatePfMockups('${id}')"><i class="fas fa-magic"></i> Generate Mockups</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function openPfProduct(productId) {
+            try {
+                const token = localStorage.getItem('authToken') || '';
+                const res = await fetch('/.netlify/functions/printful-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ endpoint: `/store/products/${productId}`, method: 'GET' })
+                });
+                const payload = await res.json().catch(()=>({}));
+                if (!res.ok || !payload.success) throw new Error(payload.error || `HTTP ${res.status}`);
+                const data = payload.data?.result || payload.data || {};
+                const images = [];
+                if (data?.sync_product?.thumbnail_url) images.push(data.sync_product.thumbnail_url);
+                (Array.isArray(data?.sync_variants) ? data.sync_variants : []).forEach(v => {
+                    (Array.isArray(v?.files) ? v.files : []).forEach(f => {
+                        if (f?.preview_url) images.push(f.preview_url);
+                    });
+                });
+                showPfImagesModal(images);
+            } catch (e) {
+                showNotification(`Failed to open product: ${e.message}`, 'error');
+            }
+        }
+
+        async function generatePfMockups(productId) {
+            try {
+                showNotification('Starting mockup generation...', 'info');
+                const token = localStorage.getItem('authToken') || '';
+                // Fetch product to extract variant ids and file_ids/placements
+                const prodRes = await fetch('/.netlify/functions/printful-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ endpoint: `/store/products/${productId}`, method: 'GET' })
+                });
+                const prodPayload = await prodRes.json().catch(()=>({}));
+                if (!prodRes.ok || !prodPayload.success) throw new Error(prodPayload.error || `HTTP ${prodRes.status}`);
+                const prod = prodPayload.data?.result || {};
+                const variantIds = (Array.isArray(prod?.sync_variants) ? prod.sync_variants : []).map(v => v.id || v.variant_id).filter(Boolean);
+                const placementMap = new Map();
+                (Array.isArray(prod?.sync_variants) ? prod.sync_variants : []).forEach(v => {
+                    (Array.isArray(v?.files) ? v.files : []).forEach(f => {
+                        const placement = f?.placement || 'front';
+                        const fileId = f?.id || f?.file_id;
+                        if (fileId) placementMap.set(placement, fileId);
+                    });
+                });
+                const files = Array.from(placementMap.entries()).map(([placement, file_id]) => ({ placement, file_id }));
+                if (!variantIds.length || !files.length) throw new Error('No variants/files found to generate mockups');
+
+                // Create mockup task
+                const taskRes = await fetch('/.netlify/functions/printful-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ endpoint: '/mockup-generator/create-task', method: 'POST', body: { variant_ids: variantIds, files } })
+                });
+                const taskPayload = await taskRes.json().catch(()=>({}));
+                if (!taskRes.ok || !taskPayload.success) throw new Error(taskPayload.error || `HTTP ${taskRes.status}`);
+                const taskKey = taskPayload.data?.result?.task_key || taskPayload.data?.task_key;
+                if (!taskKey) throw new Error('No task key returned');
+
+                // Poll task
+                let images = [];
+                for (let i=0; i<20; i++) {
+                    await new Promise(r => setTimeout(r, 1500));
+                    const statusRes = await fetch('/.netlify/functions/printful-proxy', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ endpoint: `/mockup-generator/task/${taskKey}`, method: 'GET' })
+                    });
+                    const statusPayload = await statusRes.json().catch(()=>({}));
+                    if (statusRes.ok && statusPayload.success) {
+                        const s = statusPayload.data?.result || statusPayload.data || {};
+                        if (s.status === 'completed' || s.mockups) {
+                            const mocks = s.mockups || [];
+                            mocks.forEach(m => {
+                                if (m?.mockup_url) images.push(m.mockup_url);
+                                (Array.isArray(m?.extra) ? m.extra : []).forEach(e => { if (e?.mockup_url) images.push(e.mockup_url); });
+                            });
+                            break;
+                        }
+                        if (s.status === 'failed' || s.error) break;
+                    }
+                }
+                if (!images.length) throw new Error('No mockups returned');
+                showPfImagesModal(images);
+                showNotification('Mockups ready!', 'success');
+            } catch (e) {
+                showNotification(`Mockup generation failed: ${e.message}`, 'error');
+            }
+        }
+
+        function showPfImagesModal(images) {
+            let modal = document.getElementById('pfImagesModal');
+            if (!modal) {
+                const tpl = document.createElement('div');
+                tpl.innerHTML = `
+                <div class="modal fade" id="pfImagesModal" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Images</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body" id="pfImagesBody"></div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+                document.body.appendChild(tpl.firstElementChild);
+                modal = document.getElementById('pfImagesModal');
+            }
+            const body = document.getElementById('pfImagesBody');
+            body.innerHTML = (images || []).map(u => `
+                <div class="mb-3">
+                    <img class="img-fluid rounded" src="${u}" alt="mockup"/>
+                    <div class="mt-1"><a href="${u}" target="_blank" download>Download</a></div>
+                </div>
+            `).join('') || '<div class="text-muted">No images</div>';
+            const bs = new bootstrap.Modal(modal);
+            modal.__bsInstance = bs;
+            bs.show();
+        }
+
+        // ---------- Settings: Printful Connection ----------
+        function updatePrintfulStatus(message, type = 'info') {
+            const el = document.getElementById('printfulStatus');
+            if (!el) return;
+            const colors = { success: '#10b981', error: '#ef4444', warning: '#f59e0b', info: '#6b7280' };
+            el.style.color = colors[type] || colors.info;
+            el.textContent = message;
+        }
+
+        async function checkPrintfulConnection() {
+            try {
+                updatePrintfulStatus('Testing connection...', 'info');
+                const token = localStorage.getItem('authToken') || '';
+                // First try /store (requires store permission)
+                let res = await fetch('/.netlify/functions/printful-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ endpoint: '/store', method: 'GET' })
+                });
+                let payload = await res.json().catch(()=>({}));
+                if (!res.ok || !payload.success) {
+                    // Fallback to /stores list
+                    res = await fetch('/.netlify/functions/printful-proxy', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ endpoint: '/stores', method: 'GET' })
+                    });
+                    payload = await res.json().catch(()=>({}));
+                }
+                if (!res.ok || !payload.success) {
+                    // Final fallback: try public catalog /products to verify OAuth works at least
+                    const res2 = await fetch('/.netlify/functions/printful-proxy', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ endpoint: '/products', method: 'GET' })
+                    });
+                    const p2 = await res2.json().catch(()=>({}));
+                    if (res2.ok && p2.success) {
+                        updatePrintfulStatus('Connected (catalog only). Some store APIs may be restricted by permissions.', 'warning');
+                        return;
+                    }
+                    const errMsg = payload?.error || p2?.error || `HTTP ${res.status}`;
+                    updatePrintfulStatus(`Not connected: ${errMsg}`, 'error');
+                    return;
+                }
+                const data = payload.data?.result || payload.data || {};
+                const name = data?.name || (Array.isArray(data) && data[0]?.name) || 'Printful';
+                updatePrintfulStatus(`Connected to Printful (${name})`, 'success');
+            } catch (e) {
+                updatePrintfulStatus('Connection test failed', 'error');
+            }
+        }
+
+        function connectPrintfulOauth() {
+            try {
+                const token = localStorage.getItem('authToken') || '';
+                const url = '/.netlify/functions/printful-oauth-start' + (token ? ('?state=' + encodeURIComponent(token)) : '');
+                window.location.href = url;
+            } catch (e) {
+                updatePrintfulStatus('Failed to start OAuth', 'error');
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="dashboard">
@@ -351,18 +528,25 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="#" class="nav-link" data-section="printful-products">
+                            <i class="fas fa-store"></i>
+                            Printful Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="#" class="nav-link" data-section="settings">
                             <i class="fas fa-cog"></i>
                             Settings
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" id="logoutLink">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </a>
+                    </li>
                 </ul>
             </nav>
-
-            <button class="logout-btn" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-            </button>
         </aside>
 
         <main class="main-content">
@@ -371,7 +555,52 @@
                     <h1 id="pageTitle">Dashboard Overview</h1>
                     <p id="pageSubtitle">Welcome back! Here's what's happening with your business.</p>
                 </div>
+
+            <!-- Printful Products Section -->
+            <div id="printfulProductsSection" class="section" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Printful Products</h2>
+                        <div>
+                            <button class="btn btn-secondary" id="refreshPrintfulBtn"><i class="fas fa-rotate"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div id="printfulProductsGrid" class="products-grid"></div>
+                </div>
+            </div>
+
+    <!-- Publish Store Picker Modal -->
+    <div id="publishStoreModal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background:#fff; width:100%; max-width:460px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow:hidden;">
+            <div style="padding:1rem 1.25rem; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
+                <h3 style="font-size:1.05rem; font-weight:600;">Select Store to Publish</h3>
+                <button onclick="closePublishStoreModal()" class="btn btn-secondary" style="padding:.4rem .75rem;">Close</button>
+            </div>
+            <div style="padding:1rem 1.25rem; display:grid; gap:.75rem;">
+                <input type="hidden" id="publishProductId">
+                <label style="font-weight:600; font-size:.9rem;">Store</label>
+                <select id="publishStoreSelect" style="padding:.6rem; border:1px solid #d1d5db; border-radius:8px;"></select>
+                <button id="confirmPublishBtn" onclick="confirmPublishWithStore()" class="btn btn-primary"><i class="fas fa-globe"></i> Publish</button>
+            </div>
+        </div>
+    </div>
                 <div class="user-info">
+                    <div class="btn-group" id="btnCreateNewGroup">
+                        <a href="/bulkly.html" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Create New
+                        </a>
+                        <button class="btn btn-primary" style="padding:0 .75rem;" onclick="(function(){
+                            const m = document.getElementById('createNewMenu');
+                            if (!m) return; m.style.display = (m.style.display==='block'?'none':'block');
+                        })()">
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div id="createNewMenu" style="display:none; position:absolute; margin-top:44px; background:#fff; border:1px solid #e5e7eb; border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,0.1); overflow:hidden; z-index:999;">
+                            <a href="/bulkly.html" class="nav-link" style="padding:.6rem 1rem; white-space:nowrap; display:block;">Bulk Creator (Printful)</a>
+                            <a href="/bulk.html" class="nav-link" style="padding:.6rem 1rem; white-space:nowrap; display:block;">Bulk Creator (Printify)</a>
+                        </div>
+                    </div>
                     <div class="subscription-badge" id="subscriptionBadge">Free Trial</div>
                     <div class="user-avatar" id="userAvatar">U</div>
                     <div>
@@ -436,13 +665,17 @@
                         <h2 class="section-title">Quick Actions</h2>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                        <a href="#" class="btn btn-primary" data-section="generate">
+                        <a href="/bulkly.html" class="btn btn-primary" id="btnStartNewBulk">
                             <i class="fas fa-magic"></i>
-                            Generate Products
+                            Start New (Printful)
                         </a>
-                        <a href="#" class="btn btn-secondary" data-section="products">
+                        <a href="/bulk.html" class="btn btn-secondary" id="btnStartNewBulkPrintify">
+                            <i class="fas fa-magic"></i>
+                            Start New (Printify)
+                        </a>
+                        <a href="#" class="btn btn-secondary" id="btnResumeLast">
                             <i class="fas fa-box"></i>
-                            View Products
+                            Resume Last
                         </a>
                         <a href="#" class="btn btn-secondary">
                             <i class="fas fa-upload"></i>
@@ -476,21 +709,33 @@
 
             <!-- Products Section -->
             <div id="productsSection" class="section" style="display: none;">
+                <div class="mb-4 flex justify-between items-center">
+                    <div class="relative w-1/3">
+                        <input type="text" id="productSearchInput" class="pl-10 pr-4 py-2 border rounded-lg w-full" placeholder="Search products...">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <select id="filterPublished" class="border rounded-lg px-4 py-2">
+                            <option value="all">All Statuses</option>
+                            <option value="published">Published</option>
+                            <option value="unpublished">Unpublished</option>
+                        </select>
+                        <select id="filterShop" class="border rounded-lg px-4 py-2">
+                            <option value="all">All Shops</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="content-section">
                     <div class="section-header">
                         <h2 class="section-title">Your Products</h2>
-                        <a href="#" class="btn btn-primary" data-section="generate">
+                        <a href="#" class="btn btn-primary" id="createNewProductBtn">
                             <i class="fas fa-plus"></i>
                             New Product
                         </a>
                     </div>
-                    <div id="productsGrid" class="products-grid">
-                        <div class="empty-state">
-                            <i class="fas fa-box"></i>
-                            <h3>No products found</h3>
-                            <p>Create your first product to get started</p>
-                        </div>
-                    </div>
+                    <div id="productsGrid" class="products-grid"></div>
+                    <div id="paginationControls" class="flex justify-center items-center mt-4 space-x-2"></div>
+                </div>
                 </div>
             </div>
 
@@ -567,6 +812,24 @@
                                     <div id="printifyStatus" style="margin-top: 0.5rem; font-size: 0.85rem;"></div>
                                 </div>
                                 
+                                <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                                <div style="margin-bottom: 1.5rem;">
+                                    <h4 style="margin-bottom: 0.5rem;">Printful Connection</h4>
+                                    <p style="color:#6b7280; margin-bottom: .75rem; font-size:.9rem;">Connect your Printful account via OAuth. Manual API tokens are no longer required.</p>
+                                    <div style="display:grid; gap:.75rem;">
+                                        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                                            <button class="btn btn-success" onclick="connectPrintfulOauth()" style="flex:1;">
+                                                <i class="fas fa-link"></i> Connect Printful via OAuth
+                                            </button>
+                                            <button class="btn btn-secondary" onclick="checkPrintfulConnection()" style="flex:1;">
+                                                <i class="fas fa-plug"></i> Test Connection
+                                            </button>
+                                        </div>
+                                        <div id="printfulStatus" style="font-size:.85rem;"></div>
+                                    </div>
+                                </div>
+
                                 <div style="margin-bottom: 1.5rem;">
                                     <h4 style="margin-bottom: 0.5rem;">Etsy API</h4>
                                     <button class="btn btn-secondary" style="width: 100%;">
@@ -575,10 +838,18 @@
                                 </div>
                                 
                                 <div>
-                                    <h4 style="margin-bottom: 0.5rem;">Shopify API</h4>
-                                    <button class="btn btn-secondary" style="width: 100%;">
-                                        <i class="fas fa-cog"></i> Configure Shopify Integration
-                                    </button>
+                                    <h4 style="margin-bottom: 0.5rem;">Shopify</h4>
+                                    <div style="display:grid; gap:.5rem;">
+                                        <input id="shopifyAppUrl" type="url" placeholder="Shopify App URL (e.g., https://your-app.example.com)" style="padding:.6rem; border:1px solid #d1d5db; border-radius:6px;">
+                                        <input id="shopifyShopDomain" type="text" placeholder="Shop domain (e.g., mystore.myshopify.com)" style="padding:.6rem; border:1px solid #d1d5db; border-radius:6px;">
+                                        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                                            <button class="btn btn-primary" style="flex:1;" onclick="saveShopifySettings()"><i class="fas fa-save"></i> Save</button>
+                                            <button class="btn btn-secondary" style="flex:1;" onclick="testShopifyConnection()"><i class="fas fa-plug"></i> Test</button>
+                                            <button class="btn btn-success" style="flex:1;" onclick="connectShopify()"><i class="fas fa-link"></i> Connect</button>
+                                            <button class="btn btn-outline-danger" style="flex:1;" onclick="disconnectShopify()"><i class="fas fa-unlink"></i> Disconnect</button>
+                                        </div>
+                                        <div id="shopifyStatus" style="font-size:.85rem; color:#374151;"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -588,6 +859,78 @@
         </main>
     </div>
 
+    <!-- Edit Product Modal -->
+    <div id="editProductModal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; overflow: auto;">
+        <div style="background: #fff; width: 100%; max-width: 640px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 90vh; display: flex; flex-direction: column; margin: 1rem;">
+            <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content: space-between;">
+                <h3 style="font-size: 1.1rem; font-weight: 600;">Edit Product</h3>
+                <button onclick="closeEditModal()" class="btn btn-secondary" style="padding: .4rem .75rem;">Close</button>
+            </div>
+            <div style="padding: 1rem 1.25rem; display: grid; gap: .75rem; overflow-y: auto; min-height: 0; flex: 1;">
+                <input type="hidden" id="editProductId">
+                <input type="hidden" id="editShopId">
+                <label style="font-weight:600; font-size:.9rem;">Store</label>
+                <select id="editStoreSelect" style="padding: .5rem; border: 1px solid #d1d5db; border-radius: 8px;"></select>
+                <label style="font-weight:600; font-size:.9rem;">Title</label>
+                <input id="editTitle" type="text" placeholder="Product title" style="padding: .75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+                <label style="font-weight:600; font-size:.9rem; margin-top:.5rem;">Description</label>
+                <textarea id="editDescription" rows="5" placeholder="Product description" style="padding: .75rem; border: 1px solid #d1d5db; border-radius: 8px; resize: vertical;"></textarea>
+                <label style="font-weight:600; font-size:.9rem; margin-top:.5rem;">Tags (comma separated)</label>
+                <input id="editTags" type="text" placeholder="tag1, tag2, tag3" style="padding: .75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+
+                <hr style="margin: .75rem 0; border: none; border-top: 1px solid #e5e7eb;">
+                <div style="display: grid; gap: .5rem;">
+                    <label style="font-weight:600; font-size:.9rem;">Current Image</label>
+                    <img id="currentImagePreview" src="/assets/placeholder.png" alt="Current image" style="width: 100%; max-height: 220px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; background:#fafafa;">
+
+                    <div style="display:flex; align-items:center; gap:.5rem; margin-top:.25rem;">
+                        <input type="checkbox" id="modelOnlyToggle">
+                        <label for="modelOnlyToggle" style="font-size:.9rem;">Add model to image <span style="color:#6b7280;">(will not work with Printify – download only)</span></label>
+                    </div>
+
+                    <label style="font-weight:600; font-size:.9rem; margin-top:.5rem;">Image Edit Prompt</label>
+                    <input id="editImagePrompt" type="text" placeholder="e.g., add watercolor effect, brighten colors, remove background" style="padding: .75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+                    <button id="editImageBtn" class="btn btn-secondary" type="button" onclick="editProductImage()"><i class="fas fa-wand-magic-sparkles"></i> Edit Image</button>
+
+                    <label style="font-weight:600; font-size:.9rem; margin-top:.5rem;">Edited Preview</label>
+                    <img id="editedImagePreview" src="" alt="Edited image preview" style="width: 100%; max-height: 220px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; background:#fafafa;">
+                    <input type="hidden" id="editedImageUrl">
+
+                    <div style="display:flex; gap:.5rem; align-items:center; margin:.5rem 0;">
+                        <label for="printAreaPositionSelect" style="font-weight:600; font-size:.85rem;">Apply to:</label>
+                        <select id="printAreaPositionSelect" style="padding:.5rem; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="front" selected>Front</option>
+                            <option value="back">Back</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                        </select>
+                        <label style="display:flex; align-items:center; gap:.35rem; font-size:.85rem;">
+                            <input type="checkbox" id="appendToggle">
+                            Append instead of replace
+                        </label>
+                    </div>
+
+                    <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="copyEditedImageUrl()"><i class="fas fa-link"></i> Copy URL</button>
+                        <button type="button" class="btn btn-secondary" onclick="downloadEditedImage()"><i class="fas fa-download"></i> Download</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="(function(){
+                            const url = document.getElementById('editedImageUrl')?.value || document.getElementById('editedImagePreview')?.src || '';
+                            if (!url) { updateShopifyStatus('No edited image to send', 'error'); return; }
+                            // Optionally include product title as handle fallback
+                            const handle = (document.getElementById('editProductId')?.value || '').trim();
+                            sendImageToShopify(url, handle);
+                        })()"><i class="fas fa-store"></i> Send to Shopify</button>
+                        <button type="button" class="btn btn-primary" id="applyEditedImageBtn" onclick="applyEditedImage()"><i class="fas fa-check"></i> Apply to Product</button>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; display:flex; justify-content: flex-end; gap:.5rem;">
+                <button onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveProductEdits()" class="btn btn-primary" id="saveEditBtn"><i class="fas fa-save"></i> Save</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/auth-guard.js"></script>
     <script>
 
@@ -595,10 +938,27 @@
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
         // Initialize dashboard
+        let isDashboardLoading = false;
+
         document.addEventListener('DOMContentLoaded', () => {
             loadUserInfo();
+            // Show overview by default
+            showSection('overview');
             loadDashboardData();
             loadPrintifyApiKey();
+            checkPrintfulConnection();
+            loadShopifySettings();
+
+            // If redirected from OAuth callback
+            try {
+                if (location.hash && location.hash.includes('printful=connected')) {
+                    const el = document.getElementById('printfulStatus');
+                    if (el) {
+                        el.textContent = 'Printful connected via OAuth';
+                        el.style.color = '#10b981';
+                    }
+                }
+            } catch(e) {}
         });
 
         // Printify API Key Functions
@@ -714,6 +1074,107 @@
             statusDiv.style.color = colors[type] || colors.info;
         }
 
+        // ---------- Shopify Settings ----------
+        function updateShopifyStatus(message, type = 'info') {
+            const el = document.getElementById('shopifyStatus');
+            if (!el) return;
+            const color = type === 'success' ? '#166534' : type === 'error' ? '#991b1b' : '#374151';
+            el.style.color = color;
+            el.textContent = message;
+        }
+
+        function saveShopifySettings() {
+            try {
+                const appUrl = (document.getElementById('shopifyAppUrl')?.value || '').trim();
+                const shopDomain = (document.getElementById('shopifyShopDomain')?.value || '').trim();
+                const settings = { appUrl, shopDomain };
+                localStorage.setItem('shopifySettings', JSON.stringify(settings));
+                updateShopifyStatus('Saved Shopify settings', 'success');
+            } catch (e) {
+                updateShopifyStatus('Failed to save settings', 'error');
+            }
+        }
+
+        function loadShopifySettings() {
+            try {
+                const raw = localStorage.getItem('shopifySettings');
+                if (!raw) return;
+                const s = JSON.parse(raw || '{}');
+                if (s.appUrl) document.getElementById('shopifyAppUrl').value = s.appUrl;
+                if (s.shopDomain) document.getElementById('shopifyShopDomain').value = s.shopDomain;
+                updateShopifyStatus('Loaded Shopify settings', 'success');
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        async function testShopifyConnection() {
+            const appUrl = (document.getElementById('shopifyAppUrl')?.value || '').trim();
+            const shopDomain = (document.getElementById('shopifyShopDomain')?.value || '').trim();
+            if (!appUrl) return updateShopifyStatus('Enter your Shopify App URL first', 'error');
+            try {
+                const u = new URL(appUrl);
+                // Attempt reachability (no-cors -> opaque but proves network path)
+                await fetch(u.toString(), { method: 'GET', mode: 'no-cors' });
+                updateShopifyStatus(`Reachable. ${shopDomain ? 'Shop: ' + shopDomain : ''}`, 'success');
+            } catch (e) {
+                updateShopifyStatus('Cannot reach app URL', 'error');
+            }
+        }
+
+        function connectShopify() {
+            const appUrl = (document.getElementById('shopifyAppUrl')?.value || '').trim();
+            const shopDomain = (document.getElementById('shopifyShopDomain')?.value || '').trim();
+            // If no direct app URL provided, use Netlify proxy (requires SHOPIFY_APP_URL env)
+            if (!appUrl) {
+                const proxied = '/.netlify/functions/shopify-auth-start' + (shopDomain ? ('?shop=' + encodeURIComponent(shopDomain)) : '');
+                window.open(proxied, '_blank');
+                updateShopifyStatus('Opening Shopify via Netlify proxy...', 'info');
+                return;
+            }
+            try {
+                const url = new URL(appUrl);
+                if (shopDomain) url.searchParams.set('shop', shopDomain);
+                window.open(url.toString(), '_blank');
+                updateShopifyStatus('Opening Shopify app for install/auth...', 'info');
+            } catch (e) {
+                updateShopifyStatus('Invalid app URL', 'error');
+            }
+        }
+
+        function disconnectShopify() {
+            // Client-only: clear saved settings. Server-side token revocation would be handled by the Shopify app.
+            localStorage.removeItem('shopifySettings');
+            const appUrlEl = document.getElementById('shopifyAppUrl');
+            const shopEl = document.getElementById('shopifyShopDomain');
+            if (appUrlEl) appUrlEl.value = '';
+            if (shopEl) shopEl.value = '';
+            updateShopifyStatus('Disconnected (local settings cleared)', 'success');
+        }
+
+        // Optional helper: open Shopify app with an image to update a product (handled by your app)
+        function sendImageToShopify(imageUrl, productHandle = '', shopDomainOverride = '') {
+            const raw = localStorage.getItem('shopifySettings');
+            const s = raw ? JSON.parse(raw) : {};
+            const appUrl = s.appUrl || '';
+            const shopDomain = shopDomainOverride || s.shopDomain || '';
+            if (!appUrl || !imageUrl) {
+                updateShopifyStatus('Missing app URL or imageUrl', 'error');
+                return;
+            }
+            try {
+                const url = new URL(appUrl);
+                url.pathname = '/import-image';
+                url.searchParams.set('image', imageUrl);
+                if (productHandle) url.searchParams.set('product', productHandle);
+                if (shopDomain) url.searchParams.set('shop', shopDomain);
+                window.open(url.toString(), '_blank');
+                updateShopifyStatus('Sending image to Shopify app...', 'info');
+            } catch (e) {
+                updateShopifyStatus('Invalid app URL', 'error');
+            }
+        }
+
         function loadUserInfo() {
             if (user.firstName && user.lastName) {
                 document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
@@ -741,30 +1202,934 @@
             }
         }
 
-        async function loadDashboardData() {
+        // Define pagination variables in global scope
+        let allDashboardProducts = [];
+        let currentPage = 1;
+        const productsPerPage = 8;
+        const limits = { products_per_month: 100, ai_generations: 500 };
+        
+        // --- Missing UI handlers: Edit and Publish helpers ---
+        function openEditProduct(productId, shopId) {
             try {
-                // Load user products and usage data
-                // This would typically come from your API
-                updateUsageStats();
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
+                const modal = document.getElementById('editProductModal');
+                if (!modal) return;
+
+                // Find product in currently loaded list
+                const product = (Array.isArray(allDashboardProducts) ? allDashboardProducts : []).find(p => String(p.id) === String(productId));
+
+                // Populate fields safely
+                const idInput = document.getElementById('editProductId');
+                const shopInput = document.getElementById('editShopId');
+                const titleInput = document.getElementById('editTitle');
+                const descInput = document.getElementById('editDescription');
+                const tagsInput = document.getElementById('editTags');
+                const currentImg = document.getElementById('currentImagePreview');
+
+                if (idInput) idInput.value = productId || '';
+                if (shopInput) shopInput.value = shopId ? String(shopId) : '';
+                if (titleInput) titleInput.value = product?.title || '';
+                if (descInput) descInput.value = product?.description || '';
+                if (tagsInput) {
+                    const tags = Array.isArray(product?.tags) ? product.tags : [];
+                    tagsInput.value = tags.join(', ');
+                }
+
+                // Set current image preview
+                if (currentImg) {
+                    let imageUrl = '/assets/placeholder.png';
+                    if (product?.images && product.images.length) {
+                        const d = product.images.find(i => i.is_default) || product.images[0];
+                        if (d?.src) imageUrl = d.src; else if (d?.preview_url) imageUrl = d.preview_url;
+                    }
+                    currentImg.src = imageUrl;
+                }
+
+                // Populate store list and select default
+                populateEditStores(shopId || product?.shop_id || 0);
+
+                // Show modal
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } catch (e) {
+                console.error('openEditProduct error:', e);
+                if (typeof showNotification === 'function') {
+                    showNotification('Unable to open edit modal', 'error');
+                }
             }
         }
 
-        function updateUsageStats() {
-            // Mock data - replace with actual API calls
-            const limits = user.subscription?.limits || { products_per_month: 50, ai_generations: 200 };
-            const usage = { products: 12, ai_generations: 45 }; // Mock current usage
+        function closeEditModal() {
+            const modal = document.getElementById('editProductModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
 
-            document.getElementById('totalProducts').textContent = usage.products;
-            document.getElementById('aiGenerations').textContent = usage.ai_generations;
+        async function openPublishStorePicker(productId, shopId) {
+            try {
+                // If a shopId is provided, publish directly
+                if (shopId && Number(shopId) > 0) {
+                    return await publishProduct(productId, Number(shopId));
+                }
 
-            // Update usage bars
-            const productsPercent = (usage.products / limits.products_per_month) * 100;
-            const aiPercent = (usage.ai_generations / limits.ai_generations) * 100;
+                // Otherwise, fetch shops and choose the first available as a minimal UX
+                const authToken = localStorage.getItem('authToken') || '';
+                const res = await fetch('/.netlify/functions/get-shops', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json().catch(() => ({}));
+                const shops = Array.isArray(data.shops) ? data.shops : [];
 
+                if (!shops.length) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('No connected shops found. Please connect Shopify in Settings.', 'warning');
+                    }
+                    // Navigate to settings section to help user connect
+                    if (typeof showSection === 'function') showSection('settings');
+                    return;
+                }
+
+                const chosen = shops[0];
+                if (typeof showNotification === 'function') {
+                    showNotification(`Publishing to ${chosen?.shop_name || 'selected shop'}...`, 'info');
+                }
+                await publishProduct(productId, Number(chosen.id));
+            } catch (e) {
+                console.error('openPublishStorePicker error:', e);
+                if (typeof showNotification === 'function') {
+                    showNotification('Failed to publish product', 'error');
+                }
+            }
+        }
+
+        // Expose for inline handlers
+        window.openEditProduct = openEditProduct;
+        window.closeEditModal = closeEditModal;
+        window.openPublishStorePicker = openPublishStorePicker;
+
+        // Global filter and pagination functions
+        function applyFiltersAndSearch(resetPage = false) {
+            if (resetPage) {
+                currentPage = 1;
+            }
+
+            const searchTerm = document.getElementById('productSearchInput').value.toLowerCase();
+            const publishedStatus = document.getElementById('filterPublished').value;
+            const shopId = document.getElementById('filterShop').value;
+
+            const filteredProducts = allDashboardProducts.filter(product => {
+                const matchesSearch = !searchTerm || product.title.toLowerCase().includes(searchTerm);
+                const matchesPublished = publishedStatus === 'all' || 
+                                       (publishedStatus === 'published' && product.published_at) || 
+                                       (publishedStatus === 'unpublished' && !product.published_at);
+                const matchesShop = shopId === 'all' || product.shop_id == shopId;
+
+                return matchesSearch && matchesPublished && matchesShop;
+            });
+
+            renderPagination(filteredProducts.length);
+
+            const startIndex = (currentPage - 1) * productsPerPage;
+            const paginatedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage);
+
+            renderProducts(paginatedProducts);
+        }
+
+        function renderPagination(totalItems) {
+            const paginationContainer = document.getElementById('paginationControls');
+            paginationContainer.innerHTML = '';
+            const pageCount = Math.ceil(totalItems / productsPerPage);
+
+            if (pageCount <= 1) return;
+
+            const createButton = (text, page, isDisabled = false) => {
+                const button = document.createElement('button');
+                button.textContent = text;
+                button.disabled = isDisabled;
+                button.className = `px-3 py-1 border rounded-md ${isDisabled ? 'bg-gray-200 text-gray-500' : 'bg-white hover:bg-gray-100'}`;
+                button.onclick = () => {
+                    currentPage = page;
+                    applyFiltersAndSearch(false);
+                };
+                return button;
+            };
+
+            paginationContainer.appendChild(createButton('Previous', currentPage - 1, currentPage === 1));
+
+            for (let i = 1; i <= pageCount; i++) {
+                const pageButton = createButton(i, i, i === currentPage);
+                if (i === currentPage) {
+                    pageButton.classList.add('bg-indigo-500', 'text-white');
+                }
+                paginationContainer.appendChild(pageButton);
+            }
+
+            paginationContainer.appendChild(createButton('Next', currentPage + 1, currentPage === pageCount));
+        }
+
+        function initializeFilters() {
+            const shopFilter = document.getElementById('filterShop');
+            // NOTE: Shop options are now populated by populateShopFilterDropdown() using real Printify shops
+
+            // Remove previous event listeners to avoid duplication
+            const newSearchInput = document.getElementById('productSearchInput').cloneNode(true);
+            document.getElementById('productSearchInput').parentNode.replaceChild(newSearchInput, document.getElementById('productSearchInput'));
+            newSearchInput.addEventListener('input', () => applyFiltersAndSearch(true));
+
+            const newPublishedFilter = document.getElementById('filterPublished').cloneNode(true);
+            document.getElementById('filterPublished').parentNode.replaceChild(newPublishedFilter, document.getElementById('filterPublished'));
+            newPublishedFilter.addEventListener('change', () => applyFiltersAndSearch(true));
+
+            const newShopFilter = shopFilter.cloneNode(true);
+            shopFilter.parentNode.replaceChild(newShopFilter, shopFilter);
+            newShopFilter.addEventListener('change', () => {
+                try { localStorage.setItem('lastShopFilter', newShopFilter.value || 'all'); } catch(e) {}
+                applyFiltersAndSearch(true);
+            });
+        }
+
+        // Populate the store dropdown with all connected stores
+        function populateShopFilterDropdown(shops) {
+            try {
+                const shopFilter = document.getElementById('filterShop');
+                if (!shopFilter) return;
+                // Reset to only the All option
+                shopFilter.innerHTML = '<option value="all">All Shops</option>';
+                (Array.isArray(shops) ? shops : []).forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = String(s.id);
+                    opt.textContent = s.title || s.shop_name || ('Shop ' + s.id);
+                    shopFilter.appendChild(opt);
+                });
+            } catch (e) { console.warn('populateShopFilterDropdown error', e); }
+        }
+
+        function restoreShopFilterSelection() {
+            try {
+                const shopFilter = document.getElementById('filterShop');
+                if (!shopFilter) return;
+                const saved = localStorage.getItem('lastShopFilter') || 'all';
+                if ([...shopFilter.options].some(o => o.value === saved)) {
+                    shopFilter.value = saved;
+                } else {
+                    shopFilter.value = 'all';
+                }
+            } catch (e) {}
+        }
+        
+        async function loadDashboardData() {
+            if (isDashboardLoading) {
+                console.log('loadDashboardData skipped: already running');
+                return;
+            }
+            isDashboardLoading = true;
+            console.log('loadDashboardData called');
+            
+            // Show loading indicators
+            showLoadingState();
+            
+            try {
+                const authToken = localStorage.getItem('authToken') || '';
+                console.log('Auth token exists:', authToken ? 'Yes' : 'No');
+                
+                if (!authToken) {
+                    throw new Error('No authentication token found. Please log in again.');
+                }
+                
+                // Fetch subscription data
+                console.log('Fetching subscription data');
+                try {
+                    const subscriptionRes = await fetch('/.netlify/functions/get-subscription', { 
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    if (subscriptionRes.ok) {
+                        const subscriptionData = await subscriptionRes.json();
+                        console.log('Subscription data:', subscriptionData);
+                        
+                        // Update subscription UI
+                        document.getElementById('subscriptionBadge').textContent = subscriptionData.plan_name || 'Free Trial';
+                        const daysEl = document.getElementById('daysLeft');
+                        daysEl.textContent = subscriptionData.days_remaining ?? 14;
+                        // Lock days so later calculations don't override subscription source
+                        daysEl.dataset.locked = '1';
+                        
+                        // Update limits
+                        window.limits = {
+                            products_per_month: subscriptionData.products_per_month || 10,
+                            ai_generations: subscriptionData.ai_generations || 50
+                        };
+                        
+                        // Update usage
+                        document.getElementById('totalProducts').textContent = subscriptionData.products_used || 0;
+                        document.getElementById('aiGenerations').textContent = subscriptionData.ai_used || 0;
+                        
+                        // Update progress bars
+                        const productsPercent = (subscriptionData.products_used / (subscriptionData.products_per_month || 10)) * 100;
+                        const aiPercent = (subscriptionData.ai_used / (subscriptionData.ai_generations || 50)) * 100;
+                        document.getElementById('productsUsage').style.width = `${Math.min(productsPercent, 100)}%`;
+                        document.getElementById('aiUsage').style.width = `${Math.min(aiPercent, 100)}%`;
+                    } else {
+                        console.error('Failed to fetch subscription data:', subscriptionRes.status);
+                        const errorData = await subscriptionRes.json().catch(() => ({}));
+                        console.error('Subscription error details:', errorData);
+                        showNotification('Could not load subscription data. Using default values.', 'warning');
+                    }
+                } catch (subError) {
+                    console.error('Error fetching subscription data:', subError);
+                    showNotification('Could not load subscription data. Using default values.', 'warning');
+                }
+                
+                // Fetch products from Printify
+                console.log('Fetching products from /.netlify/functions/get-products');
+                showProductsLoading(true);
+                
+                try {
+                    // 1) Load all connected shops to populate the store dropdown with real stores
+                    try {
+                        const shopsRes = await fetch('/.netlify/functions/get-shops', { 
+                            headers: { 'Authorization': `Bearer ${authToken}` }
+                        });
+                        const shopsPayload = await shopsRes.json().catch(() => ({}));
+                        const shops = Array.isArray(shopsPayload.shops) ? shopsPayload.shops : [];
+                        window.__allShops = shops;
+                        populateShopFilterDropdown(shops);
+                    } catch (e) {
+                        console.warn('Failed to load shops; falling back to All Shops only', e);
+                        window.__allShops = [];
+                        populateShopFilterDropdown([]);
+                    }
+                    const productsRes = await fetch('/.netlify/functions/get-products', { 
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    console.log('Products response status:', productsRes.status);
+                    
+                    if (!productsRes.ok) {
+                        throw new Error(`Failed to fetch products: ${productsRes.status}`);
+                    }
+                    
+                    const productsPayload = await productsRes.json();
+                    console.log('Products payload:', productsPayload);
+                    
+                    if (productsPayload.error) {
+                        throw new Error(productsPayload.error);
+                    }
+                    
+                    allDashboardProducts = productsPayload.products || [];
+                    console.log(`Loaded ${allDashboardProducts.length} products successfully`);
+                    
+                    // Update product count in stats
+                    document.getElementById('totalProducts').textContent = allDashboardProducts.length;
+                    
+                    initializeFilters(); // wires search/status handlers
+                    // Restore previously selected shop or default to 'all'
+                    restoreShopFilterSelection();
+                    applyFiltersAndSearch(true); // This will call renderPagination and renderProducts
+                } catch (productsError) {
+                    console.error('Error fetching products:', productsError);
+                    showNotification(`Could not load products: ${productsError.message}`, 'error');
+                    allDashboardProducts = [];
+                    renderProducts([]);
+                } finally {
+                    showProductsLoading(false);
+                }
+
+                // Fetch recent bulk sessions for other stats
+                try {
+                    const sessionsRes = await fetch('/.netlify/functions/list-bulk-contexts?limit=12', { 
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    if (sessionsRes.ok) {
+                        const sessionsPayload = await sessionsRes.json();
+                        const sessions = sessionsPayload?.data || [];
+                        renderSessionsToOverview(sessions);
+                        (window.wireQuickActions || function(){ })(sessions);
+                        updateUsageStatsFromSessions(sessions, allDashboardProducts.length, window.limits || { products_per_month: 100, ai_generations: 500 });
+                    } else {
+                        console.error('Failed to fetch sessions:', sessionsRes.status);
+                    }
+                } catch (sessionsError) {
+                    console.error('Error fetching sessions:', sessionsError);
+                }
+
+                calculateTrialDays();
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+            } finally {
+                isDashboardLoading = false;
+                hideLoadingState();
+            }
+        }
+        
+        function showLoadingState() {
+            // No-op for stats to avoid overwriting counters during async loads
+        }
+        
+        function hideLoadingState() {
+            // No-op since we don't change stat-number during loading anymore
+        }
+        
+        function showProductsLoading(isLoading) {
+            const gridContainer = document.getElementById('productsGrid');
+            const recentProductsContainer = document.getElementById('recentProducts');
+            
+            if (isLoading) {
+                if (gridContainer) {
+                    gridContainer.innerHTML = '<div class="loading-message"><i class="fas fa-spinner fa-spin"></i> Loading products...</div>';
+                }
+                if (recentProductsContainer) {
+                    recentProductsContainer.innerHTML = '<div class="loading-message"><i class="fas fa-spinner fa-spin"></i> Loading recent products...</div>';
+                }
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element if it doesn't exist
+            let notificationContainer = document.getElementById('notificationContainer');
+            if (!notificationContainer) {
+                notificationContainer = document.createElement('div');
+                notificationContainer.id = 'notificationContainer';
+                notificationContainer.style.position = 'fixed';
+                notificationContainer.style.top = '20px';
+                notificationContainer.style.right = '20px';
+                notificationContainer.style.zIndex = '1000';
+                document.body.appendChild(notificationContainer);
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.padding = '12px 20px';
+            notification.style.marginBottom = '10px';
+            notification.style.borderRadius = '4px';
+            notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            notification.style.transition = 'all 0.3s ease';
+            notification.style.cursor = 'pointer';
+            
+            // Set colors based on type
+            const colors = {
+                info: { bg: '#e0f2fe', text: '#0369a1' },
+                success: { bg: '#dcfce7', text: '#16a34a' },
+                warning: { bg: '#fef3c7', text: '#d97706' },
+                error: { bg: '#fee2e2', text: '#dc2626' }
+            };
+            
+            notification.style.backgroundColor = colors[type]?.bg || colors.info.bg;
+            notification.style.color = colors[type]?.text || colors.info.text;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>${message}</div>
+                    <button style="background: none; border: none; cursor: pointer; margin-left: 10px;">&times;</button>
+                </div>
+            `;
+            
+            notificationContainer.appendChild(notification);
+            
+            // Add click handler to close
+            notification.querySelector('button').addEventListener('click', () => {
+                notification.remove();
+            });
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.opacity = '0';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+        }
+        
+
+        function calculateTrialDays() {
+            const daysEl = document.getElementById('daysLeft');
+            // If subscription already set this, do not override
+            if (daysEl && daysEl.dataset.locked === '1') return;
+            const trialDuration = 14; // 14-day trial
+            // The user's creation date from Supabase appears to be in the future.
+            // Using a placeholder date for now. Replace with user.created_at when the data is correct.
+            const creationDate = new Date('2025-08-20T16:45:47.134644Z'); 
+            const now = new Date();
+            const diffTime = Math.abs(now - creationDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const daysLeft = Math.max(0, trialDuration - diffDays);
+            document.getElementById('daysLeft').textContent = daysLeft;
+        }
+
+
+        function renderSessionsToOverview(sessions) {
+            // Optionally adjust badges or counters later; currently covered by updateUsageStatsFromSessions
+        }
+
+        // Wire up overview quick action buttons safely (attach to window to ensure global availability)
+        window.wireQuickActions = function(sessions) {
+            const startBtn = document.getElementById('btnStartNewBulk');
+            const resumeBtn = document.getElementById('btnResumeLast');
+            const createProductBtn = document.getElementById('createNewProductBtn');
+
+            if (startBtn) startBtn.onclick = (e) => { e.preventDefault(); startNewBulk(); };
+            if (resumeBtn) resumeBtn.onclick = (e) => { e.preventDefault(); resumeLastSession(sessions); };
+            if (createProductBtn) createProductBtn.onclick = (e) => { e.preventDefault(); redirectToProductCreation(); };
+        }
+
+        function renderProducts(products) {
+            const gridContainer = document.getElementById('productsGrid');
+            const recentProductsContainer = document.getElementById('recentProducts');
+
+            if (gridContainer) gridContainer.innerHTML = '';
+            if (recentProductsContainer) recentProductsContainer.innerHTML = '';
+
+
+            if (!products || products.length === 0) {
+                const emptyStateHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-box"></i>
+                        <h3>No products found</h3>
+                        <p>Your products will appear here once you create them.</p>
+                    </div>`;
+                if (gridContainer) gridContainer.innerHTML = emptyStateHTML;
+                // Don't show empty state for recent products, just leave it blank
+                if (recentProductsContainer) recentProductsContainer.innerHTML = '';
+                return;
+            }
+
+            // Helper to build a product card element
+            const createProductCard = (product) => {
+                // Ensure image URL is valid
+                let imageUrl = 'https://via.placeholder.com/150';
+                let providerName = 'Unknown Provider';
+                if (product.images && product.images.length > 0) {
+                    const defaultImg = product.images.find(img => img.is_default) || product.images[0];
+                    if (defaultImg) {
+                        if (defaultImg.src) {
+                            imageUrl = defaultImg.src;
+                        } else if (defaultImg.preview_url) {
+                            imageUrl = defaultImg.preview_url;
+                        }
+                    }
+                }
+                if (product.print_provider && product.print_provider.title) {
+                    providerName = product.print_provider.title;
+                }
+                const price = (product.variants && product.variants[0]?.price / 100).toFixed(2) || '0.00';
+
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-lg shadow-sm product-card';
+                card.setAttribute('data-product-id', product.id);
+                card.innerHTML = `
+                    <div class="product-image">
+                        <img src="${imageUrl}" alt="${product.title}" onerror="this.src='/assets/placeholder.png'">
+                    </div>
+                    <div class="product-details p-3">
+                        <h3 class="product-title text-sm font-semibold mb-1 truncate">${product.title}</h3>
+                        <p class="product-provider text-xs text-gray-500 mb-2">${providerName}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-md font-bold text-gray-800">$${price}</span>
+                            <div class="flex items-center gap-2">
+                                <button class="text-gray-600 hover:text-gray-900 text-xs font-semibold" onclick="openEditProduct('${product.id}', ${product.shop_id || 0})"><i class=\"fas fa-edit\"></i> Edit</button>
+                                ${product.published_at ? 
+                                    '<span class="text-xs font-medium text-green-600 px-2 py-1 bg-green-50 rounded-full">Published</span>' : 
+                                    `<button class="publish-btn text-indigo-600 hover:text-indigo-800 text-xs font-semibold" onclick="openPublishStorePicker('${product.id}', ${product.shop_id || 0})"><i class=\"fas fa-globe\"></i> Publish</button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return card;
+            };
+
+            // Render recent products as cards (same style as products grid)
+            if (recentProductsContainer) {
+                const recentGrid = document.createElement('div');
+                recentGrid.className = 'products-grid';
+                products.slice(0, 8).forEach(product => {
+                    const card = createProductCard(product);
+                    recentGrid.appendChild(card);
+                });
+                recentProductsContainer.appendChild(recentGrid);
+            }
+
+
+            if (gridContainer) {
+                products.forEach(product => {
+                    const card = createProductCard(product);
+                    gridContainer.appendChild(card);
+                });
+            }
+        }
+
+        async function publishProduct(productId, shopId) {
+            let publishBtn;
+            try {
+                // Show publishing status
+                publishBtn = document.querySelector(`[data-product-id="${productId}"] .publish-btn`);
+                if (publishBtn) {
+                    publishBtn.disabled = true;
+                    publishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing...';
+                }
+
+                showNotification(`Publishing product ${productId.substring(0, 8)}...`, 'info');
+
+                const authToken = localStorage.getItem('authToken') || '';
+                if (!authToken) {
+                    throw new Error('Not authenticated');
+                }
+
+                const res = await fetch('/.netlify/functions/publish-product', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ productId, shopId })
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || `Failed to publish (${res.status})`);
+                }
+
+                showNotification('Product published successfully!', 'success');
+                await loadDashboardData();
+            } catch (err) {
+                console.error('Error publishing product:', err);
+                showNotification(`Publication failed: ${err.message}`, 'error');
+            } finally {
+                if (publishBtn) {
+                    publishBtn.disabled = false;
+                    publishBtn.innerHTML = '<i class="fas fa-globe"></i> Publish';
+                }
+            }
+        }
+
+        // Edit Product Modal Handlers
+        async function populateEditStores(defaultShopId) {
+            const select = document.getElementById('editStoreSelect');
+            const hidden = document.getElementById('editShopId');
+            if (!select || !hidden) return;
+            // reset
+            select.innerHTML = '<option value="" disabled selected>Loading stores...</option>';
+            try {
+                const authToken = localStorage.getItem('authToken') || '';
+                const res = await fetch('/.netlify/functions/get-shops', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json().catch(() => ({}));
+                const shops = Array.isArray(data.shops) ? data.shops : [];
+                if (!res.ok) throw new Error(data.error || `Failed to load stores (${res.status})`);
+
+                // build options
+                select.innerHTML = '';
+                shops.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = String(s.id);
+                    opt.textContent = `${s.title || 'Shop'}${s.sales_channel ? ` • ${s.sales_channel}` : ''}`;
+                    select.appendChild(opt);
+                });
+                // set selection
+                const desired = String(defaultShopId || '');
+                if (desired && [...select.options].some(o => o.value === desired)) {
+                    select.value = desired;
+                } else if (select.options.length) {
+                    select.selectedIndex = 0;
+                }
+                // sync hidden
+                hidden.value = select.value || '';
+                select.addEventListener('change', () => {
+                    hidden.value = select.value || '';
+                });
+            } catch (e) {
+                console.error('populateEditStores error:', e);
+                select.innerHTML = '<option value="" disabled selected>No stores found</option>';
+            }
+        }
+
+        async function saveProductEdits() {
+            const productId = document.getElementById('editProductId').value;
+            const shopIdStr = document.getElementById('editShopId').value;
+            const title = document.getElementById('editTitle').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+            const tagsText = document.getElementById('editTags').value.trim();
+            const saveBtn = document.getElementById('saveEditBtn');
+
+            const shopId = shopIdStr ? Number(shopIdStr) : undefined;
+
+            try {
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                }
+
+                const authToken = localStorage.getItem('authToken') || '';
+                if (!authToken) {
+                    throw new Error('Not authenticated');
+                }
+
+                const body = { productId, shopId };
+                if (title) body.title = title;
+                if (description) body.description = description;
+                if (tagsText) body.tags = tagsText.split(',').map(t => t.trim()).filter(Boolean);
+
+                const res = await fetch('/.netlify/functions/update-product', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || `Save failed (${res.status})`);
+                }
+
+                showNotification('Product updated successfully', 'success');
+                closeEditModal();
+                await loadDashboardData();
+            } catch (e) {
+                console.error('saveProductEdits error:', e);
+                showNotification(e.message || 'Failed to save product edits', 'error');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+                }
+            }
+        }
+
+        // Call Netlify edit-image function and preview the result in the modal
+        async function editProductImage() {
+            const productId = document.getElementById('editProductId').value;
+            const prompt = (document.getElementById('editImagePrompt')?.value || '').trim();
+            const currentSrc = document.getElementById('currentImagePreview')?.src || '';
+            const btn = document.getElementById('editImageBtn');
+            const previewEl = document.getElementById('editedImagePreview');
+            const hiddenEditedUrl = document.getElementById('editedImageUrl');
+            const modelOnly = !!document.getElementById('modelOnlyToggle')?.checked;
+
+            if (!prompt && !modelOnly) {
+                showNotification('Please enter an image edit prompt.', 'warning');
+                return;
+            }
+            if (!currentSrc) {
+                showNotification('No source image found to edit.', 'error');
+                return;
+            }
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                }
+
+                const authToken = localStorage.getItem('authToken') || '';
+                let endpoint = '/.netlify/functions/edit-image';
+                let finalPrompt = prompt;
+
+                if (modelOnly) {
+                    const product = (Array.isArray(allDashboardProducts) ? allDashboardProducts : []).find(p => p.id === productId) || {};
+                    const title = typeof product.title === 'string' ? product.title : '';
+                    const tags = Array.isArray(product.tags) ? product.tags.join(', ') : '';
+                    // Build contextual lifestyle prompt
+                    finalPrompt = [
+                        'Add a photorealistic human model interacting with this product in an appropriate scenic environment.',
+                        'Do NOT alter the printed design on the product. Keep the original design intact and visible.',
+                        'Produce a full-scene lifestyle image (not a flat design overlay). Natural lighting, high detail, no text overlays.',
+                        'Choose a background that matches the product theme. Examples: if a shirt has a mountain design, place the model outdoors in a cool mountain scene; if it is a mug, have the model using the mug in a cozy home or kitchen.',
+                        (title ? `Product title: ${title}.` : ''),
+                        (tags ? `Tags: ${tags}.` : ''),
+                        (prompt ? `Additional guidance: ${prompt}` : '')
+                    ].filter(Boolean).join(' ');
+
+                    const ok = confirm('This will generate a lifestyle image with a model for download only (not applied to Printify). Proceed?');
+                    if (!ok) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Edit Image';
+                        }
+                        return;
+                    }
+                    endpoint = '/.netlify/functions/add-model';
+                }
+
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+                    },
+                    body: JSON.stringify({ prompt: finalPrompt, imageUrl: currentSrc })
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || `Edit failed (${res.status})`);
+                }
+
+                const editedUrl = data?.data?.image_url;
+                if (!editedUrl) throw new Error('No edited image returned');
+
+                if (previewEl) previewEl.src = editedUrl;
+                if (hiddenEditedUrl) hiddenEditedUrl.value = editedUrl;
+                showNotification(modelOnly ? 'Lifestyle image generated for download only.' : 'Edited image generated. You can download or copy the URL.', 'success');
+            } catch (e) {
+                console.error('editProductImage error:', e);
+                showNotification(e.message || 'Failed to edit image', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Edit Image';
+                }
+            }
+        }
+
+        // Copy the edited image URL from the hidden input
+        function copyEditedImageUrl() {
+            const url = document.getElementById('editedImageUrl')?.value || '';
+            if (!url) {
+                showNotification('No edited image URL to copy yet.', 'warning');
+                return;
+            }
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('Edited image URL copied to clipboard.', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy URL. Please copy manually.', 'error');
+            });
+        }
+
+        // Trigger a download for the edited image URL
+        async function downloadEditedImage() {
+            const url = document.getElementById('editedImageUrl')?.value || '';
+            if (!url) {
+                showNotification('No edited image available to download.', 'warning');
+                return;
+            }
+            try {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'edited-image.png';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (e) {
+                console.error('downloadEditedImage error:', e);
+                showNotification('Could not start download.', 'error');
+            }
+        }
+
+        // Apply the edited image to the product's print areas via serverless function
+        async function applyEditedImage() {
+            const productId = document.getElementById('editProductId')?.value;
+            const shopIdStr = document.getElementById('editShopId')?.value;
+            const editedUrl = document.getElementById('editedImageUrl')?.value || '';
+            const btn = document.getElementById('applyEditedImageBtn');
+            const areaSelect = document.getElementById('printAreaPositionSelect');
+            const appendToggle = document.getElementById('appendToggle');
+            const position = (areaSelect?.value || 'front');
+            const append = !!(appendToggle?.checked);
+
+            if (!editedUrl) {
+                showNotification('Generate an edited image first.', 'warning');
+                return;
+            }
+
+            const shopId = shopIdStr ? Number(shopIdStr) : undefined;
+            if (!productId || !shopId) {
+                showNotification('Missing product or shop info.', 'error');
+                return;
+            }
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+                }
+                const authToken = localStorage.getItem('authToken') || '';
+                if (!authToken) throw new Error('Not authenticated');
+
+                const res = await fetch('/.netlify/functions/apply-edited-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ shopId, productId, imageUrl: editedUrl, position, append })
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || `Apply failed (${res.status})`);
+                }
+
+                // Update current preview and notify
+                const currentPreview = document.getElementById('currentImagePreview');
+                if (currentPreview) currentPreview.src = editedUrl;
+                showNotification('Edited image applied to product successfully.', 'success');
+
+                // Generate mockups so gallery images reflect the new design
+                // Mockup generation endpoint has been removed; skip this step
+                showNotification('Edited image applied. Mockup regeneration is disabled.', 'info');
+
+                // Reload dashboard to reflect updates
+                await loadDashboardData();
+
+                // Offer to republish
+                const doPublish = confirm('Edited image applied. Do you want to republish this product now?');
+                if (doPublish) {
+                    await publishProduct(productId, Number(shopIdStr));
+                }
+            } catch (e) {
+                console.error('applyEditedImage error:', e);
+                showNotification(e.message || 'Failed to apply edited image', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Apply to Product';
+                }
+            }
+        }
+
+        function redirectToProductCreation() {
+            console.log('Redirecting to product creation page');
+            window.location.href = '/index.html';
+        }
+
+        function updateUsageStatsFromSessions(sessions, totalProducts, limits) {
+            const sessionsAi = sessions.reduce((acc, s) => acc + (s?.totals?.imagesAssigned || 0), 0);
+            const aiEl = document.getElementById('aiGenerations');
+            const currentAi = parseInt((aiEl?.textContent || '0').toString().replace(/[^0-9]/g, ''), 10) || 0;
+            const finalAi = Math.max(currentAi, sessionsAi);
+            if (aiEl) aiEl.textContent = finalAi;
+
+            const prodEl = document.getElementById('totalProducts');
+            const currentProducts = parseInt((prodEl?.textContent || '0').toString().replace(/[^0-9]/g, ''), 10) || totalProducts || 0;
+
+            const productsPercent = (currentProducts / (limits.products_per_month || 100)) * 100;
+            const aiPercent = (finalAi / (limits.ai_generations || 500)) * 100;
             document.getElementById('productsUsage').style.width = `${Math.min(productsPercent, 100)}%`;
             document.getElementById('aiUsage').style.width = `${Math.min(aiPercent, 100)}%`;
+        }
+
+
+        function connectPrintfulOauth() {
+            const token = localStorage.getItem('authToken') || '';
+            const url = new URL('/api/printful-oauth-start', window.location.origin);
+            if (token) url.searchParams.set('state', token);
+            window.location.href = url.toString();
+        }
+
+        function startNewBulk() {
+            window.location.href = '/bulk.html';
+        }
+
+        function resumeLastSession(sessions) {
+            const latest = sessions && sessions[0];
+            if (!latest) { startNewBulk(); return; }
+            window.location.href = `/bulk.html?sessionId=${encodeURIComponent(latest.sessionId)}`;
         }
 
         // Navigation handling
@@ -816,12 +2181,16 @@
             }
         }
 
-        // Logout functionality
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            window.location.href = '/auth.html';
-        });
+        // Logout functionality (moved to nav)
+        const logoutLink = document.getElementById('logoutLink');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
+                window.location.href = '/auth.html';
+            });
+        }
 
         // Handle Stripe checkout success
         const urlParams = new URLSearchParams(window.location.search);
@@ -832,6 +2201,8 @@
             // Refresh user data
             window.location.href = '/dashboard.html';
         }
+        
+        // Removed duplicate DOMContentLoaded handler to prevent double loading
     </script>
 </body>
 </html>

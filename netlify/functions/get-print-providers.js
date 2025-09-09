@@ -44,8 +44,26 @@ exports.handler = async (event, context) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid token payload' }) };
     }
 
-    // Import Printify proxy functionality
-    const { simpleDecrypt } = require('./printify-proxy.js');
+    // Define the simpleDecrypt function (same as in printify-proxy.js)
+    function simpleDecrypt(encryptedBase64, key) {
+      try {
+        const encryptedBytes = Buffer.from(encryptedBase64, 'base64');
+        const keyLength = key.length;
+        let decrypted = '';
+        
+        for (let i = 0; i < encryptedBytes.length; i++) {
+          const keyChar = key.charCodeAt(i % keyLength);
+          const decryptedChar = String.fromCharCode(encryptedBytes[i] ^ keyChar);
+          decrypted += decryptedChar;
+        }
+        
+        return decrypted;
+      } catch (err) {
+        console.error('Error decrypting API key:', err);
+        return null;
+      }
+    }
+    
     const PRINTIFY_API_BASE = 'https://api.printify.com/v1';
 
     // Get user's encrypted API key
@@ -75,11 +93,17 @@ exports.handler = async (event, context) => {
       };
     }
 
+    console.log('[get-print-providers] Fetching print providers for blueprints:', blueprintIds);
+    console.log('[get-print-providers] Using API key:', apiKey.substring(0, 8) + '...');
+    
     // Fetch print providers for each blueprint
     const results = await Promise.all(
       (blueprintIds || []).map(async (blueprintId) => {
         try {
-          const response = await fetch(`${PRINTIFY_API_BASE}/catalog/blueprints/${blueprintId}/print_providers.json`, {
+          const printifyUrl = `${PRINTIFY_API_BASE}/catalog/blueprints/${blueprintId}/print_providers.json`;
+          console.log('[get-print-providers] Making request to:', printifyUrl);
+          
+          const response = await fetch(printifyUrl, {
             headers: {
               Authorization: `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
@@ -92,7 +116,8 @@ exports.handler = async (event, context) => {
           }
 
           const providers = await response.json();
-          
+          console.log(`[get-print-providers] Raw API response for blueprint ${blueprintId}:`, providers);
+          console.log(`[get-print-providers] Provider IDs for blueprint ${blueprintId}:`, providers.map(p => p.id));
           return {
             blueprintId,
             printProviderId: providers.length > 0 ? providers[0].id : null,

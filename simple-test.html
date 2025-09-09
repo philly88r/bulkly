@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick AI Simple Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .ok { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
+        pre { background: #f5f5f5; padding: 10px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Quick AI Simple Test</h1>
+    <button onclick="runTest()">Test System</button>
+    <div id="results"></div>
+
+    <script>
+        async function runTest() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch('/.netlify/functions/quick-ai-simple-test');
+                const data = await response.json();
+                
+                let html = '<h2>Results:</h2>';
+                
+                // Overall status
+                if (data.status === 'READY') {
+                    html += '<p class="ok">✅ SYSTEM READY - Quick AI should work!</p>';
+                } else if (data.status === 'NEEDS_SETUP') {
+                    html += '<p class="error">❌ NEEDS SETUP</p>';
+                    html += '<p>Missing: ' + (data.missing || []).join(', ') + '</p>';
+                } else {
+                    html += '<p class="error">❌ ERROR: ' + (data.error || 'Unknown') + '</p>';
+                }
+                
+                // Environment variables
+                html += '<h3>Environment Variables:</h3><ul>';
+                const env = data.environment || {};
+                for (const key in env) {
+                    const status = env[key];
+                    const icon = status === 'SET' ? '✅' : '❌';
+                    html += '<li>' + icon + ' ' + key + ': ' + status + '</li>';
+                }
+                html += '</ul>';
+                
+                // Database
+                html += '<h3>Database:</h3>';
+                if (data.database === 'CONNECTED') {
+                    html += '<p class="ok">✅ Connected successfully</p>';
+                } else {
+                    html += '<p class="error">❌ ' + (data.database || 'Failed') + '</p>';
+                }
+                
+                // Gemini
+                html += '<h3>Gemini AI:</h3>';
+                if (data.gemini === 'WORKING') {
+                    html += '<p class="ok">✅ API working</p>';
+                } else if (data.gemini === 'NO_API_KEY') {
+                    html += '<p class="error">❌ No API key set</p>';
+                } else {
+                    html += '<p class="error">❌ ' + (data.gemini || 'Failed') + '</p>';
+                }
+                
+                // Raw data
+                html += '<details><summary>Raw Data</summary><pre>' + JSON.stringify(data, null, 2) + '</pre></details>';
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = '<p class="error">Test failed: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

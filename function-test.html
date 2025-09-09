@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Function Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .result { background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    button { padding: 8px 16px; margin-right: 8px; margin-bottom: 8px; }
+    .success { color: green; }
+    .error { color: red; }
+    .tabs { display: flex; margin-bottom: 16px; }
+    .tab { padding: 8px 16px; cursor: pointer; border: 1px solid #ddd; border-bottom: none; }
+    .tab.active { background: #f5f5f5; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Printify Function Test Suite</h1>
+  
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('basicTab')">Basic Tests</div>
+    <div class="tab" onclick="showTab('chatTab')">Chat Bot</div>
+    <div class="tab" onclick="showTab('jobTab')">Quick Job</div>
+    <div class="tab" onclick="showTab('dbTab')">Database</div>
+  </div>
+  
+  <div id="basicTab" class="tab-content active">
+    <div class="card">
+      <h3>Ping Test (Basic Function)</h3>
+      <button onclick="testPing()">Test Ping</button>
+      <div id="pingResult" class="result">Results will appear here...</div>
+    </div>
+    
+    <div class="card">
+      <h3>Health Test (Shallow)</h3>
+      <button onclick="testHealth(true)">Test Health (Shallow)</button>
+      <div id="healthShallowResult" class="result">Results will appear here...</div>
+    </div>
+    
+    <div class="card">
+      <h3>Health Test (Full)</h3>
+      <button onclick="testHealth(false)">Test Health (Full)</button>
+      <div id="healthFullResult" class="result">Results will appear here...</div>
+    </div>
+    
+    <div class="card">
+      <h3>Debug Gemini API</h3>
+      <button onclick="testDebugGemini()">Test Gemini API</button>
+      <div id="debugGeminiResult" class="result">Results will appear here...</div>
+    </div>
+    
+    <div class="card">
+      <h3>DB Helper (/.netlify/functions/db-info)</h3>
+      <div class="mb-2">
+        <button onclick="testDbInfo(false)">Show Info</button>
+        <button onclick="testDbInfo(true)">Try Connect</button>
+      </div>
+      <div id="dbInfoResult" class="result">Results will appear here...</div>
+    </div>
+  </div>
+  
+  <div id="chatTab" class="tab-content">
+    <div class="card">
+      <h3>Test Plan Next Question</h3>
+      <div class="mb-3">
+        <label>Chat State (JSON):</label>
+        <textarea id="chatState">{
+  "prompt": "Create 10 retro dog t-shirts",
+  "quantity": 10,
+  "productScope": "tshirt",
+  "imageMode": "generate",
+  "style": "retro"
+}</textarea>
+      </div>
+      <div class="mb-3">
+        <label>Required Missing:</label>
+        <input type="text" id="requiredMissing" class="form-control" value="shopId" />
+      </div>
+      <div class="mb-3">
+        <label>Nice Missing:</label>
+        <input type="text" id="niceMissing" class="form-control" value="background,consistency,markup" />
+      </div>
+      <button onclick="testPlanNextQuestion()">Test Plan Next Question</button>
+      <div id="planNextQuestionResult" class="result">Results will appear here...</div>
+    </div>
+  </div>
+  
+  <div id="jobTab" class="tab-content">
+    <div class="card">
+      <h3>Create Quick Job</h3>
+      <div class="mb-3">
+        <label>Job Payload:</label>
+        <textarea id="jobPayload">{
+  "prompt": "Retro dog t-shirts",
+  "quantity": 3,
+  "productScope": "tshirt",
+  "imageMode": "generate",
+  "style": "retro",
+  "shopId": "YOUR_SHOP_ID"
+}</textarea>
+      </div>
+      <button onclick="createQuickJob()">Create Job</button>
+      <div id="createJobResult" class="result">Results will appear here...</div>
+    </div>
+    
+    <div class="card">
+      <h3>Check Job Status</h3>
+      <div class="mb-3">
+        <label>Job ID:</label>
+        <input type="text" id="jobId" class="form-control" placeholder="Enter job ID" />
+      </div>
+      <button onclick="checkJobStatus(false)">Check Status</button>
+      <button onclick="checkJobStatus(true)">Check Status + Tick</button>
+      <div id="jobStatusResult" class="result">Results will appear here...</div>
+    </div>
+  </div>
+  
+  <div id="dbTab" class="tab-content">
+    <div class="card">
+      <h3>Database Connection Test</h3>
+      <p>This tests the database connection directly using the health endpoint.</p>
+      <button onclick="testHealth(false)">Test DB Connection</button>
+      <div id="dbConnectionResult" class="result">Results will appear here...</div>
+    </div>
+    <div class="card">
+      <h3>Database Environment Details</h3>
+      <p>Shows which env var is being used and the safe parts of the connection string (no secrets).</p>
+      <button onclick="testDbEnv()">Show DB Env Details</button>
+      <div id="dbEnvResult" class="result">Results will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    // Tab functionality
+    function showTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show selected tab
+      document.getElementById(tabId).classList.add('active');
+      document.querySelector(`.tab[onclick="showTab('${tabId}')"]`).classList.add('active');
+    }
+    
+    // Basic tests
+    async function testPing() {
+      const resultEl = document.getElementById('pingResult');
+      resultEl.textContent = 'Testing...';
+      
+      try {
+        const start = Date.now();
+        const response = await fetch('/.netlify/functions/ping');
+        const elapsed = Date.now() - start;
+        
+        if (!response.ok) {
+          resultEl.innerHTML = `<span class="error">Error: ${response.status} ${response.statusText}</span>\nTime: ${elapsed}ms`;
+          return;
+        }
+        
+        const data = await response.json();
+        resultEl.innerHTML = `<span class="success">Success (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+    
+    async function testHealth(shallow) {
+      const resultEl = document.getElementById(shallow ? 'healthShallowResult' : 'healthFullResult');
+      if (!shallow) document.getElementById('dbConnectionResult').textContent = 'Testing...';
+      resultEl.textContent = 'Testing...';
+      
+      try {
+        const url = `/.netlify/functions/health${shallow ? '?shallow=true' : ''}`;
+        const start = Date.now();
+        const response = await fetch(url);
+        const elapsed = Date.now() - start;
+        
+        if (!response.ok) {
+          resultEl.innerHTML = `<span class="error">Error: ${response.status} ${response.statusText}</span>\nTime: ${elapsed}ms`;
+          if (!shallow) document.getElementById('dbConnectionResult').innerHTML = resultEl.innerHTML;
+          return;
+        }
+        
+        const data = await response.json();
+        const result = `<span class="${data.ok ? 'success' : 'error'}">Status: ${data.ok ? 'OK' : 'Failed'} (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+        resultEl.innerHTML = result;
+        if (!shallow) document.getElementById('dbConnectionResult').innerHTML = result;
+      } catch (error) {
+        const errorMsg = `<span class="error">Fetch Error: ${error.message}</span>`;
+        resultEl.innerHTML = errorMsg;
+        if (!shallow) document.getElementById('dbConnectionResult').innerHTML = errorMsg;
+      }
+    }
+    
+    async function testDebugGemini() {
+      const resultEl = document.getElementById('debugGeminiResult');
+      resultEl.textContent = 'Testing Gemini API...';
+      
+      try {
+        const start = Date.now();
+        const response = await fetch('/.netlify/functions/debug-gemini');
+        const elapsed = Date.now() - start;
+        
+        if (!response.ok) {
+          resultEl.innerHTML = `<span class="error">Error: ${response.status} ${response.statusText}</span>\nTime: ${elapsed}ms`;
+          return;
+        }
+        
+        const data = await response.json();
+        resultEl.innerHTML = `<span class="${data.success ? 'success' : 'error'}">Status: ${data.success ? 'OK' : 'Failed'} (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+    
+    // Chat bot tests
+    async function testPlanNextQuestion() {
+      const resultEl = document.getElementById('planNextQuestionResult');
+      resultEl.textContent = 'Testing plan-next-question...';
+      
+      try {
+        let chatState;
+        try {
+          chatState = JSON.parse(document.getElementById('chatState').value);
+        } catch (e) {
+          resultEl.innerHTML = `<span class="error">Invalid JSON in chatState: ${e.message}</span>`;
+          return;
+        }
+        
+        const requiredMissing = document.getElementById('requiredMissing').value.split(',').filter(Boolean).map(s => s.trim());
+        const niceMissing = document.getElementById('niceMissing').value.split(',').filter(Boolean).map(s => s.trim());
+        
+        const known = [];
+        if (chatState.productScope) known.push(`scope: ${chatState.productScope}`);
+        if (chatState.quantity) known.push(`qty: ${chatState.quantity}`);
+        if (chatState.imageMode) known.push(`image: ${chatState.imageMode}`);
+        if (chatState.style) known.push(`style: ${chatState.style}`);
+        
+        const start = Date.now();
+        const response = await fetch('/.netlify/functions/plan-next-question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatState, history: [], requiredMissing, niceMissing, known })
+        });
+        const elapsed = Date.now() - start;
+        
+        if (!response.ok) {
+          resultEl.innerHTML = `<span class="error">Error: ${response.status} ${response.statusText}</span>\nTime: ${elapsed}ms`;
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+          resultEl.innerHTML = `<span class="success">Success (${elapsed}ms)</span>:\n\nQuestion: "${data.question}"\n\nFull response:\n${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultEl.innerHTML = `<span class="error">API Error (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+    
+    // Job tests
+    async function createQuickJob() {
+      const resultEl = document.getElementById('createJobResult');
+      resultEl.textContent = 'Creating job...';
+      
+      try {
+        let payload;
+        try {
+          payload = JSON.parse(document.getElementById('jobPayload').value);
+        } catch (e) {
+          resultEl.innerHTML = `<span class="error">Invalid JSON in job payload: ${e.message}</span>`;
+          return;
+        }
+        
+        const start = Date.now();
+        const response = await fetch('/.netlify/functions/quick-job-create', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
+          },
+          body: JSON.stringify(payload)
+        });
+        const elapsed = Date.now() - start;
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+          resultEl.innerHTML = `<span class="success">Job Created (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+          document.getElementById('jobId').value = data.job_id;
+        } else {
+          resultEl.innerHTML = `<span class="error">Error (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+    
+    async function checkJobStatus(tick) {
+      const resultEl = document.getElementById('jobStatusResult');
+      const jobId = document.getElementById('jobId').value;
+      
+      if (!jobId) {
+        resultEl.innerHTML = `<span class="error">Please enter a job ID</span>`;
+        return;
+      }
+      
+      resultEl.textContent = 'Checking job status...';
+      
+      try {
+        const start = Date.now();
+        const response = await fetch(`/.netlify/functions/quick-job-status?job_id=${encodeURIComponent(jobId)}${tick ? '&tick=true' : ''}`, {
+          headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '') }
+        });
+        const elapsed = Date.now() - start;
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+          resultEl.innerHTML = `<span class="success">Status: ${data.status} (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultEl.innerHTML = `<span class="error">Error (${elapsed}ms)</span>:\n${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+
+    // DB env details (shallow health)
+    async function testDbEnv() {
+      const resultEl = document.getElementById('dbEnvResult');
+      resultEl.textContent = 'Fetching DB env details...';
+      try {
+        const start = Date.now();
+        const response = await fetch('/.netlify/functions/health?shallow=true');
+        const elapsed = Date.now() - start;
+        const data = await response.json();
+        if (!response.ok) {
+          resultEl.innerHTML = `<span class="error">Error: ${response.status} ${response.statusText}</span>\nTime: ${elapsed}ms`;
+          return;
+        }
+        const info = data?.db?.info || {};
+        const src = data?.db?.sourceVar || '(unknown)';
+        const pretty = {
+          sourceVar: src,
+          scheme: info.scheme || null,
+          host: info.host || null,
+          port: info.port || null,
+          database: info.database || null,
+          sslmode: info.sslmode || null
+        };
+        resultEl.innerHTML = `<span class="success">Success (${elapsed}ms)</span>\n${JSON.stringify(pretty, null, 2)}`;
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+
+    async function testDbInfo(connect) {
+      const resultEl = document.getElementById('dbInfoResult');
+      resultEl.textContent = 'Testing db-info...';
+      try {
+        const start = Date.now();
+        const response = await fetch('/.netlify/functions/db-info' + (connect ? '?connect=true' : ''));
+        const elapsed = Date.now() - start;
+        const data = await response.json();
+        const ok = response.ok && data && (data.success !== false);
+        resultEl.innerHTML = `<span class="${ok ? 'success' : 'error'}">${ok ? 'OK' : 'Error'} (${elapsed}ms)</span>\n${JSON.stringify(data, null, 2)}`;
+      } catch (error) {
+        resultEl.innerHTML = `<span class="error">Fetch Error: ${error.message}</span>`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,4273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Printify Bulk Product Creator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary:#0ea5e9; --radius:12px; }
+        body{ background:#f8fafc; font-family:Inter,sans-serif;}
+        .step-container{display:none;}
+        .step-container.active{display:block;}
+        .step-indicator{gap:12px;display:flex;justify-content:center;flex-wrap:wrap}
+        .step{background:#f1f5f9;border-radius:var(--radius);padding:14px;min-width:120px;text-align:center;cursor:pointer}
+        .step.active{background:var(--primary);color:#fff}
+        .step.completed{background:#22c55e;color:#fff}
+        .card{border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+        .btn-primary{background:var(--primary);border:none}
+        .has-changes { border-color: #ffc107 !important; }
+        .variant-table th { font-size: 0.8rem; }
+        .variant-table td { font-size: 0.85rem; padding: 0.5rem; }
+        .product-image { height: 150px; object-fit: cover; }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">Printify Manager</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li><a class="nav-link active" href="bulkly.html">Bulk Creator (Printful)</a></li>
+        <li><a class="nav-link" href="pricing.html">Manage Pricing</a></li>
+        <li><a class="nav-link" href="inspiration.html">Inspiration</a></li>
+      </ul>
+      <div class="navbar-nav ms-auto">
+        <span class="navbar-text me-3">Welcome!</span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+      </div>
+
+  <!-- Error Details Modal -->
+  <div class="modal fade" id="errorDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="errorDetailsTitle">Error</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <pre id="errorDetailsBody" class="small bg-light p-3 rounded" style="white-space:pre-wrap; word-break:break-word;"></pre>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View All Images Modal -->
+  <div class="modal fade" id="viewAllImagesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Product Images</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="viewAllImagesBody">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Variant-Image Binding Matrix Modal -->
+  <div class="modal fade" id="variantImageMatrixModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="variantImageMatrixTitle">Variant image bindings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2 text-muted small">Check which images should be shown for each variant. Select one default per variant.</div>
+          <div id="variantImageMatrixBody"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveVariantImageMatrix()"><i class="bi bi-save"></i> Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Images Modal -->
+  <div class="modal fade" id="manageImagesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="manageImagesTitle">Manage images</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="manageImagesList"></div>
+          <div class="text-muted small mt-2">Use arrows to change order. Select one default image.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveManageImages()"><i class="bi bi-save"></i> Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h1 class="mb-4"><i class="bi bi-layers"></i> Bulk Product Creator</h1>
+
+  <!-- Step Indicator -->
+  <div class="step-indicator mb-4">
+    <div class="step active" onclick="navigateToStep(2)">
+      <i class="bi bi-check-square"></i><br><small>Products</small>
+    </div>
+    <div class="step" onclick="navigateToStep(3)">
+      <i class="bi bi-palette"></i><br><small>Designs</small>
+    </div>
+    <div class="step" onclick="navigateToStep(4)">
+      <i class="bi bi-magic"></i><br><small>Generate</small>
+    </div>
+    <div class="step" onclick="navigateToStep(5)">
+      <i class="bi bi-gear"></i><br><small>Pricing</small>
+    </div>
+  </div>
+
+  <!-- Step 1 removed: OAuth selects the store. Keeping container hidden for layout consistency. -->
+  <div class="step-container" id="step1-container" style="display:none"></div>
+
+  <!-- Step 2: Product Selection -->
+  <div class="step-container active" id="step2-container">
+    <div class="card">
+      <div class="card-header">
+        <h4><i class="bi bi-box"></i> Select Products</h4>
+      </div>
+      <div class="card-body">
+        <!-- Search and Filter UI -->
+        <div class="row mb-4">
+          <div class="col-md-6 mb-3 mb-md-0">
+            <div class="input-group">
+              <input type="text" class="form-control" id="productSearchInput" placeholder="Search products...">
+              <button class="btn btn-outline-secondary" type="button" id="productSearchBtn">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6 d-flex justify-content-md-end">
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterOptions">
+              <i class="bi bi-funnel"></i> Filters
+            </button>
+          </div>
+        </div>
+        
+        <!-- Collapsible Filter Options -->
+        <div class="collapse mb-4" id="filterOptions">
+          <div class="card card-body bg-light">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Brand</label>
+                <div id="brandFilters" class="overflow-auto" style="max-height: 200px;"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Product Type</label>
+                <div id="typeFilters" class="overflow-auto" style="max-height: 200px;"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Print Provider</label>
+                <div id="providerFilters" class="overflow-auto" style="max-height: 200px;"></div>
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Model</label>
+                <div id="modelFilters" class="overflow-auto" style="max-height: 200px;"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Category</label>
+                <div id="categoryFilters" class="overflow-auto" style="max-height: 200px;"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Product (exact)</label>
+                <div class="input-group">
+                  <input type="text" id="productExactInput" class="form-control" placeholder='id:12345, model:3001, or "Exact Product Title"'>
+                  <button class="btn btn-outline-secondary" type="button" id="productExactApplyBtn">Apply</button>
+                  <button class="btn btn-outline-secondary" type="button" id="productExactClearBtn">Clear</button>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+              <span class="text-muted small" id="filterCount">No filters applied</span>
+              <button class="btn btn-sm btn-outline-secondary" id="resetFiltersBtn">Reset Filters</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div id="productsGrid" class="row g-3"></div>
+        
+        <!-- Selection Controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div>
+            <p class="mb-0">Selected: <span id="selectedCount">0</span> products</p>
+          </div>
+          <div>
+            <button class="btn btn-primary" id="selectProductsBtn" disabled>Continue</button>
+          </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div id="paginationContainer" class="mt-4 mb-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Print Areas -->
+  <div class="step-container" id="step3-container">
+    <div class="card">
+      <div class="card-header">
+        <h4><i class="bi bi-palette"></i> Assign Print Areas</h4>
+      </div>
+      <div class="card-body" id="step3-content"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Design Generation -->
+  <div class="step-container" id="step4-container">
+    <div class="row">
+      <!-- LEFT: generation panel -->
+      <div class="col-lg-8">
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h4><i class="bi bi-magic"></i> AI Design Generation</h4>
+          </div>
+          <div class="card-body">
+            <label class="form-label fw-bold">Prompt</label>
+            <textarea class="form-control mb-3" id="bulkPrompt" rows="3"
+                      placeholder="e.g. minimalist mountain sunset"></textarea>
+
+            <div class="row mb-3">
+              <div class="col-md-3">
+                <label class="form-label">Style</label>
+                <select class="form-select" id="bulkStyle">
+                  <option>Modern</option><option>Vintage</option><option>Minimalist</option>
+                  <option>Artsy</option><option>Professional</option><option>Trendy</option>
+                  <option>Luxury</option><option>Casual</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Colors</label>
+                <select class="form-select" id="bulkColors">
+                  <option>Vibrant</option><option>Muted</option><option>Monochrome</option>
+                  <option>Pastel</option><option>Bold</option><option>Earth Tones</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Audience</label>
+                <select class="form-select" id="bulkAudience">
+                  <option>General</option><option>Young Adults</option><option>Professionals</option>
+                  <option>Creatives</option><option>Fitness</option><option>Parents</option>
+                </select>
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="removeBackgroundToggle">
+                  <label class="form-check-label" for="removeBackgroundToggle">Remove Background</label>
+                </div>
+              </div>
+            </div>
+
+            <div id="sizeControlsContainer"></div>
+
+            <div class="text-center mt-3">
+              <button class="btn btn-primary btn-lg" id="generateBtn">
+                <i class="bi bi-magic"></i> Generate Designs
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- generated images -->
+        <div id="generatedImagesCard" style="display:none" class="card mb-4">
+          <div class="card-header">
+            <h5><i class="bi bi-images"></i> Generated Designs</h5>
+          </div>
+          <div class="card-body" id="generatedImagesContainer"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: summary -->
+      <div class="col-lg-4">
+        <div class="card sticky-top" style="top:20px">
+          <div class="card-header">
+            <h6><i class="bi bi-info-circle"></i> Project Summary</h6>
+          </div>
+          <div class="card-body" id="projectSummary"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignment table -->
+    <div class="card mt-4" id="assignmentTableCard" style="display:none">
+      <div class="card-header">
+        <h5><i class="bi bi-grid-3x3-gap"></i> Design Assignments</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle" id="assignmentTable">
+            <thead class="table-dark">
+              <tr>
+                <th>Title</th>
+                <th>Print Area</th>
+                <th>Size</th>
+                <th>Description</th>
+                <th>Tags</th>
+                <th>Materials</th>
+                <th>Design</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="assignmentTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-4 mb-4">
+      <button class="btn btn-success btn-lg" id="proceedToStep5Btn" onclick="proceedToStep5()" style="display: none;">
+        <i class="bi bi-arrow-right-circle"></i> Proceed to Pricing
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 5: Pre-Creation Review + Pricing Manager -->
+  <div class="step-container" id="step5-container">
+    
+
+    <div id="step5-pricing" class="card" style="display:none">
+      <div class="card-header">
+        <h4><i class="bi bi-gear"></i> Product Pricing Manager</h4>
+      </div>
+      <div class="card-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header"><h5>Bulk Pricing Options</h5></div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label class="form-label">Apply Markup to All Products</label>
+                  <div class="input-group">
+                    <input type="number" id="bulkMarkupInput" class="form-control" value="40" min="1" max="500">
+                    <span class="input-group-text">%</span>
+                    <button id="applyBulkMarkupBtn" class="btn btn-warning" disabled>Apply to Selected</button>
+                  </div>
+                </div>
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" id="selectAllProducts">
+                  <label class="form-check-label" for="selectAllProducts">Select All Products</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header"><h5>Publishing Options</h5></div>
+              <div class="card-body">
+                <button class="btn btn-success w-100 mb-2" id="publishSelectedBtn" disabled>
+                  <i class="bi bi-cloud-arrow-up"></i> Publish Selected Products
+                </button>
+                <button class="btn btn-primary w-100" id="finishProcessBtn">
+                  <i class="bi bi-check-circle"></i> Finish Process
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="productsContainer" class="mt-3">
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                  <label class="form-label">Mockup Background</label>
+                  <input type="text" id="mockupBackground" class="form-control" placeholder="#ffffff" value="#ffffff">
+                  <div class="form-text">Use hex color or the word "transparent"</div>
+                </div>
+                <div class="col-6 col-md-4">
+                  <label class="form-label">Mockup Format</label>
+                  <select id="mockupFormat" class="form-select">
+                    <option value="png" selected>PNG (transparent)</option>
+                    <option value="jpg">JPG</option>
+                  </select>
+                </div>
+                <div class="col-6 col-md-4">
+                  <label class="form-label">Mockup Style</label>
+                  <select id="mockupStyle" class="form-select">
+                    <option value="classic" selected>Classic</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="lifestyle">Lifestyle</option>
+                  </select>
+                  <div class="form-text">Style is advisory; background/format are applied</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-info">Creating products...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+{{ ... }}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Use Printful data sources in this page
+const IS_PRINTFUL = true;
+
+// Feature flag (persisted): mockup fetching vs direct design preview
+// Default ON unless explicitly set to 'false' in localStorage
+let USE_MOCKUP_PREVIEW = (function(){
+  const v = localStorage.getItem('useMockupPreview');
+  return v === null ? true : v === 'true';
+})();
+
+function setMockupPreviewEnabled(enabled){
+  try {
+    USE_MOCKUP_PREVIEW = !!enabled;
+    localStorage.setItem('useMockupPreview', USE_MOCKUP_PREVIEW ? 'true' : 'false');
+    const t = document.getElementById('mockupPreviewToggle');
+    if (t) t.checked = USE_MOCKUP_PREVIEW;
+    const label = document.getElementById('mockupPreviewModeLabel');
+    if (label) label.textContent = USE_MOCKUP_PREVIEW ? 'Mockup preview' : 'Design preview only';
+    // Refresh all previews currently visible in pre-create grid
+    const selectedProductIds = Array.from(state.selectedProducts || []).map(String);
+    const productsToCreate = (allProducts || []).filter(p => selectedProductIds.includes(p.id.toString()));
+    productsToCreate.forEach(p => { try { refreshPreviewForProduct(p.id); } catch(e){} });
+  } catch(e) { console.warn('Failed to apply preview toggle', e); }
+}
+// Early global guards to avoid ReferenceError from inline onclick before later definitions load
+window.openVariantImageMatrix = window.openVariantImageMatrix || function(productId){
+  try { if (typeof openManageImages === 'function') openManageImages(String(productId)); } catch(e) {}
+};
+
+/* ---------- Global State ---------- */
+let state = { 
+  selectedProducts: new Set(), 
+  currentStep: 1, 
+  completedSteps: new Set([1]), 
+  sessionId: 'bulk_' + Date.now(),
+  selectedShop: null,
+  apiKey: null
+};
+
+let allProducts = [];
+let filteredProducts = [];
+let currentPage = 1;
+let productsPerPage = 12;
+let selectedImages = {};
+
+// Placement overrides per print area size (normalized to [0..1] and sane ranges)
+function getPlacementOverrides() {
+  try { return JSON.parse(sessionStorage.getItem('placementOverrides') || '{}'); } catch(e) { return {}; }
+}
+function setPlacementOverrides(map) {
+  sessionStorage.setItem('placementOverrides', JSON.stringify(map || {}));
+}
+function savePlacementForSize(sizeKey, vals) {
+  const map = getPlacementOverrides();
+  map[sizeKey] = {
+    x: Math.min(Math.max(Number(vals.x ?? 0.5), 0), 1),
+    y: Math.min(Math.max(Number(vals.y ?? 0.5), 0), 1),
+    scale: Math.min(Math.max(Number(vals.scale ?? 1.0), 0.1), 5.0),
+    angle: Math.max(-180, Math.min(180, Number(vals.angle ?? 0)))
+  };
+  setPlacementOverrides(map);
+}
+
+// Placement editor modal logic
+let placementModal, placementCurrentSizeKey = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEl = document.getElementById('placementEditorModal');
+  if (modalEl) placementModal = new bootstrap.Modal(modalEl);
+
+  const xEl = document.getElementById('placementX');
+  const yEl = document.getElementById('placementY');
+  const sEl = document.getElementById('placementScale');
+  const aEl = document.getElementById('placementAngle');
+  const xVal = document.getElementById('placementXVal');
+  const yVal = document.getElementById('placementYVal');
+  const sVal = document.getElementById('placementScaleVal');
+  const aVal = document.getElementById('placementAngleVal');
+  const saveBtn = document.getElementById('savePlacementBtn');
+  const dpiBadge = document.getElementById('placementDPIValue');
+
+  function parseSizeKey(sk) {
+    if (!sk) return { w: 0, h: 0 };
+    const m = sk.match(/^(\d+)x(\d+)$/);
+    if (!m) return { w: 0, h: 0 };
+    return { w: parseInt(m[1], 10), h: parseInt(m[2], 10) };
+  }
+
+  // Update all row badges for a specific sizeKey
+  function updateDPIBadgeForSize(sizeKey) {
+    const map = getPlacementOverrides();
+    const scale = (map && map[sizeKey] && map[sizeKey].scale) ? map[sizeKey].scale : 1.0;
+    const dpi = computeDPI(sizeKey, scale);
+    document.querySelectorAll('.dpi-badge[data-size="' + sizeKey + '"]').forEach(badge => {
+      if (dpi && isFinite(dpi)) {
+        const r = Math.round(dpi);
+        badge.textContent = r + ' DPI';
+        badge.classList.remove('bg-secondary','bg-danger','bg-success');
+        badge.classList.add(r >= 300 ? 'bg-success' : 'bg-danger');
+      } else {
+        badge.textContent = '—';
+        badge.classList.remove('bg-danger','bg-success');
+        badge.classList.add('bg-secondary');
+      }
+    });
+  }
+
+  // Estimate DPI assuming print areas are defined at 300 DPI (Printify templates)
+  function computeDPI(sizeKey, scaleVal) {
+    const { w: areaW, h: areaH } = parseSizeKey(sizeKey);
+    if (!areaW || !areaH) return null;
+    // Assume image matches this sizeKey (we only allow matching in the table)
+    const imgW = areaW;
+    const imgH = areaH;
+    const scale = Math.max(0.1, parseFloat(scaleVal || 1));
+    const dpiW = (imgW * 300 / areaW) / scale; // simplifies to 300/scale when sizes match
+    const dpiH = (imgH * 300 / areaH) / scale; // simplifies to 300/scale when sizes match
+    return Math.min(dpiW, dpiH);
+  }
+
+  function syncLabels() {
+    if (xVal) xVal.textContent = Number(xEl.value).toFixed(2);
+    if (yVal) yVal.textContent = Number(yEl.value).toFixed(2);
+    if (sVal) sVal.textContent = Number(sEl.value).toFixed(2);
+    if (aVal) aVal.textContent = String(Math.round(Number(aEl.value)));
+    if (dpiBadge) {
+      const dpi = computeDPI(placementCurrentSizeKey, sEl.value);
+      if (dpi && isFinite(dpi)) {
+        const rounded = Math.round(dpi);
+        dpiBadge.textContent = `${rounded} DPI`;
+        dpiBadge.classList.remove('bg-secondary','bg-success','bg-danger');
+        dpiBadge.classList.add(rounded >= 300 ? 'bg-success' : 'bg-danger');
+        dpiBadge.title = rounded >= 300 ? 'Good print quality' : 'Below recommended 300 DPI';
+      } else {
+        dpiBadge.textContent = '—';
+        dpiBadge.classList.remove('bg-success','bg-danger');
+        dpiBadge.classList.add('bg-secondary');
+        dpiBadge.title = '';
+      }
+    }
+  }
+  [xEl, yEl, sEl, aEl].forEach(el => el && el.addEventListener('input', syncLabels));
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      if (!placementCurrentSizeKey) return;
+      savePlacementForSize(placementCurrentSizeKey, {
+        x: parseFloat(xEl.value),
+        y: parseFloat(yEl.value),
+        scale: parseFloat(sEl.value),
+        angle: parseFloat(aEl.value)
+      });
+      // Refresh table badges for this size
+      updateDPIBadgeForSize(placementCurrentSizeKey);
+      try { placementModal && placementModal.hide(); } catch(e) {}
+    });
+  }
+
+  // Expose opener globally
+  window.openPlacementEditor = function(sizeKey) {
+    placementCurrentSizeKey = sizeKey;
+    const label = document.getElementById('placementSizeLabel');
+    if (label) label.textContent = `(${sizeKey})`;
+    const map = getPlacementOverrides();
+    const def = map[sizeKey] || { x: 0.5, y: 0.5, scale: 1.0, angle: 0 };
+    if (xEl) xEl.value = def.x;
+    if (yEl) yEl.value = def.y;
+    if (sEl) sEl.value = def.scale;
+    if (aEl) aEl.value = def.angle;
+    syncLabels();
+    try { placementModal && placementModal.show(); } catch(e) {}
+  };
+});
+
+// Filter state
+let filterState = {
+  search: '',
+  brands: new Set(),
+  types: new Set(),
+  providers: new Set(),
+  models: new Set(),
+  categories: new Set(),
+  // Dedicated exact product filter set from the Product field in the filter box
+  // { type: 'id'|'model'|'title', value: string|number } or null
+  productExact: null
+};
+let selectedPrintAreas = {};
+let providerSelection = {};
+let createdProducts = [];
+
+// Restore persisted selections/state
+(function restoreBulkState(){
+  try {
+    const spa = sessionStorage.getItem('selectedPrintAreas');
+    if (spa) {
+      selectedPrintAreas = JSON.parse(spa);
+      console.log('[State] Restored selectedPrintAreas', selectedPrintAreas);
+    }
+  } catch(e) { console.warn('Failed to restore selectedPrintAreas', e); }
+  try {
+    const ps = sessionStorage.getItem('providerSelection');
+    if (ps) {
+      providerSelection = JSON.parse(ps);
+      console.log('[State] Restored providerSelection', providerSelection);
+    }
+  } catch(e) { console.warn('Failed to restore providerSelection', e); }
+})();
+
+/* ---------- Image Assignment ---------- */
+async function assignImage(size, imageUrl, button) {
+  console.log(`📤 ASSIGN: Assigning image ${imageUrl} for size ${size}`);
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
+  }
+
+  try {
+    // Upload the image immediately when it's assigned to a print area
+    console.log(`⬆️ UPLOADING: Starting upload for assigned image ${imageUrl}`);
+    const uploadedImage = await uploadImage(imageUrl);
+    
+    if (!uploadedImage || !uploadedImage.id) {
+      throw new Error('Image upload failed to return a valid ID');
+    }
+    
+    // Store the Printify image ID mapped to the original URL
+    sessionStorage.setItem(`imageId_${imageUrl}`, uploadedImage.id);
+    console.log(`✅ UPLOAD SUCCESS: Image ID ${uploadedImage.id} stored for URL ${imageUrl}`);
+    
+    // Update button to show success
+    if (button) {
+      button.innerHTML = '<i class="bi bi-check-circle"></i> Uploaded';
+      button.classList.remove('btn-outline-primary');
+      button.classList.add('btn-success');
+    }
+
+    // Associate the image URL with the product size, overwriting any previous assignment.
+    let productDesigns = JSON.parse(sessionStorage.getItem('productDesigns') || '{}');
+    productDesigns[size] = [imageUrl]; // Always replace the value to ensure only the latest image is used.
+    sessionStorage.setItem('productDesigns', JSON.stringify(productDesigns));
+
+    // Ensure the "Proceed to Pricing" button is enabled
+    const proceedBtn = document.getElementById('proceedToStep5Btn');
+    if (proceedBtn) {
+      proceedBtn.disabled = false;
+      proceedBtn.style.display = 'block';
+      proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Proceed to Pricing';
+    }
+  } catch (error) {
+    console.error(`❌ ERROR: Failed to upload image ${imageUrl}:`, error);
+    if (button) {
+      button.innerHTML = '<i class="bi bi-x-circle"></i> Upload Failed';
+      button.classList.remove('btn-outline-primary');
+      button.classList.add('btn-danger');
+      button.disabled = false; // Allow retry
+    }
+    alert(`Failed to upload image: ${error.message}`);
+  }
+}
+
+/* ---------- Navigation ---------- */
+function navigateToStep(step) {
+  // Allow navigation to completed steps or the current step
+  if (!state.completedSteps.has(step) && step !== state.currentStep && step > 1) {
+    // Special check to allow returning to step 1
+    if (step !== 1) return;
+  }
+  
+  document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+  
+  const container = document.getElementById('step' + step + '-container');
+  if (container) {
+    container.classList.add('active');
+    state.currentStep = step;
+    updateStepIndicators();
+  }
+}
+
+function updateStepIndicators() {
+  document.querySelectorAll('.step').forEach((el, index) => {
+    const stepNum = index + 1;
+    el.classList.remove('active', 'completed');
+    
+    if (state.completedSteps.has(stepNum)) {
+      el.classList.add('completed');
+    } else if (stepNum === state.currentStep) {
+      el.classList.add('active');
+    }
+  });
+}
+
+/* ---------- Initialization ---------- */
+document.addEventListener('DOMContentLoaded', init);
+
+// Clear all product-related session storage to ensure a fresh start
+function clearProductSessionStorage() {
+  console.log('Clearing all product-related session storage...');
+  // Clear any stored product data that might be interfering with new product creation
+  // Keep auth, selected shop, and handoff-created products from Quick AI
+  const keysToKeep = ['authToken', 'bulkSelectedShop', 'createdProducts'];
+  
+  // Loop through all session storage keys
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const key = sessionStorage.key(i);
+    // Keep authentication and shop selection, clear everything else
+    if (!keysToKeep.includes(key)) {
+      console.log(`Removing session storage key: ${key}`);
+      sessionStorage.removeItem(key);
+    }
+  }
+  
+  // Reset global variables that might contain stale data
+  createdProducts = [];
+  console.log('Session storage cleared for fresh product creation');
+}
+
+async function init() {
+  const token = localStorage.getItem('authToken');
+  if (!token) return (location.href = '/auth.html');
+  
+  // Clear session storage at the beginning of the workflow
+  clearProductSessionStorage();
+  
+  // Use OAuth connection; no manual token required
+  try {
+    await loadShops(token);
+  } catch (e) {
+    console.warn('Failed to load Printful store. User may not be connected via OAuth.', e);
+    alert('Please connect your Printful account via OAuth in Dashboard → Settings');
+    return;
+  }
+
+  // Quick AI handoff: if createdProducts exist as IDs, fetch full details and jump to pricing
+  try {
+    const handoff = JSON.parse(sessionStorage.getItem('createdProducts') || '[]');
+    const shopId = sessionStorage.getItem('bulkSelectedShop');
+    if (Array.isArray(handoff) && handoff.length && shopId) {
+      console.log('[QuickAI Handoff] Detected', handoff.length, 'product IDs. Loading details...');
+      const ids = handoff.map(x => (typeof x === 'string' || typeof x === 'number') ? String(x) : (x && x.id ? String(x.id) : null)).filter(Boolean);
+      const details = [];
+      for (const pid of ids) {
+        try { const p = await fetchProductById(shopId, pid); if (p) details.push(p); } catch(e) { console.warn('Failed to fetch product', pid, e); }
+      }
+      if (details.length) {
+        createdProducts = details;
+        sessionStorage.setItem('createdProducts', JSON.stringify(details));
+        // Navigate directly to Step 5 pricing manager
+        state.currentStep = 5;
+        document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+        const container = document.getElementById('step5-container');
+        if (container) container.classList.add('active');
+        try { updateStepIndicators && updateStepIndicators(); } catch(e) {}
+        const pricingPanel = document.getElementById('step5-pricing');
+        if (pricingPanel) pricingPanel.style.display = '';
+        initializeStep5();
+        return;
+      }
+    }
+  } catch (e) { console.log('[QuickAI Handoff] No handoff or failed to load:', e.message); }
+}
+
+/* ---------- API Helpers ---------- */
+async function uploadImage(imageUrl) {
+  console.log(`⬆️ UPLOADING: Requesting upload for ${imageUrl}`);
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch('/.netlify/functions/upload-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        url: imageUrl,
+        file_name: imageUrl.split('/').pop().split('?')[0] || 'design.png'
+      })
+    });
+    
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to upload image');
+    }
+    
+    // Return a compatible object structure that matches what the code expects
+    return {
+      id: data.image_id,
+      src_url: imageUrl
+    };
+  } catch (error) {
+    console.error(`Image upload failed for ${imageUrl}:`, error);
+    throw error;
+  }
+}
+
+async function getStoredApiKey(token) {
+  const r = await fetch('/.netlify/functions/get-printful-api-key', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  return (await r.json()).apiKey;
+}
+
+async function makeApiCall(endpoint, options = {}) {
+  const token = localStorage.getItem('authToken');
+  const resp = await fetch(IS_PRINTFUL ? '/.netlify/functions/printful-proxy' : '/.netlify/functions/printify-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ 
+      endpoint,
+      method: options.method || 'GET',
+      body: options.body || null
+    })
+  });
+  const text = await resp.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (!resp.ok || !data || data.success === false) {
+    const details = (data && (data.details || data.data)) || text;
+    console.warn('API call failed', { endpoint, status: resp.status, data });
+    const err = new Error((data && data.error) || `API Error ${resp.status}`);
+    err.response = data;
+    err.details = details;
+    throw err;
+  }
+  return data.data;
+}
+
+/* ---------- Step 1: Shop Selection ---------- */
+async function loadShops(token) {
+  // Printful: prefer /stores (some tokens lack /store scope). If none, proceed with default.
+  try {
+    const storesRes = await makeApiCall('/stores', { method: 'GET' });
+    const stores = Array.isArray(storesRes?.result) ? storesRes.result : (Array.isArray(storesRes) ? storesRes : []);
+    if (Array.isArray(stores) && stores.length) {
+      const first = stores[0];
+      const id = String(first.id || first.store_id || 'printful');
+      const title = first.name || first.title || 'Printful Store';
+      state.selectedShop = id;
+      try { sessionStorage.setItem('bulkSelectedShop', id); } catch(_) {}
+      populateShops([{ id, title }]);
+      await proceedToStep2();
+      return;
+    }
+  } catch (e) {
+    // Silently ignore and fall back
+  }
+  const id = 'printful';
+  const title = 'Printful Store';
+  state.selectedShop = id;
+  try { sessionStorage.setItem('bulkSelectedShop', id); } catch(_) {}
+  populateShops([{ id, title }]);
+  await proceedToStep2();
+}
+
+function populateShops(shops) {
+  const sel = document.getElementById('shopSelect');
+  // If Step 1 UI is removed, just persist selection and exit
+  if (!sel) {
+    const first = Array.isArray(shops) && shops.length ? shops[0] : null;
+    if (first) {
+      state.selectedShop = String(first.id);
+      try { sessionStorage.setItem('bulkSelectedShop', String(first.id)); } catch(e) {}
+    }
+    return;
+  }
+  sel.innerHTML = '<option value="">-- Select --</option>';
+  shops.forEach(s => sel.innerHTML += '<option value="' + s.id + '">' + s.title + '</option>');
+  sel.onchange = function() { 
+    state.selectedShop = sel.value;
+    sessionStorage.setItem('bulkSelectedShop', sel.value);
+    document.getElementById('selectShopBtn').disabled = !sel.value; 
+  };
+  const btn = document.getElementById('selectShopBtn');
+  if (btn) btn.onclick = function() { proceedToStep2(); };
+}
+
+/* ---------- Step 2: Product Selection ---------- */
+async function proceedToStep2() {
+  state.completedSteps.add(1);
+  state.currentStep = 2;
+  navigateToStep(2);
+  await loadProductsForShop();
+}
+
+async function loadProductsForShop() {
+  // Printful catalog
+  const res = await makeApiCall('/products');
+  const list = Array.isArray(res?.result) ? res.result : (Array.isArray(res) ? res : []);
+  allProducts = list.map(p => ({
+    id: p.id,
+    title: p.title,
+    brand: p.brand || '',
+    model: p.model || '',
+    images: p.image ? [p.image] : (p.thumbnail_url ? [p.thumbnail_url] : []),
+    description: p.description || '',
+    type: extractTypeFromTitle(p.title),
+    category: extractCategoryFromTitle(p.title)
+  }));
+  console.log('Printful catalog loaded:', allProducts.length);
+  currentPage = 1;
+  initializeFilterOptions();
+  applyFilters();
+}
+
+// Helper function to extract product type from title
+function extractTypeFromTitle(title) {
+  if (!title) return '';
+  
+  // Common product types in Printify
+  const productTypes = ['T-Shirt', 'Hoodie', 'Sweatshirt', 'Tank Top', 'Long Sleeve', 
+                       'Mug', 'Poster', 'Canvas', 'Phone Case', 'Tote Bag', 'Hat',
+                       'Leggings', 'Socks', 'Blanket', 'Pillow', 'Towel', 'Notebook'];
+  
+  // Check if title contains any of these types
+  for (const type of productTypes) {
+    if (title.includes(type)) {
+      return type;
+    }
+  }
+  
+  // If no match, try to extract based on common patterns
+  const words = title.split(' ');
+  if (words.length >= 2) {
+    // Often the product type is in the first 2-3 words
+    return words.slice(0, Math.min(3, words.length)).join(' ');
+  }
+  
+  return title; // Fallback to using the whole title
+}
+
+// Helper function to extract category from title or type
+function extractCategoryFromTitle(title) {
+  if (!title) return '';
+  
+  // Map of categories and their related keywords
+  const categoryMap = {
+    'Apparel': ['T-Shirt', 'Hoodie', 'Sweatshirt', 'Tank', 'Sleeve', 'Shirt', 'Pants', 'Leggings'],
+    'Accessories': ['Hat', 'Cap', 'Beanie', 'Socks', 'Bag', 'Tote', 'Backpack', 'Phone Case'],
+    'Home Decor': ['Mug', 'Poster', 'Canvas', 'Pillow', 'Blanket', 'Towel', 'Rug'],
+    'Stationery': ['Notebook', 'Journal', 'Sticker', 'Card', 'Print']
+  };
+  
+  // Check which category this title belongs to
+  for (const [category, keywords] of Object.entries(categoryMap)) {
+    for (const keyword of keywords) {
+      if (title.includes(keyword)) {
+        return category;
+      }
+    }
+  }
+  
+  return 'Other'; // Default category
+}
+
+function initializeFilterOptions() {
+  try {
+    // Extract unique brands, types, providers, models, and categories
+    const brands = new Set();
+    const types = new Set();
+    const providers = new Set();
+    const models = new Set();
+    const categories = new Set();
+
+    // Debug counters
+    let typeCount = 0;
+    let categoryCount = 0;
+    
+    console.log('Initializing filter options with', allProducts.length, 'products');
+    
+    allProducts.forEach(product => {
+      // Brand handling
+      if (product.brand) brands.add(product.brand);
+      
+      // Type handling - ensure we have values
+      if (product.type) {
+        types.add(product.type);
+        typeCount++;
+      }
+      
+      // Model handling
+      if (product.model) models.add(product.model);
+      
+      // Provider handling
+      if (product.print_provider && product.print_provider.title) {
+        providers.add(product.print_provider.title);
+      }
+      
+      // Category handling - ensure we have values
+      if (product.category) {
+        categories.add(product.category);
+        categoryCount++;
+      }
+      
+      // Extract category from product type if available as fallback
+      if (product.type && product.type.includes('-')) {
+        const category = product.type.split('-')[0].trim();
+        if (category) categories.add(category);
+      }
+    });
+    
+    // Log filter data for debugging
+    console.log('Filter data extracted:', {
+      brands: brands.size,
+      types: types.size,
+      providers: providers.size,
+      models: models.size,
+      categories: categories.size
+    });
+    console.log('Products with type:', typeCount, 'Products with category:', categoryCount);
+    
+    // If no types or categories were found, add some defaults
+    if (types.size === 0) {
+      console.log('No product types found, adding defaults');
+      ['T-Shirt', 'Hoodie', 'Mug', 'Poster', 'Phone Case'].forEach(t => types.add(t));
+    }
+    
+    if (categories.size === 0) {
+      console.log('No categories found, adding defaults');
+      ['Apparel', 'Accessories', 'Home Decor', 'Stationery'].forEach(c => categories.add(c));
+    }
+
+    // Safely render filter options
+    const renderSafe = (id, options, type) => {
+      const container = document.getElementById(id);
+      if (container) {
+        try {
+          renderFilterOptions(id, [...options].sort(), type);
+        } catch (e) {
+          console.log(`Error rendering ${id}:`, e);
+        }
+      }
+    };
+    
+    renderSafe('brandFilters', brands, 'brand');
+    renderSafe('typeFilters', types, 'type');
+    renderSafe('providerFilters', providers, 'provider');
+    renderSafe('modelFilters', models, 'model');
+    renderSafe('categoryFilters', categories, 'category');
+    
+    // Create or find sortSelect
+    let sortEl = document.getElementById('sortSelect');
+    if (!sortEl) {
+      // Try to find a suitable container
+      const container = document.querySelector('.col-md-4.mb-3:nth-child(3)') || 
+                        document.querySelector('#filterOptions .row:nth-child(2)') ||
+                        document.getElementById('filterOptions');
+      
+      if (container) {
+        const formGroup = document.createElement('div');
+        formGroup.className = 'form-group';
+        formGroup.innerHTML = `
+          <label class="form-label fw-bold">Sort By</label>
+          <select class="form-select" id="sortSelect">
+            <option value="title-asc">Name (A-Z)</option>
+            <option value="title-desc">Name (Z-A)</option>
+            <option value="brand-asc">Brand (A-Z)</option>
+            <option value="brand-desc">Brand (Z-A)</option>
+          </select>
+        `;
+        container.appendChild(formGroup);
+        sortEl = document.getElementById('sortSelect');
+      }
+    }
+    
+    // Add event listener for sort select (guarded)
+    if (sortEl) {
+      sortEl.addEventListener('change', applyFilters);
+    }
+    
+    // Build product autocomplete (titles and models)
+    try { buildProductAutocomplete(); } catch (e) { console.warn('Autocomplete init failed', e); }
+    
+    // Hook up Product exact filter box inside filter panel
+    const exactInput = document.getElementById('productExactInput');
+    const exactBtn = document.getElementById('productExactApplyBtn');
+    const exactClearBtn = document.getElementById('productExactClearBtn');
+    if (exactBtn) {
+      exactBtn.addEventListener('click', setProductExactFromInput);
+    }
+    if (exactClearBtn) {
+      exactClearBtn.addEventListener('click', function(){
+        clearProductExact();
+        applyFilters();
+      });
+    }
+    if (exactInput) {
+      exactInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') setProductExactFromInput();
+      });
+    }
+    
+    // Add event listener for search input (with debounce) (guarded)
+    const searchInputEl = document.getElementById('productSearchInput');
+    if (searchInputEl) {
+      searchInputEl.addEventListener('input', debounce(function() {
+        filterState.search = this.value.toLowerCase().trim();
+        applyFilters();
+      }, 300));
+    }
+    
+    const searchBtnEl = document.getElementById('productSearchBtn');
+    if (searchBtnEl) {
+      searchBtnEl.addEventListener('click', function() {
+        const inp = document.getElementById('productSearchInput');
+        filterState.search = (inp ? inp.value : '').toLowerCase().trim();
+        applyFilters();
+      });
+    }
+    
+    const resetBtnEl = document.getElementById('resetFiltersBtn');
+    if (resetBtnEl) {
+      resetBtnEl.addEventListener('click', resetFilters);
+    }
+  } catch (err) {
+    console.log('Error in initializeFilterOptions:', err);
+  }
+}
+
+// Create datalist autocomplete for product search (titles and models)
+function buildProductAutocomplete() {
+  const input = document.getElementById('productSearchInput');
+  let dl = document.getElementById('productTitlesList');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'productTitlesList';
+    document.body.appendChild(dl);
+  }
+  if (input) input.setAttribute('list', 'productTitlesList');
+  const exactInput = document.getElementById('productExactInput');
+  if (exactInput) exactInput.setAttribute('list', 'productTitlesList');
+  const seen = new Set();
+  const options = [];
+  allProducts.forEach(p => {
+    const title = p.title || '';
+    const model = p.model || '';
+    // Option values are what gets inserted into the input
+    if (title && !seen.has(title.toLowerCase())) {
+      options.push(`<option value="${title.replace(/&/g,'&amp;').replace(/</g,'&lt;')}"></option>`);
+      seen.add(title.toLowerCase());
+    }
+    if (model && !seen.has(model.toLowerCase())) {
+      options.push(`<option value="model:${model.replace(/&/g,'&amp;').replace(/</g,'&lt;')}"></option>`);
+      seen.add(model.toLowerCase());
+    }
+    if (p.id && !seen.has(String(p.id))) {
+      options.push(`<option value="id:${p.id}"></option>`);
+      seen.add(String(p.id));
+    }
+  });
+  dl.innerHTML = options.join('');
+}
+
+function setProductExactFromInput() {
+  const el = document.getElementById('productExactInput');
+  if (!el) return;
+  const raw = (el.value || '').trim();
+  if (!raw) {
+    filterState.productExact = null;
+    applyFilters();
+    return;
+  }
+  // Parse id:, model:, or treat as exact title
+  const idMatch = /^id:(\d+)$/i.exec(raw) || /^(\d{4,})$/.exec(raw);
+  const modelMatch = /^model:(.+)$/i.exec(raw);
+  if (idMatch) {
+    filterState.productExact = { type: 'id', value: parseInt(idMatch[1] || idMatch[0], 10) };
+  } else if (modelMatch) {
+    filterState.productExact = { type: 'model', value: modelMatch[1].toLowerCase() };
+  } else {
+    // Exact title match
+    filterState.productExact = { type: 'title', value: raw.toLowerCase() };
+  }
+  applyFilters();
+}
+
+function clearProductExact() {
+  const el = document.getElementById('productExactInput');
+  if (el) el.value = '';
+  filterState.productExact = null;
+}
+
+function renderFilterOptions(containerId, options, filterType) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = options.map(option => {
+    const id = `${filterType}-${option.replace(/\s+/g, '-').toLowerCase()}`;
+    return `
+      <div class="form-check">
+        <input class="form-check-input filter-checkbox" type="checkbox" id="${id}" 
+               data-filter-type="${filterType}" data-filter-value="${option}">
+        <label class="form-check-label" for="${id}">${option}</label>
+      </div>
+    `;
+  }).join('');
+  
+  // Add event listeners to checkboxes
+  container.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const type = this.dataset.filterType;
+      const value = this.dataset.filterValue;
+      
+      // Map filter type to the correct property name in filterState
+      let filterProperty;
+      switch(type) {
+        case 'brand':
+          filterProperty = 'brands';
+          break;
+        case 'type':
+          filterProperty = 'types';
+          break;
+        case 'provider':
+          filterProperty = 'providers';
+          break;
+        case 'model':
+          filterProperty = 'models';
+          break;
+        case 'category':
+          filterProperty = 'categories';
+          break;
+        default:
+          filterProperty = type + 's';
+      }
+      
+      if (this.checked) {
+        filterState[filterProperty].add(value);
+      } else {
+        filterState[filterProperty].delete(value);
+      }
+      
+      applyFilters();
+    });
+  });
+}
+
+function applyFilters() {
+  try {
+    // Ensure allProducts exists and is an array
+    if (!Array.isArray(allProducts)) {
+      console.warn('allProducts is not an array, initializing as empty array');
+      allProducts = [];
+    }
+    
+    // Start with all products
+    filteredProducts = [...allProducts];
+    
+    // Apply dedicated product exact filter if set
+    if (filterState.productExact) {
+      const f = filterState.productExact;
+      if (f.type === 'id') {
+        filteredProducts = filteredProducts.filter(p => p && (p.id === f.value || p.blueprint_id === f.value));
+      } else if (f.type === 'model') {
+        filteredProducts = filteredProducts.filter(p => p && (p.model||'').toLowerCase() === f.value);
+      } else if (f.type === 'title') {
+        filteredProducts = filteredProducts.filter(p => p && (p.title||'').toLowerCase() === f.value);
+      }
+    } else {
+      // Apply search filter
+      if (filterState.search) {
+        const q = filterState.search.trim();
+        const isQuoted = q.startsWith('"') && q.endsWith('"') && q.length > 1;
+        const unquoted = isQuoted ? q.slice(1, -1) : q;
+        const idMatch = /^id:(\d+)$/i.exec(unquoted) || /^(\d{4,})$/.exec(unquoted);
+        const modelMatch = /^model:(.+)$/i.exec(unquoted);
+        
+        // Priority 1: explicit ID filter
+        if (idMatch) {
+          const idVal = parseInt(idMatch[1] || idMatch[0], 10);
+          filteredProducts = filteredProducts.filter(p => p && p.id === idVal);
+        } else if (modelMatch) {
+          // Priority 2: explicit model filter
+          const modelVal = modelMatch[1].toLowerCase();
+          filteredProducts = filteredProducts.filter(p => p && (p.model||'').toLowerCase() === modelVal);
+        } else if (isQuoted) {
+          // Priority 3: exact title match
+          const exact = unquoted.toLowerCase();
+          filteredProducts = filteredProducts.filter(p => p && (p.title||'').toLowerCase() === exact);
+        } else {
+          // Fallback: contains match across key fields
+          const s = unquoted.toLowerCase();
+          filteredProducts = filteredProducts.filter(p => {
+            if (!p) return false;
+            return (p.title||'').toLowerCase().includes(s) || 
+                  (p.description||'').toLowerCase().includes(s) ||
+                  (p.brand||'').toLowerCase().includes(s) ||
+                  (p.type||'').toLowerCase().includes(s) ||
+                  (p.model||'').toLowerCase().includes(s);
+          });
+        }
+      }
+    }
+    
+    // Apply brand filter
+    if (filterState.brands && filterState.brands.size > 0) {
+      filteredProducts = filteredProducts.filter(p => 
+        p && p.brand && filterState.brands.has(p.brand)
+      );
+    }
+    
+    // Apply type filter
+    if (filterState.types && filterState.types.size > 0) {
+      filteredProducts = filteredProducts.filter(p => 
+        p && p.type && filterState.types.has(p.type)
+      );
+    }
+    
+    // Apply provider filter
+    if (filterState.providers && filterState.providers.size > 0) {
+      filteredProducts = filteredProducts.filter(p => {
+        if (!p || !p.print_provider) return false;
+        
+        const providerName = typeof p.print_provider === 'string' 
+          ? p.print_provider 
+          : (p.print_provider && p.print_provider.title ? p.print_provider.title : '');
+        
+        return filterState.providers.has(providerName);
+      });
+    }
+    
+    // Apply model filter
+    if (filterState.models && filterState.models.size > 0) {
+      filteredProducts = filteredProducts.filter(p => 
+        p && p.model && filterState.models.has(p.model)
+      );
+    }
+    
+    // Apply category filter
+    if (filterState.categories && filterState.categories.size > 0) {
+      filteredProducts = filteredProducts.filter(p => {
+        if (!p) return false;
+        
+        // Check if product type contains any of the selected categories
+        if (p.type) {
+          for (const category of filterState.categories) {
+            if (p.type.includes(category)) return true;
+          }
+        }
+        
+        // Check if product description contains any of the selected categories
+        if (p.description) {
+          for (const category of filterState.categories) {
+            if (p.description.includes(category)) return true;
+          }
+        }
+        
+        return false;
+      });
+    }
+    
+    // Apply sorting - with fallback if sortSelect is missing
+    let sortField = 'title';
+    let sortDirection = 'asc';
+    
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect && sortSelect.value) {
+      const sortValue = sortSelect.value;
+      const parts = sortValue.split('-');
+      if (parts.length === 2) {
+        sortField = parts[0];
+        sortDirection = parts[1];
+      }
+    }
+    
+    // Apply sorting with error handling
+    try {
+      filteredProducts.sort((a, b) => {
+        // Handle null/undefined values
+        if (!a && !b) return 0;
+        if (!a) return 1;
+        if (!b) return -1;
+        
+        const valueA = a[sortField] || '';
+        const valueB = b[sortField] || '';
+        return sortDirection === 'asc' ? 
+          String(valueA).localeCompare(String(valueB)) : 
+          String(valueB).localeCompare(String(valueA));
+      });
+    } catch (sortErr) {
+      console.warn('Error during sorting:', sortErr);
+      // Fallback to simple title sort
+      filteredProducts.sort((a, b) => {
+        if (!a || !a.title) return 1;
+        if (!b || !b.title) return -1;
+        return a.title.localeCompare(b.title);
+      });
+    }
+    
+    // Update filter count display
+    try {
+      updateFilterCountDisplay();
+    } catch (e) {
+      console.warn('Error updating filter count display:', e);
+    }
+    
+    // Reset to first page and render
+    currentPage = 1;
+    renderProductsPage();
+  } catch (err) {
+    console.error('Error in applyFilters:', err);
+    // Try to render something even if filtering fails
+    try {
+      filteredProducts = [...allProducts];
+      currentPage = 1;
+      renderProductsPage();
+    } catch (e) {
+      console.error('Failed to recover from filter error:', e);
+    }
+  }
+}
+
+function updateFilterCountDisplay() {
+  try {
+    const filterCount = document.getElementById('filterCount');
+    if (!filterCount) {
+      console.log('Filter count display element not found');
+      return;
+    }
+    
+    // Safely calculate total filters with null checks
+    let totalFilters = 0;
+    if (filterState) {
+      if (filterState.brands) totalFilters += filterState.brands.size || 0;
+      if (filterState.types) totalFilters += filterState.types.size || 0;
+      if (filterState.providers) totalFilters += filterState.providers.size || 0;
+      if (filterState.models) totalFilters += filterState.models.size || 0;
+      if (filterState.categories) totalFilters += filterState.categories.size || 0;
+    }
+    
+    const hasSearch = filterState && filterState.search && filterState.search.length > 0;
+    const sortSelect = document.getElementById('sortSelect');
+    const hasSorting = sortSelect && sortSelect.value && sortSelect.value !== 'title-asc';
+    
+    if (totalFilters === 0 && !hasSearch && !hasSorting) {
+      filterCount.textContent = 'No filters applied';
+    } else {
+      let text = '';
+      if (hasSearch) {
+        // Safely display search term with length limit to prevent UI issues
+        const searchTerm = filterState.search.length > 50 ? 
+          filterState.search.substring(0, 47) + '...' : filterState.search;
+        text += `Search: "${searchTerm}" `;
+      }
+      
+      if (totalFilters > 0) {
+        text += `Filters: ${totalFilters} `;
+        
+        // Add breakdown of filters with null checks
+        const filterDetails = [];
+        if (filterState.brands && filterState.brands.size > 0) 
+          filterDetails.push(`Brands: ${filterState.brands.size}`);
+        if (filterState.types && filterState.types.size > 0) 
+          filterDetails.push(`Types: ${filterState.types.size}`);
+        if (filterState.providers && filterState.providers.size > 0) 
+          filterDetails.push(`Providers: ${filterState.providers.size}`);
+        if (filterState.models && filterState.models.size > 0) 
+          filterDetails.push(`Models: ${filterState.models.size}`);
+        if (filterState.categories && filterState.categories.size > 0) 
+          filterDetails.push(`Categories: ${filterState.categories.size}`);
+        
+        if (filterDetails.length > 0) {
+          text += `(${filterDetails.join(', ')})`;
+        }
+      }
+      
+      if (hasSorting) {
+        try {
+          const sortValue = sortSelect.value;
+          const parts = sortValue.split('-');
+          if (parts.length === 2) {
+            const [field, direction] = parts;
+            text += ` Sorted by: ${field} (${direction === 'asc' ? 'A-Z' : 'Z-A'})`;
+          }
+        } catch (e) {
+          console.warn('Error parsing sort value:', e);
+        }
+      }
+      
+      filterCount.textContent = text.trim() || 'Filtered products';
+    }
+  } catch (err) {
+    console.error('Error updating filter count display:', err);
+    // Try to set a basic message if possible
+    try {
+      const filterCount = document.getElementById('filterCount');
+      if (filterCount) filterCount.textContent = 'Filtered products';
+    } catch (e) {}
+  }
+}
+
+function resetFilters() {
+  try {
+    // Clear search input safely
+    const searchInput = document.getElementById('productSearchInput');
+    if (searchInput) searchInput.value = '';
+    
+    // Clear product exact filter
+    try { clearProductExact(); } catch (e) { console.warn('Error clearing product exact:', e); }
+    
+    // Reset filter state with null checks
+    if (filterState) {
+      filterState.search = '';
+      if (filterState.brands) filterState.brands.clear();
+      if (filterState.types) filterState.types.clear();
+      if (filterState.providers) filterState.providers.clear();
+      if (filterState.models) filterState.models.clear();
+      if (filterState.categories) filterState.categories.clear();
+      if (filterState.productExact) filterState.productExact = null;
+    }
+    
+    // Reset sort to default
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) sortSelect.value = 'title-asc';
+    
+    // Uncheck all checkboxes safely
+    try {
+      document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+        if (checkbox) checkbox.checked = false;
+      });
+    } catch (e) {
+      console.warn('Error resetting checkboxes:', e);
+    }
+    
+    // Reset exact product input if it exists
+    const exactInput = document.getElementById('productExactInput');
+    if (exactInput) exactInput.value = '';
+    
+    // Apply filters (which will now show all products)
+    applyFilters();
+  } catch (err) {
+    console.error('Error in resetFilters:', err);
+    // Try to recover by at least applying filters
+    try { applyFilters(); } catch (e) {}
+  }
+}
+
+// Debounce function to limit how often a function is called
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+function renderProductsPage() {
+  const grid = document.getElementById('productsGrid');
+  const start = (currentPage - 1) * productsPerPage;
+  const slice = filteredProducts.slice(start, start + productsPerPage);
+  
+  if (filteredProducts.length === 0) {
+    grid.innerHTML = '<div class="col-12 text-center py-5">' +
+      '<div class="alert alert-info">' +
+      '<i class="bi bi-exclamation-circle me-2"></i>' +
+      'No products match your search criteria. Try adjusting your filters.' +
+      '</div></div>';
+  } else {
+    grid.innerHTML = slice.map(p => {
+      // Extract additional info for display
+      const brand = p.brand ? `<span class="badge bg-light text-dark me-1">${p.brand}</span>` : '';
+      const type = p.type ? `<span class="badge bg-light text-dark">${p.type}</span>` : '';
+      
+      return '<div class="col-lg-3 col-md-4 mb-4">' +
+        '<div class="card h-100">' +
+          '<img src="' + (p.images?.[0] || 'https://via.placeholder.com/300') + '" ' +
+               'class="card-img-top" style="height:200px;object-fit:cover">' +
+          '<div class="card-body">' +
+            '<h6 class="card-title">' + p.title + '</h6>' +
+            '<div class="mb-2">' + brand + type + '</div>' +
+            '<div class="form-check">' +
+              '<input type="checkbox" class="form-check-input product-checkbox" ' +
+                     'id="product-' + p.id + '" ' +
+                     'value="' + p.id + '" ' + (state.selectedProducts.has(p.id.toString()) ? 'checked' : '') + ' ' +
+                     'onchange="toggleProduct(' + p.id + ',this.checked)">' +
+              '<label class="form-check-label" for="product-' + p.id + '">Select</label>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  
+  updateSelectedCount();
+  renderPagination();
+}
+
+function toggleProduct(id, checked) {
+  state.selectedProducts[checked ? 'add' : 'delete'](id.toString());
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  document.getElementById('selectedCount').textContent = state.selectedProducts.size;
+  document.getElementById('selectProductsBtn').disabled = !state.selectedProducts.size;
+  document.getElementById('selectProductsBtn').onclick = state.selectedProducts.size ? proceedToStep3 : null;
+}
+
+function renderPagination() {
+  const total = Math.ceil(filteredProducts.length / productsPerPage);
+  const holder = document.getElementById('paginationContainer');
+  if (total <= 1) return (holder.style.display = 'none');
+  
+  holder.style.display = 'block';
+  
+  // Calculate page range to display (show max 5 pages at a time)
+  const maxPagesToShow = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+  let endPage = Math.min(total, startPage + maxPagesToShow - 1);
+  
+  // Adjust if we're near the end
+  if (endPage - startPage + 1 < maxPagesToShow) {
+    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+  }
+  
+  let paginationHTML = '<nav aria-label="Product pagination"><ul class="pagination justify-content-center">';
+  
+  // Previous button
+  paginationHTML += '<li class="page-item ' + (currentPage === 1 ? 'disabled' : '') + '">' +
+    '<a class="page-link" href="#" ' + (currentPage === 1 ? '' : 'onclick="currentPage=' + (currentPage - 1) + ';renderProductsPage()"') + '>' +
+    '<i class="bi bi-chevron-left"></i></a></li>';
+  
+  // First page if not in range
+  if (startPage > 1) {
+    paginationHTML += '<li class="page-item"><a class="page-link" href="#" onclick="currentPage=1;renderProductsPage()">1</a></li>';
+    if (startPage > 2) {
+      paginationHTML += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+    }
+  }
+  
+  // Page numbers
+  for (let i = startPage; i <= endPage; i++) {
+    paginationHTML += '<li class="page-item ' + (i === currentPage ? 'active' : '') + '">' +
+      '<a class="page-link" href="#" onclick="currentPage=' + i + ';renderProductsPage()">' + i + '</a></li>';
+  }
+  
+  // Last page if not in range
+  if (endPage < total) {
+    if (endPage < total - 1) {
+      paginationHTML += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+    }
+    paginationHTML += '<li class="page-item"><a class="page-link" href="#" onclick="currentPage=' + total + ';renderProductsPage()">' + total + '</a></li>';
+  }
+  
+  // Next button
+  paginationHTML += '<li class="page-item ' + (currentPage === total ? 'disabled' : '') + '">' +
+    '<a class="page-link" href="#" ' + (currentPage === total ? '' : 'onclick="currentPage=' + (currentPage + 1) + ';renderProductsPage()"') + '>' +
+    '<i class="bi bi-chevron-right"></i></a></li>';
+  
+  paginationHTML += '</ul></nav>';
+  
+  // Add page info text with filtered count and total count
+  paginationHTML += '<div class="text-center text-muted small mt-2">' +
+    'Page ' + currentPage + ' of ' + total + ' (' + filteredProducts.length + ' filtered products out of ' + allProducts.length + ' total)' +
+    '</div>';
+  
+  holder.innerHTML = paginationHTML;
+}
+
+/* ---------- Step 3: Print Areas ---------- */
+async function proceedToStep3() {
+  state.completedSteps.add(2);
+  state.currentStep = 3;
+  navigateToStep(3);
+  await populateStep3();
+}
+
+async function populateStep3() {
+  const container = document.getElementById('step3-content');
+  const products = allProducts.filter(p => state.selectedProducts.has(p.id.toString()));
+  if (!products.length) return (container.innerHTML = 'No products selected');
+  let html = '<h4 class="mb-4">Configure each product</h4>';
+  for (const p of products) {
+    html += '<div class="card mb-3">' +
+      '<div class="card-header">' + p.title + '</div>' +
+      '<div class="card-body" id="printAreas_' + p.id + '">Loading placements…</div>' +
+    '</div>';
+  }
+  html += '<button class="btn btn-success mt-3" onclick="proceedToStep4()">Continue → Generate</button>';
+  container.innerHTML = html;
+  // Fetch placements for each selected catalog product
+  for (const p of products) {
+    try { await loadPrintAreasPrintful(p.id); } catch(e) { console.warn('placements failed for', p.id, e); }
+  }
+}
+
+// Fetch placements and variants for a Printful catalog product and render checkboxes
+async function loadPrintAreasPrintful(productId) {
+  const box = document.getElementById('printAreas_' + productId);
+  if (!box) return;
+  box.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+  try {
+    const detail = await makeApiCall(`/products/${productId}`);
+    const product = allProducts.find(p => String(p.id) === String(productId));
+    const d = detail?.result || detail || {};
+    // Variants for selection later
+    product.variants = Array.isArray(d?.variants) ? d.variants : [];
+    // Capture supported placements from catalog data for validation/mapping
+    try {
+      const placements = Array.isArray(d?.placements) ? d.placements : (Array.isArray(d?.techniques) && d.techniques[0]?.placements ? d.techniques[0].placements : []);
+      if (Array.isArray(placements)) {
+        product.supported_placements = placements.map(a => a?.position || a?.name || a).filter(Boolean);
+      }
+    } catch(_) {}
+    // Placements from files list
+    const files = Array.isArray(d?.files) ? d.files : [];
+    // Fallback placements if files missing
+    const placements = files.map(f => ({ position: f.placement || f.type || 'front', width: f.image_width || 3600, height: f.image_height || 4800 }))
+      .filter(x => x && x.position);
+    const unique = [];
+    const seen = new Set();
+    for (const pl of placements) {
+      const key = String(pl.position).toLowerCase();
+      if (seen.has(key)) continue; seen.add(key); unique.push(pl);
+    }
+    if (!unique.length) {
+      unique.push({ position: 'front', width: 3600, height: 4800 });
+    }
+    // Restore saved
+    const saved = selectedPrintAreas[productId] || [];
+    const badges = Array.isArray(product.supported_placements) && product.supported_placements.length
+      ? '<div class="mb-2">Supported: ' + product.supported_placements.map(sp=>'<span class="badge bg-secondary me-1">'+sp+'</span>').join('') + '</div>'
+      : '';
+
+    box.innerHTML = badges + '<div class="mb-2"><button class="btn btn-sm btn-outline-primary" onclick="autoFixPlacements(\'' + productId + '\')"><i class="bi bi-magic"></i> Auto-fix Placements</button></div>' + unique.map((area, idx) => {
+      const isChecked = saved.some(s => String(s.position).toLowerCase() === String(area.position).toLowerCase());
+      return (
+        '<div class="form-check">' +
+        `<input class="form-check-input" type="checkbox" id="area_${productId}_${idx}" ` +
+        `data-product-id="${productId}" data-position="${area.position}" data-width="${area.width}" data-height="${area.height}" ` +
+        (isChecked ? 'checked ' : '') +
+        `onchange="togglePrintArea('${productId}','${area.position}',this.checked)">` +
+        `<label class="form-check-label" for="area_${productId}_${idx}">` +
+        `${area.position} (${area.width}x${area.height}px)` +
+        '</label></div>'
+      );
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load Printful placements', e);
+    box.innerHTML = '<div class="text-danger">Failed to load placements.</div>';
+  }
+}
+
+// Global helper used in Step 3 UI and assembly: choose best-supported placement (AOP-aware)
+function choosePlacementForProduct(prod, desired) {
+  try {
+    const d = String(desired || '').toLowerCase();
+    const supported = Array.isArray(prod?.supported_placements) ? prod.supported_placements.map(x=>String(x).toLowerCase()) : [];
+    if (supported.includes(d)) return desired;
+    const aop = supported.filter(p => p.includes('all') || p.includes('over'));
+    if (aop.length) return aop[0];
+    if (supported.length) return supported[0];
+    return desired || 'front';
+  } catch { return desired || 'front'; }
+}
+
+// One-click fixer: remap selectedPrintAreas[...] to supported placements and update checkboxes
+function autoFixPlacements(productId) {
+  try {
+    const pid = String(productId);
+    const product = allProducts.find(p => String(p.id) === pid) || {};
+    const saved = selectedPrintAreas[pid] || [];
+    if (!Array.isArray(saved) || !saved.length) {
+      // If nothing selected yet, pick first supported if any
+      if (Array.isArray(product.supported_placements) && product.supported_placements.length) {
+        selectedPrintAreas[pid] = [{ position: product.supported_placements[0], width: 3600, height: 4800, unit: 'pixels' }];
+      }
+    } else {
+      selectedPrintAreas[pid] = saved.map(a => ({
+        position: choosePlacementForProduct(product, a.position),
+        width: a.width, height: a.height, unit: a.unit || 'pixels'
+      }));
+    }
+    sessionStorage.setItem('selectedPrintAreas', JSON.stringify(selectedPrintAreas));
+    // Update checkboxes
+    const checks = document.querySelectorAll('#printAreas_' + pid + ' input.form-check-input');
+    checks.forEach(input => {
+      const pos = String(input.getAttribute('data-position')||'').toLowerCase();
+      const isSel = (selectedPrintAreas[pid]||[]).some(s => String(s.position).toLowerCase() === pos);
+      input.checked = isSel;
+    });
+    // Visual toast
+    try { alert('Placements updated to supported values for this product.'); } catch(_) {}
+  } catch (e) {
+    console.warn('autoFixPlacements error', e);
+    alert('Failed to auto-fix placements: ' + (e?.message || e));
+  }
+}
+
+async function getProviders(blueprintId) {
+    const data = await makeApiCall(`/v1/catalog/blueprints/${blueprintId}/print_providers.json`);
+    return data || [];
+}
+
+async function loadPrintAreas(productId, blueprintId, providerId) {
+  const box = document.getElementById('printAreas_' + productId);
+  if (!providerId) return (box.innerHTML = '');
+  
+  providerSelection[blueprintId] = parseInt(providerId);
+  try {
+    sessionStorage.setItem('providerSelection', JSON.stringify(providerSelection));
+    console.log('[State] Saved providerSelection', providerSelection);
+  } catch(e) { console.warn('Failed to persist providerSelection', e); }
+  box.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+
+  try {
+    const variantsData = await makeApiCall(`/v1/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`);
+    const providerData = variantsData;
+
+    const product = allProducts.find(p => p.id.toString() === productId);
+    if (product) {
+        product.variants = providerData.variants || [];
+    }
+
+    box.innerHTML = '';
+    
+    // Extract print areas from the first variant's placeholders
+    const firstVariant = providerData.variants && providerData.variants.length > 0 ? providerData.variants[0] : null;
+    const printAreas = firstVariant ? firstVariant.placeholders || [] : [];
+    
+    // Get saved print areas for this product
+    const savedPrintAreas = selectedPrintAreas[productId] || [];
+    console.log(`[loadPrintAreas] Product ${productId} has ${savedPrintAreas.length} saved print areas:`, savedPrintAreas);
+    
+    // If no print areas are saved yet, select the front position by default
+    if (savedPrintAreas.length === 0 && printAreas.length > 0) {
+      const frontArea = printAreas.find(area => area.position === 'front');
+      if (frontArea) {
+        console.log('[loadPrintAreas] Auto-selecting front print area as default');
+        selectedPrintAreas[productId] = [{
+          position: frontArea.position,
+          width: frontArea.width,
+          height: frontArea.height,
+          unit: 'pixels'
+        }];
+        sessionStorage.setItem('selectedPrintAreas', JSON.stringify(selectedPrintAreas));
+      }
+    }
+    
+    printAreas.forEach((area, idx) => {
+        const isChecked = savedPrintAreas.some(saved => saved.position === area.position);
+        box.insertAdjacentHTML('beforeend', 
+        '<div class="form-check">' +
+          '<input class="form-check-input" type="checkbox" id="area_' + productId + '_' + idx + '" ' +
+                 'data-product-id="' + productId + '" data-position="' + area.position + '" ' +
+                 'data-width="' + area.width + '" data-height="' + area.height + '" ' +
+                 (isChecked ? 'checked ' : '') +
+                 'onchange="togglePrintArea(\'' + productId + '\',\'' + area.position + '\',this.checked)">' +
+          '<label class="form-check-label" for="area_' + productId + '_' + idx + '">' +
+            area.position + ' (' + area.width + 'x' + area.height + 'px)' +
+          '</label>' +
+        '</div>'
+      );
+    });
+
+  } catch (error) {
+    console.error(`Failed to get provider details for blueprint ${blueprintId}`, error);
+    box.innerHTML = '<div class="text-danger">Failed to load provider details.</div>';
+    return;
+  }
+}
+
+function togglePrintArea(productId, position, checked) {
+  selectedPrintAreas[productId] = selectedPrintAreas[productId] || [];
+  if (checked) {
+    const checkbox = document.querySelector('input[data-product-id="' + productId + '"][data-position="' + position + '"]');
+    const width = parseInt(checkbox.dataset.width);
+    const height = parseInt(checkbox.dataset.height);
+    selectedPrintAreas[productId].push({ position, width, height, unit: 'pixels' });
+  } else {
+    selectedPrintAreas[productId] = selectedPrintAreas[productId].filter(a => a.position !== position);
+  }
+  sessionStorage.setItem('selectedPrintAreas', JSON.stringify(selectedPrintAreas));
+}
+
+function proceedToStep4() {
+  state.completedSteps.add(3);
+  state.currentStep = 4;
+  // Clear stale data from any previous session before entering Step 4
+  try { resetStep4State(); } catch (e) { console.warn('resetStep4State failed', e); }
+  // Ensure Step 4 only reflects Step 3's current choices
+  try { pruneSelectedPrintAreas(); } catch (e) { console.warn('pruneSelectedPrintAreas failed', e); }
+  navigateToStep(4);
+  populateStep4();
+}
+
+/* ---------- Step 4: Design Generation ---------- */
+function populateStep4() {
+  const sizeMap = new Map();
+  const products = allProducts.filter(p => state.selectedProducts.has(p.id.toString()));
+  
+  Object.entries(selectedPrintAreas).forEach(([pid, areas]) => {
+    areas.forEach(a => {
+      const key = a.width + 'x' + a.height;
+      if (!sizeMap.has(key)) sizeMap.set(key, { products: [], width: a.width, height: a.height, positions: new Set() });
+      const prod = products.find(p => p.id.toString() === pid);
+      if (prod) sizeMap.get(key).products.push(prod);
+      // Track print area positions for this size so we can display them beside the size
+      try {
+        if (a.position) sizeMap.get(key).positions.add(String(a.position));
+        else if (a.placeholder) sizeMap.get(key).positions.add(String(a.placeholder));
+      } catch (e) {}
+    });
+  });
+
+  const container = document.getElementById('sizeControlsContainer');
+  const entries = Array.from(sizeMap.entries());
+  if (!entries.length) {
+    container.innerHTML = '<div class="alert alert-warning">No print areas selected. Please go back and select at least one print area in Step 3.</div>';
+    return;
+  }
+
+  container.innerHTML = entries.map(([size, info]) =>
+    '<div class="card mb-3">' +
+      '<div class="card-body d-flex align-items-center justify-content-between">' +
+        '<div>' +
+          '<div class="d-flex align-items-center gap-2">' +
+            '<input type="checkbox" class="form-check-input size-checkbox" id="chk-' + size + '" checked>' +
+            '<label class="form-check-label" for="chk-' + size + '"><strong>Size:</strong> ' + size + ' (' + info.products.length + ' products)</label>' +
+          '</div>' +
+          (function(){
+             try {
+               const names = (info.products || []).map(p => p.title || ('#' + p.id));
+               const shown = names.slice(0, 3).join(', ');
+               const more = names.length > 3 ? ' +' + (names.length - 3) + ' more' : '';
+               return '<div class="text-muted small"><strong>Products:</strong> ' + (shown + more) + '</div>';
+             } catch(e){ return ''; }
+           })() +
+          '<div class="text-muted small"><strong>Print area(s):</strong> ' +
+            (function(){
+              try {
+                const arr = Array.from(info.positions || []);
+                if (!arr.length) return '—';
+                return arr.map(p => String(p).charAt(0).toUpperCase() + String(p).slice(1)).join(', ');
+              } catch(e) { return '—'; }
+            })() +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="me-1">Images:</label>' +
+          '<select class="form-select form-select-sm d-inline-block" style="width:70px" id="count-' + size + '">' +
+            Array.from({length:5},(_,i)=>'<option value="' + (i+1) + '">' + (i+1) + '</option>').join('') +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+
+  updateProjectSummary();
+  
+  // Add event listener to generate button
+  document.getElementById('generateBtn').onclick = generateDesigns;
+}
+
+// Keep only Step 3 selections for the currently selected products
+function pruneSelectedPrintAreas() {
+  try {
+    const allowed = new Set(Array.from(state.selectedProducts).map(String));
+    const pruned = {};
+    Object.entries(selectedPrintAreas || {}).forEach(([pid, areas]) => {
+      if (allowed.has(String(pid))) {
+        // Only keep valid area objects with width/height/position
+        const cleaned = (Array.isArray(areas) ? areas : []).filter(a => a && a.width && a.height && (a.position || a.placeholder));
+        if (cleaned.length) pruned[pid] = cleaned.map(a => ({ position: a.position || a.placeholder, width: a.width, height: a.height, unit: 'pixels' }));
+      }
+    });
+    selectedPrintAreas = pruned;
+    sessionStorage.setItem('selectedPrintAreas', JSON.stringify(selectedPrintAreas));
+    console.log('[pruneSelectedPrintAreas] kept products:', Object.keys(pruned));
+  } catch(e) {
+    console.warn('pruneSelectedPrintAreas error', e);
+  }
+}
+
+function updateProjectSummary() {
+  const products = allProducts.filter(p => state.selectedProducts.has(p.id.toString()));
+  document.getElementById('projectSummary').innerHTML = 
+    '<div><strong>Products:</strong> ' + products.length + '</div>' +
+    '<div><strong>Shop:</strong> ' + (sessionStorage.getItem('bulkSelectedShop') || '—') + '</div>' +
+    '<div><strong>Print Areas:</strong> ' + Object.values(selectedPrintAreas).reduce((a,b)=>a+b.length,0) + '</div>';
+}
+
+function clearOldAssignments() {
+    console.log('🧹 Clearing old image assignments and uploads...');
+    sessionStorage.removeItem('productDesigns');
+    // Also clear any stored image IDs
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('imageId_')) {
+            sessionStorage.removeItem(key);
+        }
+    }
+    // Reset confirmation flag after run
+    window.__prepublishConfirmed = false;
+}
+
+// Ensure a clean slate when entering Step 4 (design generation)
+function resetStep4State() {
+  try {
+    console.log('Resetting Step 4 state...');
+    // Clear any generated image state from previous sessions
+    sessionStorage.removeItem('productDesigns');
+    sessionStorage.removeItem('generatedContent');
+    sessionStorage.removeItem('selectedImages');
+    // Clear per-image stored IDs
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const k = sessionStorage.key(i);
+      if (k && (k.startsWith('imageId_') || k.startsWith('uploadId_'))) {
+        sessionStorage.removeItem(k);
+      }
+    }
+    // Optional: clear placement overrides for new run
+    sessionStorage.removeItem('placementOverrides');
+
+    // Clear UI containers if present
+    const imgCard = document.getElementById('generatedImagesCard');
+    const imgContainer = document.getElementById('generatedImagesContainer');
+    if (imgContainer) imgContainer.innerHTML = '';
+    if (imgCard) imgCard.style.display = 'none';
+
+    console.log('Step 4 state reset complete.');
+  } catch (e) { console.warn('resetStep4State error', e); }
+}
+
+// Ensure a clean slate when entering Step 5 (product creation & pricing)
+function resetStep5State() {
+  try {
+    console.log('Resetting Step 5 state...');
+    // Clear created products so we don't carry over old session data
+    try { sessionStorage.removeItem('createdProducts'); } catch (e) {}
+    try { window.__step5CreationStarted = false; } catch (e) {}
+    // Clear image overrides cache for products from a prior run
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const k = sessionStorage.key(i);
+      if (k && (k.startsWith('imageOverrides_') || k.startsWith('variantMatrix_'))) {
+        sessionStorage.removeItem(k);
+      }
+    }
+    // Reset any draft bindings in memory
+    window.__imageOverridesDraft = {};
+    window.__variantMatrixDraft = {};
+    console.log('Step 5 state reset complete.');
+  } catch (e) { console.warn('resetStep5State error', e); }
+}
+
+async function generateDesigns() {
+  clearOldAssignments(); // Clear out old data before starting a new generation
+  const prompt = document.getElementById('bulkPrompt').value.trim();
+  if (!prompt) return alert('Enter a prompt');
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating…';
+
+  const sizes = Array.from(document.querySelectorAll('.size-checkbox:checked'))
+    .map(chk => ({ 
+      size: chk.id.replace('chk-',''), 
+      count: parseInt(document.getElementById('count-' + chk.id.replace('chk-','')).value) || 1 
+    }));
+
+  if (sizes.length === 0) {
+    alert('Please select at least one image size to generate.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic"></i> Generate Designs';
+    return;
+  }
+
+  const style = document.getElementById('bulkStyle').value;
+  const colors = document.getElementById('bulkColors').value;
+  const audience = document.getElementById('bulkAudience').value;
+  const removeBg = document.getElementById('removeBackgroundToggle')?.checked || false;
+
+  let enhancedPrompt = prompt + ', ' + style + ' style, ' + colors + ' colors, for ' + audience + ' audience';
+  // Inject strict design constraints so images work across products
+  const RULES = [
+    'ABSOLUTE: transparent background only; never use blocks/rectangles/solid backdrops',
+    'Edges must be organic/flowing/distressed/faded; avoid sharp rectangular corners',
+    'Design should look good on light and dark products (shirts, mugs, phone cases)',
+    'Bold, eye-catching composition; scalable from 1 inch to 12 inches',
+    'Prefer hand-drawn/organic borders, watercolor fades, grunge/curved line art',
+    'Avoid generic clip-art, basic frames, over-busy detail, tiny unreadable text',
+    'Use colors that pop on multiple product colors; maintain strong contrast'
+  ].join('. ');
+  enhancedPrompt += '. ' + RULES + '.';
+  if (removeBg) enhancedPrompt += ', remove background, transparent background, isolated on white';
+  
+  const selectedProductIds = Array.from(state.selectedProducts);
+  const productInfo = selectedProductIds.map(pid => {
+      const product = allProducts.find(p => p.id.toString() === pid);
+      if (!product) return null;
+      
+      let brandName = "";
+      if (product.brand) {
+        brandName = typeof product.brand === 'string' ? product.brand : (product.brand.title || "");
+      }
+      
+      const printProvider = product.print_provider || {};
+      const printProviderName = typeof printProvider === 'object' ? (printProvider.title || "") : "";
+      
+      const blueprint = product.blueprint || {};
+      const blueprintDetails = typeof blueprint === 'object' ? {
+        title: blueprint.title || "",
+        description: blueprint.description || "",
+        properties: blueprint.properties || {}
+      } : {};
+      
+      const variants = product.variants || [];
+      const variantDetails = variants.map(v => ({ title: v.title || "", options: v.options || {} }));
+      
+      return {
+        id: product.id,
+        title: product.title,
+        brand: brandName !== "Generic" ? brandName : "",
+        description: product.description || "",
+        print_provider: printProviderName,
+        blueprint: blueprintDetails,
+        variants: variantDetails,
+        materials: product.materials || [],
+        properties: product.properties || {}
+      };
+    }).filter(Boolean);
+
+  const contentPromise = fetch('/.netlify/functions/generate-content', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+    },
+    body: JSON.stringify({
+      prompt: enhancedPrompt,
+      contentType: 'product-content',
+      style, colors, audience, removeBackground: removeBg,
+      productInfo: productInfo.length > 0 ? productInfo : undefined,
+      productId: productInfo.length > 0 ? productInfo[0].id : null
+    })
+  }).then(async response => {
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      console.warn('Content generation request failed:', response.status, errText);
+      return { success: false, error: `HTTP ${response.status}: ${errText || 'Request failed'}` };
+    }
+    return response.json().catch(err => {
+      console.warn('Failed to parse content generation JSON:', err);
+      return { success: false, error: 'Invalid JSON from content API' };
+    });
+  }).catch(err => {
+    console.warn('Content generation unexpected error:', err);
+    return { success: false, error: err && err.message ? err.message : String(err) };
+  });
+
+  // Helper with simple retry/backoff for transient errors (e.g., HTTP 504)
+  const doGenerate = async (size, count, attempt = 1) => {
+    try {
+      const res = await fetch('/.netlify/functions/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+        },
+        body: JSON.stringify({
+          prompt: enhancedPrompt, size, style, colors, audience,
+          removeBackground: removeBg, numImages: count
+        })
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        const msg = `HTTP ${res.status}: ${errText || 'Request failed'}`;
+        // Retry on gateway timeouts or server errors
+        if (attempt < 3 && (res.status === 504 || res.status >= 500)) {
+          const delay = 1000 * attempt;
+          console.warn(`generate-image retry ${attempt} for ${size} after error: ${msg}`);
+          await new Promise(r => setTimeout(r, delay));
+          return doGenerate(size, count, attempt + 1);
+        }
+        return { ok: false, size, error: msg };
+      }
+      const data = await res.json().catch(() => ({}));
+      if (data && data.success && Array.isArray(data.images)) {
+        // Note: we do not assume exact dimensions; we use URLs only
+        return { ok: true, size, images: data.images };
+      }
+      const msg = (data && (data.error || data.message)) || 'Image generation failed';
+      // Retry once on generic failure without status code
+      if (attempt < 3) {
+        const delay = 1000 * attempt;
+        console.warn(`generate-image retry ${attempt} for ${size} after response error: ${msg}`);
+        await new Promise(r => setTimeout(r, delay));
+        return doGenerate(size, count, attempt + 1);
+      }
+      return { ok: false, size, error: msg };
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      if (attempt < 3) {
+        const delay = 1000 * attempt;
+        console.warn(`generate-image retry ${attempt} for ${size} after exception: ${msg}`);
+        await new Promise(r => setTimeout(r, delay));
+        return doGenerate(size, count, attempt + 1);
+      }
+      return { ok: false, size, error: msg };
+    }
+  };
+
+  const imagePromises = sizes.map(({ size, count }) => doGenerate(size, count));
+
+  try {
+    // Fetch content and images in parallel (restoring previous concurrency)
+    const [contentData, imageSettled] = await Promise.all([
+      contentPromise,
+      Promise.all(imagePromises)
+    ]);
+
+    if (contentData && contentData.success) {
+        sessionStorage.setItem('generatedContent', JSON.stringify(contentData));
+        console.log('Content generation successful and stored.');
+    }
+
+    const successes = imageSettled.filter(r => r && r.ok);
+    const failures = imageSettled.filter(r => !r || !r.ok);
+
+    // Log failures for diagnostics
+    if (failures.length) {
+      console.warn('One or more image generations failed:', failures);
+    }
+
+    successes.forEach(r => { if (r && r.size) selectedImages[r.size] = r.images; });
+    sessionStorage.setItem('selectedImages', JSON.stringify(selectedImages));
+
+    if (successes.length === 0) {
+        const errList = failures.map(f => `<div>• ${f.size || 'unknown size'}: ${f.error || 'Unknown error'}</div>`).join('');
+        document.getElementById('generatedImagesContainer').innerHTML = `<div class="alert alert-warning">No images were generated.<br>${errList || 'Check console for errors.'}</div>`;
+    } else {
+        document.getElementById('generatedImagesContainer').innerHTML = successes.map(({size, images}) => 
+            `<h6 class="mt-3">${size}</h6><div class="row g-2">${images.map(img =>
+              `<div class="col-md-4">
+                <div class="card">
+                  <img src="${img.url}" class="card-img-top" style="height:180px;object-fit:cover">
+                  <div class="card-body p-1 text-center">
+                    <div class="btn-group w-100 mb-1">
+                      <button class="btn btn-sm btn-outline-primary" onclick="assignImage('${size}','${img.url}', this)">Use</button>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="editImagePrompt('${size}','${img.url}', this)">Edit</button>
+                      <button class="btn btn-sm btn-outline-danger" onclick="removeBackground('${size}','${img.url}', this)">Remove BG</button>
+                    </div>
+                  </div>
+                </div>
+              </div>`
+            ).join('')}</div>`
+        ).join('');
+
+        // Convert to the structure expected by populateAssignmentTable
+        const tableInput = successes.map(({ size, images }) => ({ size, images }));
+        populateAssignmentTable(tableInput);
+        document.getElementById('assignmentTableCard').style.display = 'block';
+
+        const proceedBtn = document.getElementById('proceedToStep5Btn');
+        proceedBtn.style.display = 'inline-block';
+        proceedBtn.disabled = false;
+    }
+  } catch (error) {
+    console.error('Generation failed:', error && (error.stack || error));
+    alert('An error occurred during generation: ' + (error && error.message ? error.message : String(error)));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic"></i> Generate Designs';
+    document.getElementById('generatedImagesCard').style.display = 'block';
+  }
+}
+
+function populateAssignmentTable(results) {
+  const tbody = document.getElementById('assignmentTableBody');
+  tbody.innerHTML = '';
+  const products = allProducts.filter(p => state.selectedProducts.has(p.id.toString()));
+  
+  // Get generated content if available
+  let generatedContent = null;
+  try {
+    const contentStr = sessionStorage.getItem('generatedContent');
+    if (contentStr) {
+      generatedContent = JSON.parse(contentStr);
+      console.log('Using generated content:', generatedContent);
+    }
+  } catch (e) {
+    console.error('Error parsing generated content:', e);
+  }
+  
+  // Format tags as a comma-separated string if available
+  let tagsString = '';
+  if (generatedContent && Array.isArray(generatedContent.tags)) {
+    tagsString = generatedContent.tags.join(', ');
+  }
+
+  // Format materials as a comma-separated string (show all, no limit)
+  let materialsString = '';
+  if (generatedContent && Array.isArray(generatedContent.materials)) {
+    materialsString = generatedContent.materials.join(', ');
+  }
+
+  results.forEach(({size,images}) => {
+    images.forEach((img, idx) => {
+      // Only process images that match a Printify size
+      const printifySize = size; // This is the size from FAL
+      
+      Object.entries(selectedPrintAreas).forEach(([pid, areas]) => {
+        areas.forEach(area => {
+          const areaSize = area.width + 'x' + area.height;
+          
+          // Only create table entry if the FAL size matches the Printify area size
+          if (printifySize !== areaSize) return;
+          
+          const prod = products.find(p => p.id.toString() === pid);
+          if (!prod) return;
+          
+          // Use generated title if available, otherwise use product title
+          const title = (generatedContent && generatedContent.title) ? 
+                        generatedContent.title : 
+                        prod.title;
+          
+          // Use generated description if available
+          const description = (generatedContent && generatedContent.description) ? 
+                             generatedContent.description : 
+                             '';
+
+          const row = document.createElement('tr');
+          row.innerHTML = 
+            '<td>' +
+              '<input type="text" class="form-control form-control-sm" value="' + title + '">' +
+            '</td>' +
+            '<td class="text-capitalize">' + area.position + '</td>' +
+            '<td>' + areaSize + '</td>' +
+            '<td>' +
+              '<textarea class="form-control form-control-sm" rows="3" placeholder="Add description...">' + description + '</textarea>' +
+            '</td>' +
+            '<td>' +
+              '<input type="text" class="form-control form-control-sm" value="' + tagsString + '" placeholder="Add tags...">' +
+            '</td>' +
+            '<td>' +
+              '<input type="text" class="form-control form-control-sm" value="' + materialsString + '" placeholder="Add materials...">' +
+            '</td>' +
+            '<td>' +
+              '<img src="' + img.url + '" class="img-fluid rounded border" ' +
+                   'style="max-height:80px;" alt="Generated design">' +
+            '</td>' +
+            '<td>' +
+              '<button class="btn btn-sm btn-outline-success me-2" ' +
+                      'onclick="assignImage(\'' + areaSize + '\',\'' + img.url + '\')">'+
+                '<i class="bi bi-check"></i> Assign' +
+              '</button>' +
+              '<button class="btn btn-sm btn-outline-primary" ' +
+                      'onclick="openPlacementEditor(\'' + areaSize + '\')">'+
+                '<i class="bi bi-aspect-ratio"></i> Placement' +
+              '</button>' +
+              '<span class="badge bg-secondary ms-2 dpi-badge" data-size="' + areaSize + '">—</span>' +
+            '</td>';
+          tbody.appendChild(row);
+
+          // Initialize DPI badge based on any saved placement for this size
+          try {
+            const map = getPlacementOverrides();
+            const scale = (map && map[areaSize] && map[areaSize].scale) ? map[areaSize].scale : 1.0;
+            const dpi = (function(){
+              const m = areaSize.match(/^(\d+)x(\d+)$/);
+              if (!m) return null;
+              const areaW = parseInt(m[1],10), areaH = parseInt(m[2],10);
+              if (!areaW || !areaH) return null;
+              const imgW = areaW, imgH = areaH;
+              const s = Math.max(0.1, parseFloat(scale || 1));
+              const dpiW = (imgW * 300 / areaW) / s;
+              const dpiH = (imgH * 300 / areaH) / s;
+              return Math.min(dpiW, dpiH);
+            })();
+            const badge = row.querySelector('.dpi-badge[data-size="' + areaSize + '"]');
+            if (badge) {
+              if (dpi && isFinite(dpi)) {
+                const r = Math.round(dpi);
+                badge.textContent = r + ' DPI';
+                badge.classList.remove('bg-secondary','bg-danger','bg-success');
+                badge.classList.add(r >= 300 ? 'bg-success' : 'bg-danger');
+              } else {
+                badge.textContent = '—';
+                badge.classList.remove('bg-danger','bg-success');
+                badge.classList.add('bg-secondary');
+              }
+            }
+          } catch(e) { console.warn('Failed to init DPI badge', e); }
+        });
+      });
+    });
+  });
+}
+
+function editImagePrompt(size, imageUrl, button) {
+  // Disable button to prevent multiple clicks
+  if (button) button.disabled = true;
+  
+  // Prompt for edit instructions
+  const prompt = window.prompt('Enter instructions for editing this image:', '');
+  
+  if (!prompt || prompt.trim() === '') {
+    if (button) button.disabled = false;
+    return;
+  }
+  
+  // Show loading state
+  const originalText = button ? button.innerHTML : '';
+  if (button) button.innerHTML = '<i class="bi bi-hourglass-split"></i> Editing...';
+  
+  // Call the edit-image function
+  fetch('/.netlify/functions/edit-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      imageUrl, 
+      prompt,
+      size
+    })
+  })
+  .then(response => response.ok ? response.json() : response.text().then(err => Promise.reject(err)))
+  .then(data => {
+    if (data.success && data.data && data.data.image_url) {
+      // Replace the original image with the edited one
+      const card = button.closest('.card');
+      const img = card.querySelector('img');
+      img.src = data.data.image_url;
+      
+      // Update the button actions with the new URL
+      const buttons = card.querySelectorAll('button');
+      buttons.forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        if (onclickAttr) {
+          const newOnclick = onclickAttr.replace(imageUrl, data.data.image_url);
+          btn.setAttribute('onclick', newOnclick);
+        }
+      });
+      
+      // Update the selectedImages object
+      if (selectedImages[size]) {
+        const imgIndex = selectedImages[size].findIndex(img => img.url === imageUrl);
+        if (imgIndex !== -1) {
+          selectedImages[size][imgIndex].url = data.data.image_url;
+          sessionStorage.setItem('selectedImages', JSON.stringify(selectedImages));
+        }
+      }
+      
+      alert('Image edited successfully!');
+    } else {
+      alert('Failed to edit image: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error editing image:', error);
+    alert('Error editing image: ' + error);
+  })
+  .finally(() => {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalText;
+    }
+  });
+}
+
+function removeBackground(size, imageUrl, button) {
+  // Disable button to prevent multiple clicks
+  if (button) button.disabled = true;
+  
+  // Show loading state
+  const originalText = button ? button.innerHTML : '';
+  if (button) button.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+  
+  // Call the generate-image function with rembg model
+  fetch('/.netlify/functions/generate-image', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+    },
+    body: JSON.stringify({ 
+      imageUrl, 
+      model: 'rembg',
+      size,
+      // Adding an empty prompt to avoid validation errors
+      prompt: ''
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data && data.success && Array.isArray(data.images) && data.images[0]?.url) {
+      // Update the image in the selectedImages map if present
+      if (selectedImages && selectedImages[size]) {
+        const imgIndex = selectedImages[size].findIndex(img => img.url === imageUrl);
+        if (imgIndex !== -1) {
+          selectedImages[size][imgIndex].url = data.images[0].url;
+          sessionStorage.setItem('selectedImages', JSON.stringify(selectedImages));
+        }
+      }
+      
+      alert('Background removed successfully!');
+    } else {
+      alert('Failed to remove background: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error removing background:', error);
+    alert('Error removing background: ' + error);
+  })
+  .finally(() => {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalText;
+    }
+  });
+}
+
+/* ---------- Step 5: Product Creation and Pricing ---------- */
+async function proceedToStep5() {
+    const btn = document.getElementById('proceedToStep5Btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-right"></i> Proceeding...';
+
+    try {
+        // Move to Step 5 pre-creation review (no product creation yet)
+        state.completedSteps.add(4);
+        state.currentStep = 5;
+        document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+        const container = document.getElementById('step5-container');
+        if (container) {
+            container.classList.add('active');
+            updateStepIndicators();
+        }
+        // Ensure no stale data bleeds into Step 5
+        try { resetStep5State(); } catch (e) { console.warn('resetStep5State failed', e); }
+        // Pre-creation UI was removed; go straight to pricing panel
+        const pricingPanel = document.getElementById('step5-pricing');
+        if (pricingPanel) pricingPanel.style.display = '';
+        // Kick off product creation now that we're in Step 5
+        await createProductsForStep5();
+    } catch (error) {
+        console.error('Error navigating to Step 5:', error);
+        alert('An error occurred: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Proceed to Pricing';
+    }
+}
+
+// Helper: show error details modal with JSON payload
+function showErrorDetailsModal(title, payload) {
+  try {
+    const titleEl = document.getElementById('errorDetailsTitle');
+    const bodyEl = document.getElementById('errorDetailsBody');
+    if (titleEl) titleEl.textContent = title || 'Error';
+    if (bodyEl) bodyEl.textContent = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+    const modalEl = document.getElementById('errorDetailsModal');
+    if (!modalEl) return;
+    const bs = new bootstrap.Modal(modalEl);
+    modalEl.__bsInstance = bs;
+    bs.show();
+  } catch(e) {
+    console.warn('Failed to show error details modal', e);
+    alert((title||'Error') + ': ' + (payload && (payload.error || payload.message || String(payload))));
+  }
+}
+
+function initializeStep5PreCreation() {
+    // Pre-creation UI removed; directly initialize pricing view
+    try {
+        const pricingPanel = document.getElementById('step5-pricing');
+        if (pricingPanel) pricingPanel.style.display = '';
+    } catch (e) {}
+    // Also trigger creation to populate pricing grid
+    createProductsForStep5().catch(e=>console.warn('Step5 creation failed in init:', e));
+}
+
+function renderPreCreationGrid() {
+    // Pre-creation UI removed; no-op
+    return;
+}
+
+async function createProductsFromPreCreation() {
+    // Pre-creation flow removed; product creation is triggered via existing Step 4/5 flow
+    return;
+}
+
+// New: Create products when entering Step 5 and then render pricing manager
+async function createProductsForStep5() {
+    console.log('STEP5: Starting product creation flow...');
+    try {
+        // Prevent duplicate runs if user re-enters Step 5
+        if (window.__step5CreationStarted) {
+            console.log('STEP5: Creation already started, skipping duplicate call');
+            // If products already exist, just render pricing
+            const existing = JSON.parse(sessionStorage.getItem('createdProducts') || '[]');
+            if (Array.isArray(existing) && existing.length > 0) {
+                createdProducts = existing;
+                initializeStep5();
+                return;
+            }
+        }
+        // Version marker for diagnostics
+        console.log('[CREATE] bulkly assemble/version marker v2025-09-08-1');
+
+        window.__step5CreationStarted = true;
+
+        // Show creating message
+        const container = document.getElementById('productsContainer');
+        if (container) container.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Creating products...</div>';
+
+        // Clear previous state
+        sessionStorage.removeItem('createdProducts');
+        createdProducts = [];
+
+        // Build final products (will fetch AI content and selected images)
+        const finalProducts = await assembleFinalProducts();
+        console.log('[CREATE] Assembled payloads for Netlify printful-create-product:', JSON.stringify(finalProducts, null, 2));
+        if (!Array.isArray(finalProducts) || finalProducts.length === 0) {
+            throw new Error('No valid products to create. Make sure designs are assigned in Step 4.');
+        }
+
+        // Create each product via Netlify create-product function
+        console.log('STEP5: Creating', finalProducts.length, 'products...');
+        const createdProductsList = await Promise.all(finalProducts.map(async (fp) => {
+            try {
+                console.log(`[CREATE] Invoking Netlify function for: ${fp.title}`);
+                const created = await createAndMockup(fp);
+                console.log(`[CREATE] Netlify create result for ${fp.title}:`, created);
+                return created;
+            } catch (err) {
+                console.warn('Failed to create product', fp?.title, err);
+                return null;
+            }
+        }));
+        createdProducts = createdProductsList.filter(Boolean);
+        if (createdProducts.length === 0) {
+            throw new Error('Failed to create any products.');
+        }
+
+        sessionStorage.setItem('createdProducts', JSON.stringify(createdProducts));
+        console.log('STEP5: Product creation complete:', createdProducts.map(p=>p.id));
+
+        // Initialize pricing UI with created products
+        initializeStep5();
+
+        // Optionally poll and attach images if needed
+        const shopIdForPolling = sessionStorage.getItem('bulkSelectedShop') || state.selectedShop;
+        if (shopIdForPolling) {
+            pollAndAttachImages(shopIdForPolling, createdProducts)
+              .then(() => { try { renderProductsGrid(); } catch (e) {} })
+              .catch(() => {});
+        }
+    } catch (e) {
+        console.error('STEP5: Error during creation flow:', e);
+        alert('Error creating products in Step 5: ' + (e?.message || e));
+        const btn = document.getElementById('proceedToStep5Btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Proceed to Pricing';
+        }
+        throw e;
+    }
+}
+
+// Build print areas for preview using current overrides and uploaded image IDs
+function buildPreviewPrintAreas(blueprintId) {
+    console.log('[buildPreviewPrintAreas] Starting for blueprint:', blueprintId);
+    const productDesigns = JSON.parse(sessionStorage.getItem('productDesigns') || '{}');
+    console.log('[buildPreviewPrintAreas] productDesigns:', productDesigns);
+    const printAreaPlaceholders = selectedPrintAreas[blueprintId] || [];
+    console.log('[buildPreviewPrintAreas] printAreaPlaceholders:', printAreaPlaceholders);
+    const overrides = getPlacementOverrides();
+    const areas = [];
+    
+    // If no print areas are selected, create a fallback with front position
+    if (printAreaPlaceholders.length === 0) {
+        console.log('[buildPreviewPrintAreas] No print areas selected, using fallback front position');
+        // Find any design to use as fallback
+        const allSizes = Object.keys(productDesigns);
+        if (allSizes.length > 0) {
+            const firstSize = allSizes[0];
+            const [width, height] = firstSize.split('x').map(Number);
+            const urls = productDesigns[firstSize] || [];
+            if (urls.length > 0) {
+                const imageUrl = urls[0];
+                let imageId = sessionStorage.getItem(`imageId_${imageUrl}`);
+                if (!imageId) {
+                    console.warn('No uploaded imageId found for fallback preview, using URL directly:', imageUrl);
+                    imageId = imageUrl;
+                }
+                const o = overrides[firstSize] || { x: 0.5, y: 0.5, scale: 1, angle: 0 };
+                areas.push({
+                    placeholder: 'front', // Default to front position
+                    width: width,
+                    height: height,
+                    images: [{ id: imageId, url: imageUrl, x: o.x ?? 0.5, y: o.y ?? 0.5, scale: o.scale ?? 1, angle: o.angle ?? 0 }]
+                });
+                console.log('[buildPreviewPrintAreas] Created fallback area:', areas[0]);
+            }
+        }
+    }
+    
+    for (const ph of printAreaPlaceholders) {
+        const sizeKey = `${ph.width}x${ph.height}`;
+        const urls = productDesigns[sizeKey] || [];
+        if (urls.length === 0) {
+            console.log(`[buildPreviewPrintAreas] No designs for size ${sizeKey}, skipping`);
+            continue;
+        }
+        const imageUrl = urls[0];
+        // Use uploaded image ID if available; otherwise fall back to the direct URL for preview purposes
+        let imageId = sessionStorage.getItem(`imageId_${imageUrl}`);
+        if (!imageId) {
+            console.warn('No uploaded imageId found for preview, using URL directly:', imageUrl);
+            imageId = imageUrl; // Our mockup function now supports direct URLs
+        }
+        const o = overrides[sizeKey] || { x: 0.5, y: 0.5, scale: 1, angle: 0 };
+        areas.push({
+            placeholder: ph.position,
+            width: ph.width,
+            height: ph.height,
+            images: [{ id: imageId, url: imageUrl, x: o.x ?? 0.5, y: o.y ?? 0.5, scale: o.scale ?? 1, angle: o.angle ?? 0 }]
+        });
+        console.log(`[buildPreviewPrintAreas] Added area for position ${ph.position}:`, areas[areas.length-1]);
+    }
+    console.log('[buildPreviewPrintAreas] Final areas:', areas);
+    return areas;
+}
+
+// Refresh preview for a given product (by blueprintId)
+async function refreshPreviewForProduct(blueprintId) {
+    const product = allProducts.find(ap => ap.id === blueprintId);
+    if (!product) return;
+    const providerId = providerSelection[blueprintId];
+    const areas = buildPreviewPrintAreas(blueprintId);
+    // Prepare a simple fallback URL (the first assigned design URL, if any)
+    let fallbackDesignUrl = '';
+    if (areas && areas.length > 0 && areas[0].images && areas[0].images.length > 0) {
+        // try the explicit url we placed into the image object
+        fallbackDesignUrl = areas[0].images[0].url || '';
+    }
+    const imgEl = document.getElementById(`prePreview_${blueprintId}`);
+    if (!imgEl) return;
+    // Helper: proxy any external URL through serverless function
+    const getProxied = (u) => u ? `/.netlify/functions/proxy-image?url=${encodeURIComponent(u)}` : '';
+
+    // Show immediate visual using the assigned design URL (if any)
+    if (fallbackDesignUrl) {
+        let fb = fallbackDesignUrl;
+        if (fb.startsWith('http://')) fb = fb.replace('http://', 'https://');
+        const sep0 = fb.includes('?') ? '&' : '?';
+        fb = `${fb}${sep0}cb=${Date.now()}`;
+        const proxied = getProxied(fb);
+        console.log('[Preview]', blueprintId, 'Initial design preview via proxy:', proxied);
+        imgEl.src = proxied;
+        imgEl.style.display = '';
+    } else {
+        imgEl.style.display = 'none';
+        imgEl.src = ''; 
+    }
+
+    // If mockup preview is disabled, stop here
+    if (!USE_MOCKUP_PREVIEW) {
+        console.log('[Preview]', blueprintId, 'Mockup disabled: showing design only.');
+        return;
+    }
+    // Mockup endpoint removed: keep the proxied design image as the preview
+    console.log('[Preview]', blueprintId, 'Mockup generation is disabled (endpoint removed). Keeping design preview.');
+    return;
+}
+
+async function assembleFinalProducts() {
+    console.log('ASSEMBLE: Assembling final products...');
+    // Clear any stale data that might be in memory
+    console.log('Clearing any stale product data...');
+    const token = localStorage.getItem('authToken');
+    const productDesigns = JSON.parse(sessionStorage.getItem('productDesigns') || '{}');
+    const selectedShopId = sessionStorage.getItem('bulkSelectedShop');
+
+    if (!selectedShopId) {
+        throw new Error('No shop ID selected. Please select a shop in Step 1.');
+    }
+
+    // Get all products that were selected in Step 2
+    const selectedProductIds = Array.from(state.selectedProducts);
+    console.log('Currently selected product IDs:', selectedProductIds);
+    
+    // Clear any previously cached products that might be interfering
+    console.log('Filtering products to create from current selection only');
+    const productsToCreate = allProducts.filter(p => selectedProductIds.includes(p.id.toString()));
+
+    console.log(`Found ${productsToCreate.length} products to create:`, productsToCreate.map(p => ({ id: p.id, title: p.title })));
+
+    const finalProducts = [];
+
+    for (const p of productsToCreate) {
+        const product = allProducts.find(ap => ap.id === p.id);
+        if (!product) {
+            console.error(`Product with ID ${p.id} not found in allProducts.`);
+            continue;
+        }
+
+        const catalogProductId = product.id; // Printful catalog product ID
+        const printAreaPlaceholders = selectedPrintAreas[catalogProductId] || [];
+
+        if (!product.variants || product.variants.length === 0) {
+            console.error(`No variants found for product ${catalogProductId}. Cannot create product.`);
+            continue;
+        }
+
+        // Helper: choose best placement for product (AOP-aware)
+        const choosePlacement = (prod, desired) => {
+            const d = String(desired || '').toLowerCase();
+            const supported = Array.isArray(prod.supported_placements) ? prod.supported_placements.map(x=>String(x).toLowerCase()) : [];
+            // If desired is supported, keep
+            if (supported.includes(d)) return desired;
+            // AOP fallback: pick any supported 'all over' style placement
+            const aopCandidates = supported.filter(p => p.includes('all') || p.includes('over'));
+            if (aopCandidates.length) return aopCandidates[0];
+            // Fallback to first supported
+            if (supported.length) return supported[0];
+            // Last resort: keep desired
+            return desired || 'front';
+        };
+
+        // Build placement_files from selectedPrintAreas and assigned images
+        const selectedAreas = selectedPrintAreas[product.id] || [];
+        const placement_files = [];
+        for (const area of selectedAreas) {
+            const key = area.width + 'x' + area.height;
+            const assigned = productDesigns[key] && productDesigns[key][0];
+            if (!assigned) continue;
+            const mappedPlacement = choosePlacement(product, area.position);
+            placement_files.push({ placement: mappedPlacement, image_url: assigned.url });
+        }
+
+        // Determine selected variants (default to ALL catalog variants)
+        let allVariantIds = (product.variants || []).map(v => v.id || v.variant_id).filter(Boolean);
+
+        // Preflight: validate variants and placements
+        const variantIdSet = new Set((product.variants||[]).map(v => v.id || v.variant_id).filter(Boolean).map(String));
+        const invalidVariants = (allVariantIds || []).filter(id => !variantIdSet.has(String(id)));
+        const supportedSet = new Set(((product.supported_placements||[]).map(s=>String(s).toLowerCase())));
+        const invalidPlacements = placement_files.filter(f => supportedSet.size && !supportedSet.has(String(f.placement||'').toLowerCase()));
+        if (invalidVariants.length) {
+            console.warn('Preflight: removed invalid variant ids for product', product.title, invalidVariants);
+            allVariantIds = allVariantIds.filter(id => variantIdSet.has(String(id)));
+        }
+        if (invalidPlacements.length) {
+            console.warn('Preflight: mapping invalid placements for product', product.title, invalidPlacements);
+            invalidPlacements.forEach(pf => { pf.placement = choosePlacement(product, pf.placement); });
+        }
+
+        // Get generated content if available
+        let generatedContent = {};
+        try {
+            const response = await fetch(`/.netlify/functions/get-generated-content?product_id=${catalogProductId}`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) generatedContent = result.data;
+            }
+        } catch (error) {
+            console.error(`Error fetching content for product ${catalogProductId}:`, error);
+        }
+
+        // allVariantIds and placement_files were already computed above
+
+        finalProducts.push({
+            catalog_product_id: catalogProductId,
+            title: generatedContent.title || `New Product - ${product.title}`,
+            description: generatedContent.description || 'A great new product.',
+            selected_variant_ids: allVariantIds,
+            placement_files,
+            retail_price: (product.variants[0]?.price ? (product.variants[0].price/100).toFixed(2) : '24.99')
+        });
+    }
+
+    console.log('ASSEMBLE: Final products assembled:', finalProducts.length);
+    return finalProducts;
+}
+
+// Helper function to build the selectedImages map in the correct format for the backend
+function buildSelectedImagesMap() {
+    const productDesigns = JSON.parse(sessionStorage.getItem('productDesigns') || '{}');
+    const selectedImagesMap = {};
+    
+    // Map each design URL to its corresponding image ID
+    for (const [sizeKey, urls] of Object.entries(productDesigns)) {
+        if (urls.length > 0) {
+            const imageUrl = urls[0]; // Get the first (assigned) image URL
+            const imageId = sessionStorage.getItem(`imageId_${imageUrl}`);
+            if (imageId) {
+                selectedImagesMap[sizeKey] = imageId;
+                console.log(`Mapped size ${sizeKey} to image ID ${imageId}`);
+            }
+        }
+    }
+    
+    console.log('Built selectedImages map:', selectedImagesMap);
+    return selectedImagesMap;
+}
+
+async function createSingleProduct(productData) {
+    console.log(`CREATING: ${productData.title}`);
+    console.log('[CREATE] Payload to printful-create-product:', JSON.stringify(productData, null, 2));
+    try {
+        const token = localStorage.getItem('authToken');
+        
+        // Printful create
+        const response = await fetch('/.netlify/functions/printful-create-product', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                title: productData.title,
+                description: productData.description,
+                catalog_product_id: productData.catalog_product_id,
+                selected_variant_ids: productData.selected_variant_ids,
+                placement_files: productData.placement_files,
+                retail_price: productData.retail_price
+            })
+        });
+
+        // Parse response and raise detailed error for UI
+        const text = await response.text();
+        console.log('[CREATE] Netlify function raw response text:', text);
+        let respJson = null; try { respJson = text ? JSON.parse(text) : null; } catch { respJson = null; }
+        if (!response.ok || !respJson || respJson.success === false) {
+          console.error('API Error for', productData.title, 'status=', response.status, 'payload=', respJson || text);
+          const err = new Error((respJson && (respJson.error || respJson.message)) || 'Failed to create Printful product');
+          err.responseJson = respJson || { raw: text };
+          throw err;
+        }
+        
+        const data = respJson && respJson.data ? respJson.data : respJson;
+        const result = data.result || data;
+
+        // Normalize created product output
+        const created = {
+          id: result.id || result.sync_product?.id,
+          title: result.name || result.sync_product?.name || productData.title,
+          description: productData.description,
+          images: (Array.isArray(result.sync_product?.thumbnail_url) ? result.sync_product.thumbnail_url : (result.thumbnail_url || result.preview_url)) ? [{ src: result.thumbnail_url || result.preview_url, is_default: true }] : [],
+          print_areas: (productData.placement_files || []).map(pl => ({ position: pl.placement || 'front' })),
+          variants: Array.isArray(result.sync_variants) ? result.sync_variants.map(v => ({
+            id: v.id || v.variant_id,
+            price: Math.round(parseFloat(v.retail_price || productData.retail_price || '24.99') * 100) || 0,
+            cost: 0,
+            is_enabled: v.is_discontinued ? false : true,
+            title: v.name || `Variant ${v.id || v.variant_id}`
+          })) : (productData.selected_variant_ids || []).map(id => ({ id, price: Math.round(parseFloat(productData.retail_price || '24.99')*100), cost:0, is_enabled:true }))
+        };
+        console.log(`✅ PRODUCT CREATED (Printful):`, created.id);
+        return created;
+
+    } catch (error) {
+        console.error(`Product creation failed for ${productData.title}:`, error);
+        try { window.__lastCreateError = error && (error.responseJson || error.message || String(error)); } catch(_) {}
+        try {
+          // If server responded with JSON, show the detailed payload
+          if (error && error.responseJson) {
+            showErrorDetailsModal(`Create failed: ${productData.title}`, error.responseJson);
+          } else {
+            // Fallback visible alert to ensure user sees something
+            alert(`Create failed for ${productData.title}: ${error && error.message ? error.message : 'Unknown error'}`);
+          }
+        } catch(_){}
+        return null; // Return null so other products can still be created
+    }
+}
+
+// Create product, then generate mockups and attach them for Step 5 rendering
+async function createAndMockup(productData) {
+    const created = await createSingleProduct(productData);
+    if (!created) return null;
+    try {
+        // Generate mockups using catalog variant ids and original placement files
+        const mockups = await generateMockupsForProduct(productData);
+        if (Array.isArray(mockups) && mockups.length) {
+            created.mockups = mockups; // attach for UI rendering
+        }
+    } catch (e) {
+        console.warn('Mockup generation failed (non-blocking):', e);
+    }
+    return created;
+}
+
+function initializeStep5() {
+    console.log('INIT STEP 5: Initializing with created products...');
+    const container = document.getElementById('productsContainer');
+
+    if (!createdProducts || createdProducts.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">No products were created. Please go back and try again.</div>';
+        return;
+    }
+
+    container.innerHTML = '<div class="alert alert-success mb-3">' +
+        '<i class="bi bi-check-circle"></i> Successfully created ' + createdProducts.length + ' products!' +
+        '</div>' +
+        '<div id="step5ProductsGrid" class="row g-3"></div>';
+
+    renderProductsGrid();
+    setupStep5EventHandlers();
+}
+
+// Fetch a single product from Printful via proxy and normalize
+async function fetchProductById(shopId, productId) {
+    const res = await makeApiCall(`/store/products/${productId}`);
+    const pf = res?.result || res || {};
+    return {
+      id: pf.id || pf.sync_product?.id || productId,
+      title: pf.name || pf.sync_product?.name || pf.title || '',
+      images: Array.isArray(pf.sync_product?.thumbnail_url) ? pf.sync_product.thumbnail_url : (pf.thumbnail_url ? [{ src: pf.thumbnail_url, is_default: true }] : []),
+      variants: Array.isArray(pf.sync_variants) ? pf.sync_variants.map(v => ({
+        id: v.id || v.variant_id,
+        price: Math.round(parseFloat(v.retail_price || '0')*100)||0,
+        cost:0,
+        is_enabled: !v.is_discontinued,
+        title: v.name || `Variant ${v.id || v.variant_id}`
+      })) : []
+    };
+}
+
+// Printful: skip polling (mockups not retrieved via same flow). Keep no-op for UI compatibility.
+async function pollAndAttachImages(shopId, products, { attempts = 1, intervalMs = 1000 } = {}) {
+    console.log('Printful: skipping mockup polling');
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        await new Promise(r => setTimeout(r, intervalMs));
+    }
+    console.log('Printful: polling finished (no-op).');
+}
+
+// Generate mockups for a product's selected variants using Printful Mockup Generator
+async function generateMockupsForProduct(productData) {
+  try {
+    const files = Array.isArray(productData.placement_files) ? productData.placement_files : [];
+    const variants = Array.isArray(productData.selected_variant_ids) ? productData.selected_variant_ids.map(v => Number(v)) : [];
+    if (!files.length || !variants.length) return [];
+
+    // Create mockup task
+    const taskPayload = {
+      variant_ids: variants,
+      files: files.map(f => ({ placement: f.placement || 'front', image_url: f.image_url }))
+      // You can add options: background, format, etc.
+    };
+    const created = await makeApiCall('/mockup-generator/create-task', { method: 'POST', body: taskPayload });
+    const taskKey = created?.result?.task_key || created?.task_key || created?.result || created?.key;
+    if (!taskKey) return [];
+
+    // Poll task until done
+    const maxAttempts = 20;
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < maxAttempts; i++) {
+      await delay(1500);
+      const statusRes = await makeApiCall(`/mockup-generator/task/${taskKey}`);
+      const status = statusRes?.result || statusRes || {};
+      if (status.status === 'completed' || status.status === 'finished' || status.mockups) {
+        const imgs = [];
+        const mockups = status.mockups || status.result || [];
+        (Array.isArray(mockups) ? mockups : []).forEach(m => {
+          if (m?.mockup_url) imgs.push(m.mockup_url);
+          if (Array.isArray(m?.extra)) m.extra.forEach(e => { if (e?.mockup_url) imgs.push(e.mockup_url); });
+        });
+        return imgs;
+      }
+      if (status.status === 'failed' || status.error) break;
+    }
+  } catch (e) {
+    console.warn('generateMockupsForProduct error:', e);
+  }
+  return [];
+}
+
+// Open a modal to display all images for a created product (mockups + product images)
+function openViewAllImages(productId) {
+  try {
+    const p = (Array.isArray(createdProducts) ? createdProducts : []).find(x => String(x.id) === String(productId));
+    if (!p) return;
+    const body = document.getElementById('viewAllImagesBody');
+    if (!body) return;
+    const imgs = [];
+    if (Array.isArray(p.mockups)) imgs.push(...p.mockups);
+    if (Array.isArray(p.images)) {
+      p.images.forEach(im => {
+        const url = (typeof im === 'string') ? im : (im.src || im.preview_url || '');
+        if (url) imgs.push(url);
+      });
+    }
+    if (!imgs.length) {
+      body.innerHTML = '<div class="text-muted">No images available yet for this product.</div>';
+    } else {
+      body.innerHTML = imgs.map(u => (
+        '<div class="mb-3">' +
+          '<img src="' + u + '" alt="mockup" class="img-fluid rounded"/>' +
+          '<div class="mt-1"><a href="' + u + '" target="_blank" download>Download</a></div>' +
+        '</div>'
+      )).join('');
+    }
+    const modalEl = document.getElementById('viewAllImagesModal');
+    const bsModal = new bootstrap.Modal(modalEl);
+    modalEl.__bsInstance = bsModal;
+    bsModal.show();
+  } catch (e) {
+    console.warn('openViewAllImages error:', e);
+  }
+}
+
+function renderProductsGrid() {
+    const grid = document.getElementById('step5ProductsGrid');
+    
+    grid.innerHTML = createdProducts.map(p => {
+        if (!p) return '';
+        
+        // Determine selected variants (default to all if none selected)
+        let allVariantIds = [];
+        if (Array.isArray(p.variants) && p.variants.length > 0) {
+            allVariantIds = p.variants.map(v => v.id || v.variant_id).filter(Boolean);
+        }
+        
+        // Get print area info if available
+        let printAreaInfo = '';
+        if (p.print_areas && p.print_areas.length > 0) {
+            const positions = p.print_areas.map(pa => pa.placeholder || pa.position).join(', ');
+            printAreaInfo = `<small class="text-info">Print areas: ${positions}</small><br>`;
+        }
+        
+        // Hero image: prefer generated mockup, then first product image, else placeholder
+        let imageUrl = '';
+        if (Array.isArray(p.mockups) && p.mockups.length) {
+            imageUrl = p.mockups[0];
+        } else if (Array.isArray(p.images) && p.images.length) {
+            const img0 = p.images[0];
+            imageUrl = (typeof img0 === 'string') ? img0 : (img0.src || img0.preview_url || '');
+        }
+        if (!imageUrl) imageUrl = '/assets/placeholder.png';
+
+        // Get basic variant info for pricing
+        const defaultVariant = p.variants && p.variants[0] ? p.variants[0] : { cost: 0, price: 0 };
+        const cost = ((defaultVariant.cost || 0) / 100).toFixed(2);
+        const price = ((defaultVariant.price || 0) / 100).toFixed(2);
+        const profit = (price - cost).toFixed(2);
+        const margin = cost > 0 ? (((profit / cost) * 100)).toFixed(0) : '0';
+
+        return `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 product-card" id="product-card-${p.id}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input product-checkbox" type="checkbox" 
+                                   value="${p.id}" id="product-${p.id}" checked>
+                            <label class="form-check-label" for="product-${p.id}">Select</label>
+                        </div>
+                        <span class="badge bg-secondary">Draft</span>
+                    </div>
+                    <img src="${imageUrl}" class="card-img-top product-image" alt="${p.title}">
+                    <div class="card-body">
+                        <h6 class="card-title">${p.title}</h6>
+                        ${printAreaInfo}
+                        <div class="d-flex gap-3">
+                          <a href="#" class="small" onclick="openViewAllImages('${p.id}'); return false;">View all</a>
+                          <a href="#" class="small" onclick="openManageImages('${p.id}'); return false;">Manage images</a>
+                          <a href="#" class="small" onclick="openVariantImageMatrix('${p.id}'); return false;">Bind variants</a>
+                        </div>
+                        <div class="variants-container">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr><th>Cost</th><th>Price</th><th>Profit</th><th>Margin</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>$${cost}</td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="number" class="form-control price-input" 
+                                                           value="${price}" min="0" step="0.01"
+                                                           data-product-id="${p.id}" data-cost="${cost}">
+                                                </div>
+                                            </td>
+                                            <td class="profit-cell">$${profit}</td>
+                                            <td class="margin-cell">${margin}%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Per-variant pricing table (added, does not modify the existing table above) -->
+                        <div class="variants-container mt-3">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Variant</th>
+                                            <th>Cost</th>
+                                            <th>Price</th>
+                                            <th>Profit</th>
+                                            <th>Margin</th>
+                                            <th>Enabled</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${Array.isArray(p.variants) ? p.variants.map((v, idx) => {
+                                            const vCost = ((v.cost || 0) / 100).toFixed(2);
+                                            const vPrice = ((v.price || 0) / 100).toFixed(2);
+                                            const vProfit = (parseFloat(vPrice) - parseFloat(vCost)).toFixed(2);
+                                            const vMargin = (parseFloat(vCost) > 0 ? (((vProfit / vCost) * 100)) : 0).toFixed(0);
+                                            const vTitle = (v.title || `Variant ${v.id}`).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                                            const checked = v.is_enabled === false ? '' : 'checked';
+                                            const extraCls = idx >= 10 ? ' variant-row-extra d-none' : '';
+                                            return `
+                                                <tr class="variant-row${extraCls}" data-product-id="${p.id}" data-variant-id="${v.id}">
+                                                    <td>${vTitle}</td>
+                                                    <td>$${vCost}</td>
+                                                    <td>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" class="form-control price-input" value="${vPrice}" min="0" step="0.01"
+                                                                data-product-id="${p.id}" data-variant-id="${v.id}" data-cost="${vCost}">
+                                                        </div>
+                                                    </td>
+                                                    <td class="profit-cell">$${vProfit}</td>
+                                                    <td class="margin-cell">${vMargin}%</td>
+                                                    <td class="text-center">
+                                                        <input type="checkbox" class="form-check-input variant-enabled" data-product-id="${p.id}" data-variant-id="${v.id}" ${checked}>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('') : ''}
+                                    </tbody>
+                                </table>
+                                ${Array.isArray(p.variants) && p.variants.length > 10 ? `
+                                  <div class="text-center">
+                                    <button class="btn btn-link btn-sm toggle-variants" data-product-id="${p.id}" data-expanded="false">
+                                      Show more (${p.variants.length - 10} more)
+                                    </button>
+                                  </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-sm btn-primary" onclick="publishProduct('${p.id}', this)">
+                                <i class="bi bi-cloud-arrow-up"></i> Publish
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="viewProduct('${p.id}')">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function setupStep5EventHandlers() {
+    // Select all products checkbox
+    document.getElementById('selectAllProducts').onchange = function() {
+        const checked = this.checked;
+        document.querySelectorAll('#step5ProductsGrid .product-checkbox').forEach(cb => cb.checked = checked);
+        updateBulkControls();
+    };
+    
+    // Individual product checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('.product-checkbox')) {
+            updateBulkControls();
+        }
+    });
+    
+    // Price input changes
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('.price-input')) {
+            const input = e.target;
+            const productId = input.dataset.productId;
+            const cost = parseFloat(input.dataset.cost);
+            const price = parseFloat(input.value);
+            
+            if (!isNaN(price) && price >= 0) {
+                updatePriceCalculations(input, cost, price);
+                markProductAsChanged(productId);
+            }
+        }
+    });
+    
+    // Bulk markup button
+    document.getElementById('applyBulkMarkupBtn').onclick = applyBulkMarkup;
+    
+    // Publish and finish buttons
+    document.getElementById('publishSelectedBtn').onclick = publishSelectedProducts;
+    document.getElementById('finishProcessBtn').onclick = finishBulkProcess;
+    // Toggle variant rows per product (Show more / Show less)
+    document.addEventListener('click', function(e){
+        const btn = e.target.closest('.toggle-variants');
+        if (!btn) return;
+        e.preventDefault();
+        const pid = btn.getAttribute('data-product-id');
+        const expanded = btn.getAttribute('data-expanded') === 'true';
+        const rows = document.querySelectorAll(`.variant-row-extra[data-product-id="${pid}"]`);
+        rows.forEach(r=>{
+            if (expanded) {
+                r.classList.add('d-none');
+            } else {
+                r.classList.remove('d-none');
+            }
+        });
+        btn.setAttribute('data-expanded', expanded ? 'false' : 'true');
+        btn.textContent = expanded ? `Show more (${rows.length})` : 'Show less';
+    });
+}
+
+function updateBulkControls() {
+    const selectedCount = document.querySelectorAll('#step5ProductsGrid .product-checkbox:checked').length;
+    const totalCount = document.querySelectorAll('#step5ProductsGrid .product-checkbox').length;
+    
+    document.getElementById('applyBulkMarkupBtn').disabled = selectedCount === 0;
+    document.getElementById('publishSelectedBtn').disabled = selectedCount === 0;
+    
+    // Update select all checkbox state
+    const selectAllCheckbox = document.getElementById('selectAllProducts');
+    if (selectedCount === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (selectedCount === totalCount) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+function updatePriceCalculations(input, cost, price) {
+    const row = input.closest('tr');
+    const profit = price - cost;
+    const margin = cost > 0 ? ((profit / cost) * 100) : 0;
+    
+    row.querySelector('.profit-cell').textContent = '$' + profit.toFixed(2);
+    row.querySelector('.margin-cell').textContent = margin.toFixed(0) + '%';
+    
+    // Color coding for negative values
+    row.querySelector('.profit-cell').style.color = profit < 0 ? 'red' : '';
+    row.querySelector('.margin-cell').style.color = margin < 0 ? 'red' : '';
+}
+
+function markProductAsChanged(productId) {
+    const card = document.getElementById('product-card-' + productId);
+    if (card) {
+        card.classList.add('has-changes');
+    }
+}
+
+function applyBulkMarkup() {
+    const markup = parseInt(document.getElementById('bulkMarkupInput').value);
+    if (!markup || markup < 1) return alert('Enter a valid markup percentage');
+    
+    const selectedProducts = document.querySelectorAll('#step5ProductsGrid .product-checkbox:checked');
+    if (!selectedProducts.length) return alert('Select at least one product');
+    
+    let updatedCount = 0; // count products updated, not inputs
+    
+    selectedProducts.forEach(checkbox => {
+        const card = checkbox.closest('.product-card');
+        if (!card) return; // ignore checkboxes outside step 5 cards
+        const productId = checkbox.value;
+        const inputs = card.querySelectorAll('.price-input');
+        let changed = false;
+        inputs.forEach(input => {
+            const cost = parseFloat(input.dataset.cost);
+            if (!isNaN(cost)) {
+                const newPrice = cost * (1 + (markup / 100));
+                input.value = newPrice.toFixed(2);
+                updatePriceCalculations(input, cost, newPrice);
+                changed = true;
+            }
+        });
+        if (changed) {
+            markProductAsChanged(productId);
+            updatedCount++;
+        }
+    });
+    
+    alert(`Applied ${markup}% markup to ${updatedCount} products`);
+}
+
+// Collect variant updates from a product card for saving before publish
+function collectVariantUpdates(productId) {
+    const card = document.getElementById('product-card-' + productId);
+    if (!card) return [];
+    const variants = [];
+    const rows = card.querySelectorAll('input.price-input[data-variant-id]');
+    rows.forEach(input => {
+        const variantId = input.dataset.variantId;
+        const enabledCheckbox = card.querySelector(`.variant-enabled[data-variant-id="${variantId}"]`);
+        const priceFloat = parseFloat(input.value);
+        if (variantId && !isNaN(priceFloat)) {
+            variants.push({
+                id: parseInt(variantId, 10),
+                price: Math.round(priceFloat * 100),
+                is_enabled: enabledCheckbox ? enabledCheckbox.checked : true
+            });
+        }
+    });
+    return variants;
+}
+
+async function publishProduct(productId, btn) {
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Publishing...';
+    
+    try {
+        // Printful: update variant prices and mark as published (no separate publish step)
+        const updates = collectVariantUpdates(productId);
+        for (const up of updates) {
+            try {
+              await makeApiCall(`/store/variants/${up.id}`, { method: 'PUT', body: { retail_price: (up.price/100).toFixed(2), visible: up.is_enabled !== false } });
+            } catch(e) { console.warn('Variant update failed', up.id, e); }
+        }
+
+        // Update product status
+        const card = document.getElementById('product-card-' + productId);
+        const badge = card.querySelector('.badge');
+        badge.className = 'badge bg-success';
+        badge.textContent = 'Published';
+        
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Published';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        
+        alert('Product published successfully!');
+    } catch (error) {
+        console.error('Error publishing product:', error);
+        alert('Error publishing product: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function publishSelectedProducts() {
+
+    // Gate with pre-publish review
+    if (!window.__prepublishConfirmed) {
+        openPrepublishReview();
+        return;
+    }
+    const selectedCheckboxes = Array.from(document.querySelectorAll('.product-checkbox:checked'));
+    if (!selectedCheckboxes.length) return alert('Select at least one product to publish');
+    
+    const btn = document.getElementById('publishSelectedBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split spin"></i> Publishing...';
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const checkbox of selectedCheckboxes) {
+        const productId = checkbox.value;
+        
+        try {
+            const variantUpdates = collectVariantUpdates(productId);
+            for (const up of variantUpdates) {
+              try {
+                await makeApiCall(`/store/variants/${up.id}`, { method: 'PUT', body: { retail_price: (up.price/100).toFixed(2), visible: up.is_enabled !== false } });
+              } catch(e) { console.warn('Variant update failed', up.id, e); }
+            }
+
+            // Update product status
+            const card = document.getElementById('product-card-' + productId);
+            const badge = card.querySelector('.badge');
+            badge.className = 'badge bg-success';
+            badge.textContent = 'Published';
+            
+            successCount++;
+        } catch (error) {
+            console.error('Error publishing product:', productId, error);
+            errorCount++;
+        }
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    
+    alert(`Publishing complete! ${successCount} products published successfully, ${errorCount} failed.`);
+}
+
+// ---------- Pre-publish Review ----------
+function openPrepublishReview() {
+    const selectedCheckboxes = Array.from(document.querySelectorAll('.product-checkbox:checked'));
+    if (!selectedCheckboxes.length) {
+        alert('Select at least one product to publish');
+        return;
+    }
+    const shopId = sessionStorage.getItem('bulkSelectedShop') || '(no store selected)';
+
+    const modalEl = document.getElementById('prepublishReviewModal');
+    const bodyEl = document.getElementById('prepublishReviewBody');
+    const titleEl = document.getElementById('prepublishReviewTitle');
+    if (!modalEl || !bodyEl || !titleEl) return;
+
+    titleEl.textContent = `Review ${selectedCheckboxes.length} product(s) before publishing`;
+
+    const rows = [];
+    let hasBlocking = false;
+    for (const checkbox of selectedCheckboxes) {
+        const productId = checkbox.value;
+        const product = (Array.isArray(createdProducts) ? createdProducts : []).find(p => String(p.id) === String(productId));
+        if (!product) continue;
+        let imgs = [];
+        try { imgs = computeImagesForPublish(product); } catch (e) { imgs = []; }
+        const validation = validatePrintAreas(product, imgs);
+        const bindingIssues = validateVariantBindings(product, String(productId), imgs);
+        if ((validation.blocking && validation.blocking.length) || (bindingIssues.blocking && bindingIssues.blocking.length)) hasBlocking = true;
+        const enabledCount = (() => {
+            const card = document.getElementById('product-card-' + productId);
+            if (!card) return 0;
+            const checks = card.querySelectorAll('.variant-enabled');
+            return Array.from(checks).filter(c => c.checked).length;
+        })();
+
+        rows.push(`
+            <div class="border rounded p-2 mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-semibold">${product.title || 'Untitled'}</div>
+                <div class="d-flex gap-2 align-items-center">
+                  <span class="badge bg-secondary">${enabledCount} enabled variants</span>
+                  ${(validation.blocking && validation.blocking.length) || (bindingIssues.blocking && bindingIssues.blocking.length) ? '<span class="badge bg-danger">Blocking issues</span>' : ''}
+                </div>
+              </div>
+              <div class="small text-muted mb-2">Store: ${shopId}</div>
+              ${imgs && imgs.length ? `
+                <div class="d-flex flex-wrap gap-2">
+                  ${imgs.map(img => `
+                    <div class="position-relative" style="width:90px">
+                      <img src="${img.src}" class="img-fluid border rounded" alt="img">
+                      <div class="text-center mt-1"><small>${String(img.position||'').toUpperCase()}</small></div>
+                      ${img.is_default ? '<span class="badge bg-primary position-absolute top-0 start-0 m-1">Default</span>' : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : '<div class="text-muted">No images detected for publish yet.</div>'}
+              ${(validation.warnings && validation.warnings.length) || (validation.blocking && validation.blocking.length) || (bindingIssues.warnings && bindingIssues.warnings.length) || (bindingIssues.blocking && bindingIssues.blocking.length) ? `
+                <div class="mt-2 small">
+                  ${[
+                      ...validation.blocking.map(m=>`<div class='text-danger'>• ${m}</div>`),
+                      ...validation.warnings.map(m=>`<div class='text-warning'>• ${m}</div>`),
+                      ...bindingIssues.blocking.map(m=>`<div class='text-danger'>• ${m} <a href='#' onclick=\"openVariantImageMatrix('${productId}');return false;\" class='ms-1'>Fix</a></div>`),
+                      ...bindingIssues.warnings.map(m=>`<div class='text-warning'>• ${m} <a href='#' onclick=\"openVariantImageMatrix('${productId}');return false;\" class='ms-1'>Adjust</a></div>`)
+                    ].join('')}
+                </div>
+              `: ''}
+            </div>
+        `);
+    }
+
+    bodyEl.innerHTML = `
+      <div class="mb-3">
+        <div class="fw-semibold">Store</div>
+        <div class="text-muted">${shopId}</div>
+      </div>
+      ${rows.join('')}
+      <div class="alert alert-warning small mb-0">
+        We will update image order/default and variant settings, then publish to the selected store.
+      </div>
+    `;
+
+    const bsModal = new bootstrap.Modal(modalEl);
+    modalEl.__bsInstance = bsModal;
+    const confirmBtn = modalEl.querySelector('.modal-footer .btn.btn-primary');
+    if (confirmBtn) confirmBtn.disabled = !!hasBlocking;
+    const footerNote = hasBlocking ? '<div class="text-danger small">Resolve blocking issues before publishing.</div>' : '';
+    if (hasBlocking) {
+        bodyEl.insertAdjacentHTML('beforeend', footerNote);
+    }
+    bsModal.show();
+}
+
+function confirmPrepublish() {
+    // Set a one-time confirmation flag and re-trigger publish
+    window.__prepublishConfirmed = true;
+    const modalEl = document.getElementById('prepublishReviewModal');
+    if (modalEl?.__bsInstance) modalEl.__bsInstance.hide();
+    // Re-enter flow
+    setTimeout(() => publishSelectedProducts(), 0);
+}
+
+// ---------- Print-Area Validator ----------
+function getRequiredPositionsFromPrintAreas(product) {
+    const set = new Set();
+    if (Array.isArray(product.print_areas)) {
+        product.print_areas.forEach(pa => {
+            const pos = (pa && (pa.placeholder || pa.position)) || '';
+            if (pos) set.add(String(pos).toLowerCase());
+        });
+    }
+    return Array.from(set);
+}
+
+function validatePrintAreas(product, imagesForPublish) {
+    const blocking = [];
+    const warnings = [];
+    const imgs = Array.isArray(imagesForPublish) ? imagesForPublish : [];
+    if (!imgs.length) blocking.push('No printable images found for this product.');
+    const required = getRequiredPositionsFromPrintAreas(product);
+    if (required.length) {
+        const covered = new Set(imgs.map(i => String(i.position || '').toLowerCase()).filter(Boolean));
+        const missing = required.filter(r => !covered.has(r));
+        if (missing.length) warnings.push(`Missing images for required areas: ${missing.map(m=>m.toUpperCase()).join(', ')}`);
+    }
+    return { blocking, warnings };
+}
+
+function viewProduct(productId) {
+    const shopId = sessionStorage.getItem('bulkSelectedShop');
+    const url = `https://printify.com/app/shop/${shopId}/products/${productId}/edit`;
+    window.open(url, '_blank');
+}
+
+// ---------- View All Images (Printed Areas Only) ----------
+function getPrintablePositions(product) {
+    const positions = new Set();
+    // Prefer positions from images with position field (mockups reflect applied design)
+    if (Array.isArray(product.images)) {
+        product.images.forEach(img => {
+            if (img && typeof img.position === 'string' && img.position) positions.add(img.position.toLowerCase());
+        });
+    }
+    // Fallback to print_areas metadata
+    if (positions.size === 0 && Array.isArray(product.print_areas)) {
+        product.print_areas.forEach(pa => {
+            const pos = (pa && (pa.placeholder || pa.position)) || '';
+            if (typeof pos === 'string' && pos) positions.add(pos.toLowerCase());
+        });
+    }
+    return Array.from(positions);
+}
+
+function getPrintableImages(product) {
+    const positions = getPrintablePositions(product);
+    const images = Array.isArray(product.images) ? product.images.slice() : [];
+    if (images.length === 0) return [];
+
+    // Filter by positions where design is applied
+    let filtered = images.filter(img => positions.includes(String(img.position || '').toLowerCase()));
+
+    // If only back is used, include one front image as context
+    const onlyBack = positions.length === 1 && positions[0] === 'back';
+    if (onlyBack) {
+        const frontImg = images.find(img => String(img.position || '').toLowerCase() === 'front');
+        if (frontImg) filtered = [frontImg, ...filtered];
+    }
+
+    // Deduplicate by src
+    const seen = new Set();
+    const unique = filtered.filter(img => {
+        const key = img.src || img.url || JSON.stringify(img);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+    return unique;
+}
+
+function openViewAllImages(productId) {
+    const product = createdProducts.find(p => String(p.id) === String(productId));
+    const modalEl = document.getElementById('viewAllImagesModal');
+    const bodyEl = document.getElementById('viewAllImagesBody');
+    const titleEl = document.getElementById('viewAllImagesTitle');
+    if (!product || !modalEl || !bodyEl) return;
+
+    titleEl.textContent = product.title || 'Images';
+    const imgs = getPrintableImages(product);
+    if (imgs.length === 0) {
+        bodyEl.innerHTML = '<div class="text-muted">No images available yet. Mockups may still be processing.</div>';
+    } else {
+        bodyEl.innerHTML = `
+            <div class="row g-3">
+                ${imgs.map(img => `
+                    <div class="col-6">
+                        <div class="card">
+                            <img src="${img.src || img.url}" class="card-img-top" alt="${product.title || ''}">
+                            <div class="card-body py-2">
+                                <small class="text-muted">${(img.position || '').toString().toUpperCase()}</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+    const bsModal = new bootstrap.Modal(modalEl);
+    bsModal.show();
+}
+
+// ---------- Compute publish images (order + default) ----------
+function computeImagesForPublish(product) {
+    // Prefer manual overrides if present
+    try {
+        const pid = String(product.id || '');
+        const override = getOverrideImages(pid);
+        if (Array.isArray(override) && override.length) {
+            return normalizeImagesArray(override);
+        }
+    } catch (e) { /* ignore */ }
+
+    const order = ['front','back','left','right'];
+    const printable = getPrintableImages(product);
+    if (!printable.length) return [];
+
+    // Choose default: prefer front, else first
+    let defaultIndex = printable.findIndex(img => String(img.position || '').toLowerCase() === 'front');
+    if (defaultIndex < 0) defaultIndex = 0;
+
+    // Sort by preferred order, then keep relative order
+    const sorted = printable.slice().sort((a, b) => {
+        const pa = String(a.position || '').toLowerCase();
+        const pb = String(b.position || '').toLowerCase();
+        const ia = order.includes(pa) ? order.indexOf(pa) : order.length + pa.localeCompare(pb);
+        const ib = order.includes(pb) ? order.indexOf(pb) : order.length + pb.localeCompare(pa);
+        return ia - ib;
+    });
+
+    // Move default to first
+    const def = sorted.findIndex(img => String(img.position || '').toLowerCase() === 'front');
+    if (def > 0) {
+        const d = sorted.splice(def, 1)[0];
+        sorted.unshift(d);
+    }
+
+    // Ensure exactly one default
+    let defaultSet = false;
+    const mapped = sorted.map((img, idx) => {
+        const out = {
+            src: img.src || img.url,
+            position: img.position || '',
+            is_default: false
+        };
+        if (Array.isArray(img.variant_ids)) out.variant_ids = img.variant_ids;
+        if (!defaultSet && (String(img.position || '').toLowerCase() === 'front' || idx === 0)) {
+            out.is_default = true;
+            defaultSet = true;
+        }
+        return out;
+    });
+    return mapped;
+}
+
+// ---------- Image Overrides Helpers ----------
+function getOverrideImages(productId) {
+    try {
+        const raw = sessionStorage.getItem('imageOverrides_' + productId);
+        if (!raw) return null;
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : null;
+    } catch (e) { return null; }
+}
+
+function setOverrideImages(productId, images) {
+    try {
+        sessionStorage.setItem('imageOverrides_' + productId, JSON.stringify(normalizeImagesArray(images || [])));
+    } catch (e) { /* ignore */ }
+}
+
+function normalizeImagesArray(images) {
+    const out = (Array.isArray(images) ? images : []).map(img => ({
+        src: img.src || img.url || '',
+        position: img.position || '',
+        is_default: !!img.is_default
+    })).filter(i => i.src);
+    // Ensure exactly one default
+    let di = out.findIndex(i => i.is_default);
+    if (di < 0 && out.length) di = 0;
+    out.forEach((i, idx) => { i.is_default = (idx === di); });
+    return out;
+}
+
+// Optional: Send an image to Shopify app for further use (uses saved settings from dashboard)
+function sendImageToShopify(imageUrl, productHandle = '', shopDomainOverride = '') {
+    try {
+        const raw = localStorage.getItem('shopifySettings');
+        const s = raw ? JSON.parse(raw) : {};
+        const appUrl = s.appUrl || '';
+        const shopDomain = shopDomainOverride || s.shopDomain || '';
+        if (!appUrl || !imageUrl) {
+            alert('Missing Shopify App URL or image URL. Configure Shopify in Dashboard > Settings.');
+            return;
+        }
+        const url = new URL(appUrl);
+        url.pathname = '/import-image';
+        url.searchParams.set('image', imageUrl);
+        if (productHandle) url.searchParams.set('product', productHandle);
+        if (shopDomain) url.searchParams.set('shop', shopDomain);
+        window.open(url.toString(), '_blank');
+    } catch (e) {
+        alert('Could not open Shopify app. Please verify your Shopify settings.');
+    }
+}
+
+// ---------- Variant/Image Binding Helpers (matrix implementation) ----------
+// Validates image bindings before publish. Returns { blocking: string[], warnings: [] }
+window.validateVariantBindings = function(product, productId, images) {
+    const res = { blocking: [], warnings: [] };
+    const imgs = Array.isArray(images) ? images : [];
+    if (!imgs.length) {
+        res.blocking.push('No images available for publish. Add at least one image.');
+        return res;
+    }
+
+    // Build variant -> assigned images mapping from variant_ids present on images
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    const variantHas = new Map();
+    const perVariantDefaults = new Map();
+
+    for (const v of variants) {
+        variantHas.set(String(v.id), 0);
+        perVariantDefaults.set(String(v.id), 0);
+    }
+
+    imgs.forEach((img, idx) => {
+        const vIds = Array.isArray(img.variant_ids) ? img.variant_ids.map(String) : null;
+        // if null or empty, treat as assigned to all variants (legacy behavior)
+        const assignedAll = !vIds || vIds.length === 0;
+        for (const v of variants) {
+            const vid = String(v.id);
+            if (assignedAll || vIds.includes(vid)) {
+                variantHas.set(vid, (variantHas.get(vid) || 0) + 1);
+            }
+        }
+        // track defaults if custom per-variant default markers exist
+        const defaultFor = Array.isArray(img.default_for_variant_ids) ? img.default_for_variant_ids.map(String) : [];
+        for (const vid of defaultFor) {
+            perVariantDefaults.set(vid, (perVariantDefaults.get(vid) || 0) + 1);
+        }
+    });
+
+    for (const v of variants) {
+        const vid = String(v.id);
+        if ((variantHas.get(vid) || 0) === 0) {
+            res.blocking.push(`Variant "${v.title || vid}" has no images assigned. Use Bind variants to select at least one.`);
+        }
+        const defCount = perVariantDefaults.get(vid) || 0;
+        if (defCount === 0) {
+            res.warnings.push(`Variant "${v.title || vid}" has no default image set. One default is recommended.`);
+        } else if (defCount > 1) {
+            res.blocking.push(`Variant "${v.title || vid}" has multiple defaults. Select exactly one default image.`);
+        }
+    }
+
+    // Keep a single product-level default suggested
+    const productDefaults = imgs.filter(i => i && i.is_default);
+    if (productDefaults.length !== 1) {
+        res.warnings.push('Exactly one product-level default image is recommended.');
+    }
+
+    return res;
+}
+
+// Applies variant image bindings by normalizing images and attaching variant_ids and per-variant default markers.
+window.applyVariantBindings = function(product, productId, images) {
+    const normalized = normalizeImagesArray(images || []);
+    // Ensure variant_ids are arrays of strings if present
+    normalized.forEach(img => {
+        if (Array.isArray(img.variant_ids)) {
+            img.variant_ids = img.variant_ids.map(v => String(v));
+        }
+        if (Array.isArray(img.default_for_variant_ids)) {
+            img.default_for_variant_ids = img.default_for_variant_ids.map(v => String(v));
+        }
+    });
+    return normalized;
+}
+
+// Opens the variant-image binding UI and renders the matrix
+window.openVariantImageMatrix = function(productId) {
+    const pid = String(productId);
+    const product = (Array.isArray(createdProducts) ? createdProducts : []).find(p => String(p.id) === pid);
+    const modalEl = document.getElementById('variantImageMatrixModal');
+    const bodyEl = document.getElementById('variantImageMatrixBody');
+    if (!product || !modalEl || !bodyEl) return;
+    // attach product id and title for context
+    modalEl.dataset.productId = pid;
+    const titleEl = document.getElementById('variantImageMatrixTitle');
+    if (titleEl) titleEl.textContent = `Variant image bindings • ${product.title || pid}`;
+
+    // Start from overrides or printable images
+    let baseImages = getOverrideImages(pid);
+    if (!Array.isArray(baseImages) || baseImages.length === 0) {
+        baseImages = getPrintableImages(product).map(img => ({ src: img.src || img.url, position: img.position || '', is_default: !!img.is_default, variant_ids: Array.isArray(img.variant_ids) ? img.variant_ids.map(String) : [] }));
+    }
+    baseImages = normalizeImagesArray(baseImages);
+
+    // Build draft state: selections[variantId][imageIndex] = true/false, defaults[variantId] = imageIndex
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const selections = {};
+    const defaults = {};
+
+    variants.forEach(v => {
+        const vid = String(v.id);
+        selections[vid] = {};
+        // If image has no variant_ids, treat as selected for all
+        baseImages.forEach((img, idx) => {
+            const vIds = Array.isArray(img.variant_ids) ? img.variant_ids.map(String) : [];
+            const selected = vIds.length === 0 || vIds.includes(vid);
+            selections[vid][idx] = !!selected;
+        });
+        // Choose default: prefer image explicitly default_for_variant_ids, otherwise product is_default among selected, otherwise first selected
+        let defIdx = -1;
+        baseImages.forEach((img, idx) => {
+            const list = Array.isArray(img.default_for_variant_ids) ? img.default_for_variant_ids.map(String) : [];
+            if (list.includes(vid)) defIdx = idx;
+        });
+        if (defIdx === -1) {
+            const prodDefaultIdx = baseImages.findIndex(img => img.is_default);
+            if (prodDefaultIdx !== -1 && selections[vid][prodDefaultIdx]) defIdx = prodDefaultIdx;
+        }
+        if (defIdx === -1) {
+            defIdx = baseImages.findIndex((_, idx) => selections[vid][idx]);
+        }
+        defaults[vid] = defIdx >= 0 ? defIdx : 0;
+    });
+
+    window.__variantMatrixDraft = window.__variantMatrixDraft || {};
+    window.__variantMatrixDraft[pid] = { selections, defaults, images: baseImages };
+
+    renderVariantImageMatrix(product, pid);
+    const bsModal = new bootstrap.Modal(modalEl);
+    modalEl.__bsInstance = bsModal;
+    bsModal.show();
+}
+
+function renderVariantImageMatrix(product, productId) {
+    const pid = String(productId);
+    const bodyEl = document.getElementById('variantImageMatrixBody');
+    const draft = (window.__variantMatrixDraft || {})[pid];
+    if (!bodyEl || !draft) return;
+    const images = draft.images;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+
+    const headerRow = `
+      <tr>
+        <th style="position:sticky;left:0;background:#fff;z-index:2">Variant</th>
+        ${images.map((img, idx) => `<th class="text-center"><img src="${img.src}" style="width:56px;height:56px;object-fit:cover" class="border rounded" alt="img ${idx+1}"><div class='small text-muted mt-1'>Img ${idx+1}</div></th>`).join('')}
+      </tr>`;
+
+    const rows = variants.map(v => {
+        const vid = String(v.id);
+        return `
+          <tr>
+            <td style="position:sticky;left:0;background:#fff;z-index:1;min-width:240px">${(v.title || vid).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+            ${images.map((_, idx) => {
+                const checked = draft.selections[vid][idx] ? 'checked' : '';
+                const isDefault = draft.defaults[vid] === idx ? 'checked' : '';
+                return `
+                  <td class="text-center">
+                    <div class="form-check d-flex flex-column align-items-center gap-1">
+                      <input class="form-check-input" type="checkbox" ${checked}
+                        onchange="(function(){
+                          const d=window.__variantMatrixDraft['${pid}'];
+                          d.selections['${vid}'][${idx}] = this.checked;
+                          if (!this.checked && d.defaults['${vid}']===${idx}) { d.defaults['${vid}'] = -1; }
+                        }).call(this)">
+                      <div class="form-check">
+                        <input name="def_${vid}" class="form-check-input" type="radio" ${isDefault}
+                          onchange="(function(){
+                            const d=window.__variantMatrixDraft['${pid}'];
+                            if (d.selections['${vid}'][${idx}]) { d.defaults['${vid}']=${idx}; } else { this.checked=false; }
+                          }).call(this)">
+                      </div>
+                    </div>
+                  </td>`;
+            }).join('')}
+          </tr>`;
+    }).join('');
+
+    bodyEl.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>${headerRow}</thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="(function(){
+          const d=window.__variantMatrixDraft['${pid}'];
+          const vids=Object.keys(d.selections);
+          vids.forEach(vid=>{
+            // set default to first selected if missing
+            if (d.defaults[vid] === -1) {
+              const firstSel = Object.keys(d.selections[vid]).map(Number).find(i=>d.selections[vid][i]);
+              if (typeof firstSel==='number') d.defaults[vid]=firstSel;
+            }
+          });
+          renderVariantImageMatrix(${JSON.stringify({ id: product.id, variants: product.variants, title: product.title })}, '${pid}');
+        })()">Auto-fill defaults</button>
+      </div>`;
+}
+
+async function saveVariantImageMatrix() {
+    const modalEl = document.getElementById('variantImageMatrixModal');
+    const pid = modalEl?.dataset?.productId || (function(){
+        // store pid in dataset when opening
+        const latest = Object.keys(window.__variantMatrixDraft||{})[0];
+        return latest || '';
+    })();
+    if (!pid) return;
+    const draft = (window.__variantMatrixDraft || {})[pid];
+    if (!draft) return;
+
+    // Build updated images with variant_ids and per-variant defaults
+    const images = draft.images.map((img, idx) => {
+        const variant_ids = Object.entries(draft.selections)
+            .filter(([vid, sel]) => sel[idx])
+            .map(([vid]) => vid);
+        const default_for_variant_ids = Object.entries(draft.defaults)
+            .filter(([vid, defIdx]) => defIdx === idx)
+            .map(([vid]) => vid);
+        return {
+            ...img,
+            variant_ids,
+            default_for_variant_ids
+        };
+    });
+
+    // Choose a single product-level default: use the default of the first variant if any
+    const firstVariantId = Object.keys(draft.defaults)[0];
+    const firstDefIdx = typeof draft.defaults[firstVariantId] === 'number' ? draft.defaults[firstVariantId] : -1;
+    images.forEach((img, idx) => img.is_default = (idx === firstDefIdx));
+
+    // Persist overrides locally and try to update on server
+    setOverrideImages(pid, images);
+    try {
+        const token = localStorage.getItem('authToken');
+        const shopId = sessionStorage.getItem('bulkSelectedShop');
+        if (token && shopId) {
+            await fetch('/.netlify/functions/update-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ shopId, productId: pid, images: applyVariantBindings(null, pid, images) })
+            });
+        }
+    } catch (e) {
+        console.warn('Failed to persist variant bindings immediately:', e);
+    }
+
+    const bs = document.getElementById('variantImageMatrixModal').__bsInstance;
+    if (bs) bs.hide();
+}
+
+// ---------- Manage Images Modal Logic ----------
+function openManageImages(productId) {
+    const pid = String(productId);
+    const product = (Array.isArray(createdProducts) ? createdProducts : []).find(p => String(p.id) === pid);
+    const modalEl = document.getElementById('manageImagesModal');
+    const titleEl = document.getElementById('manageImagesTitle');
+    const listEl = document.getElementById('manageImagesList');
+    if (!product || !modalEl || !titleEl || !listEl) return;
+
+    let current = getOverrideImages(pid);
+    if (!current || !current.length) {
+        // Seed from printable images
+        const base = getPrintableImages(product).map(img => ({ src: img.src || img.url, position: img.position || '', is_default: !!img.is_default }));
+        current = normalizeImagesArray(base);
+    }
+
+    modalEl.dataset.productId = pid;
+    titleEl.textContent = `Manage images • ${product.title || pid}`;
+    window.__imageOverridesDraft = window.__imageOverridesDraft || {};
+    window.__imageOverridesDraft[pid] = current;
+    renderManageImagesList(pid);
+    const bsModal = new bootstrap.Modal(modalEl);
+    modalEl.__bsInstance = bsModal;
+    bsModal.show();
+}
+
+function renderManageImagesList(productId) {
+    const pid = String(productId);
+    const listEl = document.getElementById('manageImagesList');
+    if (!listEl) return;
+    const product = (Array.isArray(createdProducts) ? createdProducts : []).find(p => String(p.id) === pid) || {};
+    const productHandle = (product && product.external && typeof product.external.handle === 'string') ? product.external.handle : '';
+    const safeHandle = String(productHandle || '').replace(/'/g, "&#39;");
+    const draft = (window.__imageOverridesDraft || {})[pid] || [];
+    if (!draft.length) {
+        listEl.innerHTML = '<div class="text-muted">No images available.</div>';
+        return;
+    }
+    listEl.innerHTML = `
+      <div class="list-group">
+        ${draft.map((img, idx) => `
+          <div class="list-group-item d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+              <img src="${img.src}" style="width:64px;height:64px;object-fit:cover" class="border rounded" alt="img">
+              <div>
+                <div><strong>${String(img.position||'').toUpperCase() || 'IMAGE'}</strong></div>
+                <div class="form-check mt-1">
+                  <input class="form-check-input" type="radio" name="defaultImg" ${img.is_default ? 'checked' : ''} onclick="setDefaultOverride('${pid}', ${idx})">
+                  <label class="form-check-label">Default</label>
+                </div>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary" onclick="moveOverrideImage('${pid}', ${idx}, -1)">↑</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="moveOverrideImage('${pid}', ${idx}, 1)">↓</button>
+              <button class="btn btn-sm btn-outline-primary" title="Send to Shopify" onclick="sendImageToShopify('${img.src.replace(/'/g, "&#39;")}', '${safeHandle}')">
+                <i class="bi bi-shop"></i>
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+}
+
+function moveOverrideImage(productId, index, delta) {
+    const pid = String(productId);
+    const draft = (window.__imageOverridesDraft || {})[pid] || [];
+    const ni = index + delta;
+    if (ni < 0 || ni >= draft.length) return;
+    const tmp = draft[index];
+    draft[index] = draft[ni];
+    draft[ni] = tmp;
+    window.__imageOverridesDraft[pid] = normalizeImagesArray(draft);
+    renderManageImagesList(pid);
+}
+
+function setDefaultOverride(productId, index) {
+    const pid = String(productId);
+    const draft = (window.__imageOverridesDraft || {})[pid] || [];
+    draft.forEach((img, i) => img.is_default = (i === index));
+    window.__imageOverridesDraft[pid] = normalizeImagesArray(draft);
+}
+
+async function saveManageImages() {
+    const modalEl = document.getElementById('manageImagesModal');
+    const pid = modalEl?.dataset?.productId;
+    if (!pid) return;
+    const images = ((window.__imageOverridesDraft || {})[pid] || []);
+    setOverrideImages(pid, images);
+
+    // Persist to Printify now
+    try {
+        const token = localStorage.getItem('authToken');
+        const shopId = sessionStorage.getItem('bulkSelectedShop');
+        if (token && shopId) {
+            const product = (Array.isArray(createdProducts) ? createdProducts : []).find(p => String(p.id) === String(pid)) || {};
+            const bound = applyVariantBindings(product, pid, images);
+            await fetch('/.netlify/functions/update-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ shopId, productId: pid, images: normalizeImagesArray(bound) })
+            });
+        }
+    } catch (e) {
+        console.warn('Failed to persist image overrides immediately:', e);
+    }
+
+    if (modalEl.__bsInstance) modalEl.__bsInstance.hide();
+}
+
+function finishBulkProcess() {
+    const hasChanges = document.querySelectorAll('.has-changes').length > 0;
+    
+    if (hasChanges) {
+        const confirmSave = confirm('You have unsaved pricing changes. The changes are only stored locally and won\'t affect the actual Printify products unless you publish them. Continue?');
+        if (!confirmSave) return;
+    }
+    
+    const publishedCount = document.querySelectorAll('.badge.bg-success').length;
+    const totalCount = createdProducts.length;
+    
+    alert(`Bulk creation process complete!\n\nCreated: ${totalCount} products\nPublished: ${publishedCount} products\n\nYou can always return to manage these products later.`);
+    
+    // Clear session data
+    sessionStorage.removeItem('productDesigns');
+    sessionStorage.removeItem('createdProducts');
+    sessionStorage.removeItem('selectedPrintAreas');
+    
+    // Return to step 1 for a new process
+    state.selectedProducts.clear();
+    state.currentStep = 1;
+    state.completedSteps = new Set([1]);
+    navigateToStep(1);
+}
+
+function logout() {
+  localStorage.removeItem('authToken');
+  location.href = 'auth.html';
+}
+
+// Initialize bulk controls on load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateBulkControls, 100);
+});
+  </script>
+  <!-- Manage Images Modal -->
+  <div class="modal fade" id="manageImagesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="manageImagesTitle">Manage images</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="manageImagesList"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveManageImages()"><i class="bi bi-save"></i> Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Pre-publish Review Modal -->
+  <div class="modal fade" id="prepublishReviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="prepublishReviewTitle">Review before publishing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="prepublishReviewBody"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="confirmPrepublish()"><i class="bi bi-upload"></i> Confirm & Publish</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- View All Images Modal -->
+  <div class="modal fade" id="viewAllImagesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="viewAllImagesTitle">Images</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="viewAllImagesBody"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

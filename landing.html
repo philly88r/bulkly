@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Bulk Product Generator - The Only AI Tool for Etsy & Dropshipping Entrepreneurs</title>
-    <meta name="description" content="Generate thousands of profitable products in minutes with AI. The world's first bulk product generator for Etsy sellers and dropshipping entrepreneurs. Start your 14-day free trial.">
+    <title>MerchPilot AI – Launch Print-on-Demand Products Faster</title>
+    <meta name="description" content="MerchPilot AI helps creators and sellers launch print‑on‑demand products faster with AI design and content tools. 14‑day free trial. No credit card required.">
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,10 +17,18 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --brand-teal: #00e7ae;
+            --brand-cyan: #00b7ff;
+            --brand-blue: #1552ff;
+            --brand-navy: #0b2a5a;
+            --gradient: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-cyan) 45%, var(--brand-blue) 100%);
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6;
-            color: #1a1a1a;
+            color: var(--brand-navy);
             background: #ffffff;
         }
 
@@ -49,14 +57,16 @@
         }
 
         .logo {
-            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-size: 1.2rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
+            letter-spacing: .5px;
+            color: var(--brand-navy);
         }
+        .logo img { height: 32px; width: 32px; border-radius: 6px; }
+        .logo .brandmark { background: var(--gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
 
         .nav-links {
             display: flex;
@@ -76,7 +86,7 @@
         }
 
         .cta-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             color: white;
             padding: 0.75rem 1.5rem;
             border: none;
@@ -95,7 +105,7 @@
         /* Hero Section */
         .hero {
             padding: 120px 0 80px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);
             text-align: center;
         }
 
@@ -104,7 +114,7 @@
             font-weight: 800;
             line-height: 1.1;
             margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #1a1a1a 0%, #4b5563 100%);
+            background: var(--gradient);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -129,7 +139,7 @@
         }
 
         .primary-cta {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             color: white;
             padding: 1rem 2rem;
             border: none;
@@ -241,7 +251,7 @@
         .feature-icon {
             width: 60px;
             height: 60px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -291,9 +301,9 @@
         }
 
         .pricing-card.featured {
-            border-color: #667eea;
+            border-color: var(--brand-blue);
             transform: scale(1.05);
-            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 20px 40px rgba(21, 82, 255, 0.2);
         }
 
         .pricing-card:hover {
@@ -306,7 +316,7 @@
             top: -12px;
             left: 50%;
             transform: translateX(-50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             color: white;
             padding: 0.5rem 1.5rem;
             border-radius: 20px;
@@ -325,7 +335,7 @@
         .plan-price {
             font-size: 3rem;
             font-weight: 800;
-            color: #667eea;
+            color: var(--brand-blue);
             margin-bottom: 0.5rem;
         }
 
@@ -370,7 +380,7 @@
         }
 
         .pricing-card.featured .plan-cta {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             color: white;
         }
 
@@ -420,7 +430,7 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -441,7 +451,7 @@
         /* Final CTA */
         .final-cta {
             padding: 80px 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             color: white;
             text-align: center;
         }
@@ -546,7 +556,10 @@
     <!-- Header -->
     <header class="header">
         <nav class="nav container">
-            <div class="logo">AI Product Gen</div>
+            <div class="logo">
+                <img src="./Untitled (1200 x 1200 px).png" alt="MerchPilot AI logo" />
+                <span class="brandmark">MerchPilot AI</span>
+            </div>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
                 <li><a href="#pricing">Pricing</a></li>
@@ -560,8 +573,8 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
-            <h1>The World's First AI Bulk Product Generator</h1>
-            <p class="subtitle">Generate thousands of profitable products in minutes with AI. Built specifically for Etsy sellers and dropshipping entrepreneurs who want to scale fast.</p>
+            <h1>Launch Print‑on‑Demand Products, Faster</h1>
+            <p class="subtitle">MerchPilot AI helps you generate designs, product content, and listings so you can launch more products in less time. Built for Etsy, Shopify, and Printify workflows.</p>
             
             <div class="hero-cta">
                 <a href="#pricing" class="primary-cta">
@@ -576,23 +589,22 @@
     <!-- Social Proof -->
     <section class="social-proof">
         <div class="container">
-            <h3 style="color: #6b7280; font-size: 0.9rem; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2rem;">Trusted by 10,000+ Entrepreneurs Worldwide</h3>
             <div class="stats">
                 <div class="stat">
-                    <span class="stat-number">2.5M+</span>
-                    <span class="stat-label">Products Generated</span>
+                    <span class="stat-number">Built for POD</span>
+                    <span class="stat-label">Works with Printify, Etsy & Shopify</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-number">$50M+</span>
-                    <span class="stat-label">Revenue Generated</span>
+                    <span class="stat-number">Start fast</span>
+                    <span class="stat-label">14‑day free trial</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-number">10,000+</span>
-                    <span class="stat-label">Active Users</span>
+                    <span class="stat-number">No fluff</span>
+                    <span class="stat-label">Honest results, practical tools</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-number">4.9/5</span>
-                    <span class="stat-label">User Rating</span>
+                    <span class="stat-number">Cancel anytime</span>
+                    <span class="stat-label">No credit card required to try</span>
                 </div>
             </div>
         </div>
@@ -849,8 +861,8 @@
             const token = localStorage.getItem('authToken');
             
             if (token) {
-                // User is logged in, go to main app
-                window.location.href = '/index.html';
+                // User is logged in, go to dashboard (post-login default)
+                window.location.href = '/dashboard.html';
             } else {
                 // User needs to authenticate first
                 window.location.href = '/auth.html';

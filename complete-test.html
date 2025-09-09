@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complete Quick AI Workflow Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; font-weight: bold; }
+        .failed { color: red; font-weight: bold; }
+        .skipped { color: orange; font-weight: bold; }
+        .step { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .step-title { font-size: 18px; margin-bottom: 10px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
+        button { background: #007bff; color: white; padding: 12px 20px; border: none; cursor: pointer; margin: 5px; border-radius: 4px; }
+        .auth-info { background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .overall-status { padding: 20px; margin: 20px 0; border-radius: 8px; font-size: 20px; text-align: center; }
+        .overall-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .overall-failed { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Complete Quick AI Workflow Test</h1>
+    <p>This tests the ENTIRE Quick AI process from start to finish:</p>
+    <ol>
+        <li><strong>Parse User Intent</strong> - Convert natural language to structured data</li>
+        <li><strong>Generate Content</strong> - Create product title, description, tags, etc.</li>
+        <li><strong>Generate Image</strong> - Create AI artwork</li>
+        <li><strong>Upload to Printify</strong> - Upload image to Printify media library</li>
+        <li><strong>Get Blueprints</strong> - Fetch available product types</li>
+        <li><strong>Get Print Providers</strong> - Fetch available printing partners</li>
+        <li><strong>Create Product</strong> - Actually create the Printify product</li>
+        <li><strong>Create Background Job</strong> - Test the bulk job system</li>
+    </ol>
+    
+    <div class="auth-info">
+        <strong>🔑 Authentication Required:</strong> For steps 4-8, you need to be logged in.
+        <a href="/dashboard.html" target="_blank">Login to Dashboard</a> first, then come back.
+    </div>
+    
+    <button onclick="runFullTest(false)">🚀 Test Without Auth (Steps 1-3)</button>
+    <button onclick="runFullTest(true)">🔑 Test Full Workflow (All Steps)</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function runFullTest(useAuth = false) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>🔄 Running complete workflow test...</p>';
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                
+                if (useAuth) {
+                    const token = localStorage.getItem('authToken');
+                    if (token) {
+                        headers.Authorization = 'Bearer ' + token;
+                    } else {
+                        resultsDiv.innerHTML = '<div class="failed">❌ No auth token found. <a href="/dashboard.html">Login first</a></div>';
+                        return;
+                    }
+                }
+                
+                const response = await fetch('/.netlify/functions/simple-workflow-test', {
+                    method: 'POST',
+                    headers: headers
+                });
+                
+                const text = await response.text();
+                console.log('Raw response:', text);
+                
+                if (!text) {
+                    resultsDiv.innerHTML = '<div class="failed">❌ Empty response from workflow test</div>';
+                    return;
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    resultsDiv.innerHTML = `
+                        <div class="failed">❌ Invalid JSON response:</div>
+                        <pre>${text}</pre>
+                        <div class="failed">Parse error: ${e.message}</div>
+                    `;
+                    return;
+                }
+                
+                // Check if this is the simple workflow test response
+                if (data.step1_parse !== undefined) {
+                    let html = '<h2>🔍 Simple Workflow Results:</h2>';
+                    
+                    // Check each step
+                    const steps = [
+                        { key: 'step1_parse', name: '🧠 1. Parse User Intent' },
+                        { key: 'step2_content', name: '📝 2. Generate Content' },
+                        { key: 'step3_image', name: '🎨 3. Generate Image' },
+                        { key: 'step4_job', name: '📋 4. Create Job' }
+                    ];
+                    
+                    let allGood = true;
+                    
+                    for (const step of steps) {
+                        const result = data[step.key];
+                        let icon, status, className;
+                        
+                        if (result === 'SUCCESS') {
+                            icon = '✅';
+                            status = 'SUCCESS';
+                            className = 'success';
+                        } else if (result === 'NOT_STARTED') {
+                            icon = '⏭️';
+                            status = 'NOT STARTED';
+                            className = 'skipped';
+                        } else if (result && result.startsWith('SKIPPED:')) {
+                            icon = '⏭️';
+                            status = result;
+                            className = 'skipped';
+                        } else {
+                            icon = '❌';
+                            status = result;
+                            className = 'failed';
+                            allGood = false;
+                        }
+                        
+                        html += `<div class="step">
+                            <h4>${icon} ${step.name}</h4>
+                            <div class="${className}">Status: ${status}</div>
+                        </div>`;
+                    }
+                    
+                    if (allGood) {
+                        html = '<div class="overall-status overall-success">✅ WORKFLOW TEST WORKING!</div>' + html;
+                    } else {
+                        html = '<div class="overall-status overall-failed">❌ SOME STEPS FAILED</div>' + html;
+                    }
+                    
+                    html += `<details><summary>📄 Raw Test Data</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+                    
+                    resultsDiv.innerHTML = html;
+                    return;
+                }
+                
+                let html = '';
+                
+                // Overall Status
+                const overallStatus = data.overallStatus || 'UNKNOWN';
+                if (overallStatus === 'SUCCESS') {
+                    html += '<div class="overall-status overall-success">🎉 ALL WORKFLOW STEPS COMPLETED SUCCESSFULLY!</div>';
+                } else {
+                    const currentStep = data.currentStep || 'unknown';
+                    html += `<div class="overall-status overall-failed">❌ WORKFLOW FAILED AT: ${currentStep.toUpperCase()}</div>`;
+                    if (data.error) {
+                        html += `<div class="failed">Error: ${data.error}</div>`;
+                    }
+                }
+                
+                // Individual Steps
+                html += '<h2>📋 Step-by-Step Results:</h2>';
+                
+                const stepOrder = [
+                    { key: 'parse_intent', name: '🧠 1. Parse User Intent', desc: 'Convert "create 5 cartoon dog t-shirts" to structured data' },
+                    { key: 'generate_content', name: '📝 2. Generate Content', desc: 'Create product title, description, tags, features' },
+                    { key: 'generate_image', name: '🎨 3. Generate Image', desc: 'Create AI artwork for the product' },
+                    { key: 'upload_image', name: '📤 4. Upload to Printify', desc: 'Upload image to Printify media library' },
+                    { key: 'get_blueprints', name: '📋 5. Get Blueprints', desc: 'Fetch available product types (t-shirts, mugs, etc.)' },
+                    { key: 'get_print_providers', name: '🏭 6. Get Print Providers', desc: 'Fetch printing partners and capabilities' },
+                    { key: 'create_product', name: '🛍️ 7. Create Product', desc: 'Actually create the Printify product listing' },
+                    { key: 'create_background_job', name: '⚙️ 8. Create Background Job', desc: 'Test the bulk job creation system' }
+                ];
+                
+                for (const step of stepOrder) {
+                    const result = data.steps && data.steps[step.key] ? data.steps[step.key] : null;
+                    if (!result) continue;
+                    
+                    const status = result.status || 'UNKNOWN';
+                    const statusClass = status.toLowerCase();
+                    const icon = status === 'SUCCESS' ? '✅' : 
+                               status === 'FAILED' ? '❌' : '⏭️';
+                    
+                    html += `<div class="step">
+                        <div class="step-title">${icon} ${step.name}</div>
+                        <div>${step.desc}</div>
+                        <div class="${statusClass}">Status: ${status}</div>`;
+                    
+                    if (result.error) {
+                        html += `<div class="failed">❌ Error: ${result.error}</div>`;
+                    }
+                    
+                    if (result.reason) {
+                        html += `<div class="skipped">⏭️ ${result.reason}</div>`;
+                    }
+                    
+                    if (result.data) {
+                        html += `<details><summary>📊 Step Data</summary><pre>${JSON.stringify(result.data, null, 2)}</pre></details>`;
+                    }
+                    
+                    html += '</div>';
+                }
+                
+                // What this means
+                html += '<h2>🎯 What This Means:</h2>';
+                if (overallStatus === 'SUCCESS') {
+                    html += `<div class="success">
+                        ✅ Your Quick AI system is working perfectly!<br>
+                        ✅ All components are functional<br>
+                        ✅ You can now use <a href="/quick-ai.html">/quick-ai.html</a> with confidence
+                    </div>`;
+                } else {
+                    const currentStep = data.currentStep || 'unknown step';
+                    html += `<div class="failed">
+                        ❌ Your Quick AI system is broken at step: ${currentStep}<br>
+                        🔧 Fix the error above to get it working<br>
+                        📋 Check Netlify function logs for more details
+                    </div>`;
+                }
+                
+                // Raw data
+                html += `<details style="margin-top: 30px;">
+                    <summary>📄 Complete Test Data</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>`;
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="failed">❌ Test completely failed: ${error.message}</div>
+                    <div>This means there's a fundamental issue with the test function or network connectivity.</div>
+                `;
+                console.error('Full workflow test error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

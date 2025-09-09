@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick AI Mode</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+  <style>
+    body { background:#f8fafc; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .chat-container { max-width: 900px; margin: 40px auto; }
+    .chat-box { background:#fff; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.06); overflow: hidden; }
+    .chat-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
+    .chat-body { padding: 16px; max-height: 70vh; overflow:auto; }
+    .chat-input { padding: 12px; border-top: 1px solid #e5e7eb; background:#fafafa; }
+    .bubble { padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; max-width: 90%; }
+    .bubble.assistant { background: #eef2ff; color: #1e3a8a; align-self:flex-start; }
+    .bubble.user { background: #e5e7eb; color: #111827; align-self:flex-end; margin-left:auto; }
+    .message-row { display:flex; flex-direction: column; }
+    .sticky-controls { position: sticky; bottom: 0; background: #fafafa; }
+    .small-muted { font-size:.85rem; color:#6b7280; }
+  </style>
+</head>
+<body>
+  <script src="/auth-guard.js"></script>
+
+  <div class="container chat-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h1 class="h3 mb-0"><i class="bi bi-robot"></i> Quick AI Mode</h1>
+        <div class="small-muted">Describe what you want, I’ll ask a few quick questions, then create products for you.</div>
+      </div>
+
+  <!-- Product Preview Panel -->
+  <div id="productPreviewCard" class="card mt-3" style="display:none">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <strong>Select a product and print areas</strong>
+      <span class="small text-muted">Top options based on your request — check the print areas you want, then click Apply Selection</span>
+    </div>
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="filterStockOnly">
+          <label class="form-check-label small" for="filterStockOnly">In-stock only</label>
+        </div>
+        <div class="input-group input-group-sm" style="max-width:280px">
+          <span class="input-group-text">Brand/Model</span>
+          <input id="filterBrand" type="text" class="form-control" placeholder="e.g., 3001, Gildan, Bella">
+        </div>
+        <button id="toggleMoreBtn" class="btn btn-outline-secondary btn-sm">Show more</button>
+      </div>
+      <div id="previewOptionsRow" class="row g-3"></div>
+      <div class="d-flex justify-content-end mt-3">
+        <button id="applyPreviewBtn" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle"></i> Apply Selection</button>
+      </div>
+    </div>
+  </div>
+      <div>
+        <a href="/dashboard.html" class="btn btn-outline-secondary"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      </div>
+    </div>
+
+    <div class="chat-box">
+      <div class="chat-header" style="position: sticky; top: 0; z-index: 10; background:#fff;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-chat-text"></i>
+          <strong>Assistant</strong>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="d-none d-md-block" style="min-width:240px">
+            <div class="small-muted">Job progress</div>
+            <div class="progress" id="topProgressContainer" style="height: 8px; display:none;">
+              <div id="jobProgressTop" class="progress-bar" role="progressbar" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0">Store</label>
+            <select id="storeSelect" class="form-select form-select-sm" style="min-width:220px"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="chatBody" class="chat-body">
+        <div class="message-row">
+          <div class="bubble assistant">Tell me what to create. For example: “Create 20 men’s t-shirts with a Labrador retriever in watercolor.”</div>
+        </div>
+        <div id="typingRow" class="message-row" style="display:none">
+          <div class="bubble assistant small-muted">Assistant is typing…</div>
+        </div>
+        <!-- Design Requirements Panel -->
+        <div class="card mt-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="applyDesignSpec" checked>
+                <label class="form-check-label" for="applyDesignSpec">Apply transparent background + organic edges design rules</label>
+              </div>
+            </div>
+            <details class="mt-2">
+              <summary class="small">View design requirements and prompt template</summary>
+              <pre class="small bg-light p-2" style="white-space:pre-wrap; border-radius:6px;">{"design_requirements":{"critical_rules":{"background":"ALWAYS transparent/no background - NEVER use blocks, rectangles, or solid backgrounds","corners":"NO sharp rectangular corners - designs must be organic, flowing, or have natural edges","product_awareness":"Design must work on any product color/texture"},"creative_excellence":{"originality":"Unique concepts","visual_impact":"Bold and eye-catching from thumbnail","scalability":"Looks perfect from 1 in to 12 in","versatility":"Works across product types"},"avoid_completely":["Rectangular backgrounds or frames","Sharp 90-degree corners","Generic clip art","Overly busy, tiny unreadable text","Colors that only work on white"],"technical_specifications":{"format":"Vector-thinking, clean scalable elements","color_strategy":"Pop on light and dark products","composition":"Central focus, natural outward flow"}},"prompt_template":"Create a [DESIGN_TYPE] featuring [MAIN_CONCEPT]. NO background. Avoid rectangles/frames. Edges [organic/flowing/distressed/faded]. Use [COLOR_PALETTE] that pops on any product color. Style [ARTISTIC_STYLE] with [MOOD]. Scalable and eye-catching for POD. Audience: [TARGET_AUDIENCE]."}</pre>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input sticky-controls">
+        <div class="input-group">
+          <input id="userPrompt" type="text" class="form-control" placeholder="Type your request…" />
+          <button id="sendBtn" class="btn btn-primary"><i class="bi bi-send"></i></button>
+        </div>
+        <div class="form-text">You can also upload an image later if you want us to use your art instead of generating it.</div>
+        <div id="uploadBox" class="mt-2" style="display:none">
+          <label class="form-label">Image URLs (one per line or comma-separated):</label>
+          <textarea id="uploadUrls" class="form-control" rows="3" placeholder="https://.../image1.png\nhttps://.../image2.jpg"></textarea>
+          <div class="d-flex align-items-center gap-2 mt-2">
+            <button id="applyUploadUrls" class="btn btn-outline-secondary btn-sm">Use these URLs</button>
+            <span class="small-muted" id="uploadUrlsStatus"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="jobCard" class="card mt-4" style="display:none">
+      <div class="card-header">
+        <strong>Job Progress</strong>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <div>Job ID: <span id="jobIdLabel" class="text-monospace"></span></div>
+          <div>Status: <span id="jobStatusLabel" class="badge bg-secondary">—</span></div>
+        </div>
+        <div class="progress mb-2">
+          <div id="jobProgressBar" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+        </div>
+        <div id="jobSummary" class="small-muted mb-2"></div>
+        <div id="jobDetails" class="mt-2" style="max-height:260px; overflow:auto; border-top:1px solid #eee; padding-top:8px"></div>
+        <div class="d-flex gap-2">
+          <button id="cancelJobBtn" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle"></i> Cancel</button>
+          <a id="openPricingBtn" href="/bulk.html" class="btn btn-success btn-sm" style="display:none"><i class="bi bi-cash-coin"></i> Open Pricing Manager</a>
+          <a class="btn btn-outline-secondary btn-sm ms-auto" data-bs-toggle="collapse" href="#debugPanel" role="button"><i class="bi bi-bug"></i> Debug</a>
+        </div>
+        <div class="collapse mt-2" id="debugPanel">
+          <pre id="debugLog" class="small bg-light p-2" style="max-height: 200px; overflow: auto;">Debug log will appear here...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // Utilities
+  const chatHistory = [];
+  const askedSet = new Set(); // track which slots were already asked to avoid repeats
+  function addAssistant(text){
+    const row = document.createElement('div'); row.className='message-row';
+    const b = document.createElement('div'); b.className='bubble assistant'; b.textContent=text;
+    row.appendChild(b); document.getElementById('chatBody').appendChild(row); scrollChat();
+    chatHistory.push({ role: 'model', text: text });
+  }
+
+  function addUser(text){
+    const row = document.createElement('div'); row.className='message-row';
+    const b = document.createElement('div'); b.className='bubble user'; b.textContent=text;
+    row.appendChild(b); document.getElementById('chatBody').appendChild(row); scrollChat();
+    chatHistory.push({ role: 'user', text: text });
+  }
+  function scrollChat(){ const el=document.getElementById('chatBody'); el.scrollTop = el.scrollHeight; }
+  function showTyping(){ const r=document.getElementById('typingRow'); if(r){ r.style.display=''; scrollChat(); } }
+  function hideTyping(){ const r=document.getElementById('typingRow'); if(r){ r.style.display='none'; } }
+
+  // State for slot-filling
+  const chatState = {
+    prompt: '', // legacy; we will also use designPrompt
+    designPrompt: '',
+    quantity: null,
+    productScope: null, // any | tshirt | hoodies | mugs | posters | apparel
+    imageMode: null,    // generate | upload
+    removeBg: false,
+    style: '',
+    shopId: null,
+    // Additional slots
+    background: null,   // transparent | white | contextual
+    consistency: null,  // consistent | diverse
+    colors: '',
+    audience: '',
+    tone: '',
+    tags: '',
+    language: 'en-US',
+    providerPref: '',
+    brandPref: '',
+    printAreas: ['front'],
+    variants: 'all',    // all | subset
+    publishMode: 'draft', // draft | publish
+    markup: 40,         // percentage
+    collections: '',
+    dpimin: 300,        // min DPI target
+    retryOnLowQuality: 1, // retries 0-3
+    pauseAfter: 0,      // 0=no pause, otherwise number
+    confirmed: false,
+    jobId: null,
+    uploadUrls: [],
+    // Product selection preview
+    selectedBlueprintId: null,
+    selectedProviderId: null,
+    previewDone: false,
+    previewOptions: [], // [{index, category, blueprintId, providerId, title, positions:["front (WxH)", ...]}]
+    selectedPicks: [],   // [{category, blueprintId, providerId, title, printAreas: []}]
+    productsBrandAsked: false
+    ,machineStage: 'products' // products -> image -> content -> confirm
+  };
+
+  // Load shops into dropdown
+  async function loadShops(){
+    const sel = document.getElementById('storeSelect');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const token = localStorage.getItem('authToken') || '';
+      if (!token) {
+        addAssistant('Please sign in first (no token found). Open the dashboard and log in, then return here.');
+        sel.innerHTML = '<option value="">Sign in required</option>';
+        return;
+      }
+      const r = await fetch('/.netlify/functions/get-shops', { headers: { Authorization: 'Bearer ' + token }});
+      const txt = await r.text();
+      let data; try { data = txt ? JSON.parse(txt) : {}; } catch(e){ console.warn('get-shops non-JSON', txt?.slice(0,200)); data = { shops: [] }; }
+      const shops = Array.isArray(data.shops) ? data.shops : [];
+      sel.innerHTML = '<option value="">Select store…</option>' + shops.map(s=>`<option value="${s.id}">${s.title || s.shop_name || ('Shop ' + s.id)}</option>`).join('');
+      const saved = sessionStorage.getItem('bulkSelectedShop'); if (saved && shops.some(s=>String(s.id)===String(saved))) sel.value = saved;
+      sel.onchange = function(){ chatState.shopId = sel.value || null; sessionStorage.setItem('bulkSelectedShop', sel.value || ''); };
+      chatState.shopId = sel.value || null;
+    } catch(e){ sel.innerHTML = '<option value="">Failed to load stores</option>'; console.warn('loadShops failed', e); }
+  }
+
+  // Dynamic question planner: ask context-aware questions based on missing slots
+  async function askNext(){
+    // Stage: products (mirror Bulk: ask only product questions, then show preview panel)
+    if (chatState.machineStage === 'products' && !chatState.previewDone) {
+      if (!chatState.shopId) { addAssistant('Which store should we use? Please pick from the dropdown at the top.'); return; }
+      if (!chatState.quantity) { chatState.quantity = 1; }
+      if (!chatState.productScope) { addAssistant('What product types should we focus on (e.g., t-shirts, hoodies, bottles)?'); return; }
+      if (!chatState.brandPref) { chatState.brandPref = 'auto'; }
+      // Understood summary before preview
+      addAssistant(`Got it — focusing on: ${chatState.productScope} (brand: ${chatState.brandPref==='auto'?'you pick':chatState.brandPref}), qty ${chatState.quantity}. I’ll fetch top options next.`);
+      // Show the preview panel with options and return
+      try { await previewTopProductsAndAreas(); return; } catch(e){ addAssistant(`I couldn't preview products right now: ${e.message}. You can still type "yes" to continue.`); return; }
+    }
+    if (chatState.machineStage === 'products' && chatState.previewDone) {
+      // Advance to image stage once product chosen
+      chatState.machineStage = 'image';
+    }
+
+    // Stage: image
+    if (chatState.machineStage === 'image') {
+      if (!chatState.imageMode) { addAssistant('Should I generate the art for you, or do you want to upload your own image URLs?'); return; }
+      if (chatState.imageMode === 'upload') {
+        if (!Array.isArray(chatState.uploadUrls) || chatState.uploadUrls.length === 0) {
+          document.getElementById('uploadBox').style.display='';
+          addAssistant('Please paste the image URLs (one per line) in the box below, then click "Use these URLs".');
+          return;
+        }
+        // Image URLs provided — proceed to next stage
+        chatState.machineStage = 'content';
+      } else {
+        if (!chatState.designPrompt) { addAssistant('What should the design look like? Please provide a concise design prompt.'); return; }
+        if (!chatState.style) { addAssistant('Any style preference (e.g., watercolor, vintage, minimalist)?'); return; }
+        if (!chatState.colors) { addAssistant('Any color palette preference?'); return; }
+        if (!chatState.background) { addAssistant('Background preference: transparent, white, or contextual?'); return; }
+        // We have enough to generate — proceed
+        chatState.machineStage = 'content';
+      }
+    }
+
+    // Stage: content (we’ll show/edit later; here we only ensure readiness)
+    if (chatState.machineStage === 'content') {
+      // Ask a single nudge if audience or tags are missing (improves content)
+      if (!chatState.audience) { addAssistant('Who is the target audience (e.g., young adults, pickleball fans)?'); return; }
+      if (!chatState.tags) { addAssistant('Any specific tags you want included? You can list a few or say skip.'); return; }
+      // Move to confirm
+      chatState.machineStage = 'confirm';
+    }
+
+    // Stage: confirm — present plan and ask to start
+    // Present plan and ask for confirmation
+    const scope = chatState.productScope; const qty = chatState.quantity; const style = chatState.style ? (', style: ' + chatState.style) : '';
+    const bg = chatState.background ? (', background: ' + chatState.background) : '';
+    const pm = chatState.publishMode;
+    addAssistant(`Plan:\n- Store: ${chatState.shopId}\n- Quantity: ${qty}\n- Scope: ${scope}${style}${bg}\n- Design prompt: ${chatState.designPrompt}\n- Image: ${chatState.imageMode}${chatState.removeBg?' (remove BG)':''}, consistency: ${chatState.consistency}\n- Audience: ${chatState.audience||'—'} | Tone: ${chatState.tone||'—'} | Tags: ${chatState.tags||'—'}\n- Product: ${chatState.selectedBlueprintId||'auto'} | Provider: ${chatState.selectedProviderId||'auto'}\n- Print areas: ${Array.isArray(chatState.printAreas)?chatState.printAreas.join(', '):'—'}\n- Variants: ${chatState.variants} | Pricing: ${chatState.markup}% | Mode: ${pm}\n- Collections: ${chatState.collections||'—'}\n- Quality: min ${chatState.dpimin} DPI, retries ${chatState.retryOnLowQuality}\n- Pause after: ${chatState.pauseAfter||0}\n\nType "yes" to start, or provide changes.`);
+  }
+
+
+  async function createJob(){
+  const token = localStorage.getItem('authToken') || '';
+  try {
+    if (chatState.shopId) sessionStorage.setItem('bulkSelectedShop', String(chatState.shopId));
+    if (Number.isFinite(chatState.markup)) sessionStorage.setItem('quickaiMarkup', String(chatState.markup));
+  } catch(e) {}
+  // Build prompt with optional design spec rules
+  const basePrompt = chatState.designPrompt || chatState.prompt || '';
+  let finalPrompt = basePrompt;
+  try {
+    const apply = document.getElementById('applyDesignSpec');
+    if (!basePrompt && chatState.style) finalPrompt = `Create ${chatState.style} design.`;
+    if (apply && apply.checked) {
+      const RULES = [
+        'ABSOLUTE: transparent background only; never use blocks/rectangles/solid backdrops',
+        'Edges must be organic/flowing/distressed/faded; avoid sharp rectangular corners',
+        'Design must look great on light and dark products (shirts, mugs, phone cases)',
+        'Bold, eye-catching composition; scalable from 1 inch to 12 inches',
+        'Prefer hand-drawn/organic borders, watercolor fades, grunge/curved line art',
+        'Avoid generic clip-art, basic frames, over-busy detail, tiny unreadable text',
+        'Use colors that pop on multiple product colors; maintain strong contrast'
+      ].join('. ');
+      finalPrompt = `${finalPrompt}. ${RULES}.`;
+    }
+  } catch(_) {}
+  const payload = {
+    prompt: finalPrompt,
+    quantity: chatState.quantity,
+    productScope: chatState.productScope,
+    imageMode: chatState.imageMode,
+    removeBg: chatState.removeBg,
+    style: chatState.style,
+      colors: chatState.colors,
+      background: chatState.background,
+      consistency: chatState.consistency,
+      audience: chatState.audience,
+      tone: chatState.tone,
+      tags: chatState.tags,
+      language: chatState.language,
+      providerPref: chatState.providerPref,
+      brandPref: chatState.brandPref,
+      printAreas: Array.isArray(chatState.printAreas) ? chatState.printAreas : [],
+      selectedPicks: Array.isArray(chatState.selectedPicks) ? chatState.selectedPicks : [],
+      variants: chatState.variants,
+      publishMode: chatState.publishMode,
+      markup: chatState.markup,
+      collections: chatState.collections,
+      dpimin: chatState.dpimin,
+      retryOnLowQuality: chatState.retryOnLowQuality,
+      pauseAfter: chatState.pauseAfter,
+      uploadUrls: chatState.uploadUrls,
+      shopId: chatState.shopId,
+      // Bind selected product choice for the runner
+      blueprintId: chatState.selectedBlueprintId,
+      providerId: chatState.selectedProviderId
+    };
+    const r = await fetch('/.netlify/functions/quick-job-create', { method:'POST', headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(payload) });
+    const status = r.status;
+    let raw = '';
+    try { raw = await r.text(); } catch(_) { raw = ''; }
+    let data;
+    try { data = raw ? JSON.parse(raw) : {}; } catch(parseErr) {
+      console.warn('quick-job-create: non-JSON response', { status, raw });
+      data = { success:false, error:'Non-JSON response', raw };
+    }
+    if (!r.ok || !data.success) {
+      const msg = (data && (data.error || data.message)) || `HTTP ${status}`;
+      throw new Error(msg + (data && data.raw ? ` | raw: ${String(data.raw).slice(0,200)}` : ''));
+    }
+    chatState.jobId = data.job_id; return data;
+  }
+
+  async function pollStatus(){
+    if (!chatState.jobId) return;
+    const token = localStorage.getItem('authToken') || '';
+    try {
+      const r = await fetch('/.netlify/functions/quick-job-get-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ job_id: chatState.jobId })
+      });
+      const txt = await r.text();
+      let data;
+      try { data = txt ? JSON.parse(txt) : {}; } catch(e) {
+        console.warn('get-status non-JSON', { status: r.status, txt: txt?.slice(0,200) });
+        data = { success:false, error:'Non-JSON status response', raw: txt };
+      }
+      if (!r.ok || !data.success) {
+        console.warn('get-status error', data);
+        // Retry later without crashing the chat
+        setTimeout(()=>pollStatus(), 3000);
+        return;
+      }
+      updateJobUI(data.job || {});
+      if ((data.job && data.job.status) === 'in_progress') setTimeout(()=>pollStatus(), 2000);
+    } catch (e) {
+      console.warn('pollStatus failed', e);
+      setTimeout(()=>pollStatus(), 4000);
+    }
+  }
+
+  function updateJobUI(s){
+    try { document.getElementById('debugLog').textContent = JSON.stringify(s, null, 2); } catch(e) { console.warn('debug log render failed', e); }
+    const card = document.getElementById('jobCard'); card.style.display = '';
+    document.getElementById('jobIdLabel').textContent = s.job_id || chatState.jobId || '';
+    const badge = document.getElementById('jobStatusLabel'); badge.textContent = (s.status || '—').replace('_',' ');
+    badge.className = 'badge ' + (s.status==='completed' ? 'bg-success' : s.status==='failed' ? 'bg-danger' : s.status==='cancelled' ? 'bg-secondary' : 'bg-warning');
+    const pct = s.total ? Math.round((s.completed / s.total) * 100) : 0;
+    const bar = document.getElementById('jobProgressBar'); bar.style.width = pct + '%'; bar.textContent = pct + '%';
+    // Update top progress bar
+    try {
+      const topWrap = document.getElementById('topProgressContainer');
+      const topBar = document.getElementById('jobProgressTop');
+      if (topWrap && topBar) {
+        topWrap.style.display = '';
+        topBar.style.width = pct + '%';
+        topBar.textContent = '';
+        topBar.className = 'progress-bar ' + (s.status==='completed' ? 'bg-success' : s.status==='failed' ? 'bg-danger' : '');
+      }
+    } catch (e) { console.warn('top progress update failed', e); }
+    document.getElementById('jobSummary').textContent = `${s.completed||0} of ${s.total||0} completed • ${s.failed||0} failed`;
+    // Render per-item details (step/status/message)
+    try {
+      const details = document.getElementById('jobDetails');
+      const rows = Array.isArray(s.results) ? s.results.slice().sort((a,b)=> (a.index||0)-(b.index||0)) : [];
+      const html = rows.map(r => {
+        const step = r.step || '—';
+        const status = r.status || 'pending';
+        const msg = r.message || (r.error ? String(r.error).slice(0,140) : '');
+        const pid = r.product_id ? `<span class="text-monospace">${r.product_id}</span>` : '';
+        const err = r.error ? `<div class="small text-danger">${String(r.error).slice(0,200)}</div>` : '';
+        const cls = status==='failed' ? 'text-danger' : status==='created'||status==='published' ? 'text-success' : 'text-muted';
+        return `<div class="py-1 border-bottom">
+          <div class="d-flex justify-content-between">
+            <div><strong>#${r.index||'?'}</strong> <span class="${cls}">[${step}] ${status}</span></div>
+            <div>${pid}</div>
+          </div>
+          <div class="small">${msg}</div>
+          ${err}
+        </div>`;
+      }).join('');
+      details.innerHTML = html || '<div class="small-muted">No activity yet…</div>';
+    } catch(e) { console.warn('render job details failed', e); }
+    const openBtn = document.getElementById('openPricingBtn');
+    const hasResults = Array.isArray(s.results) && s.results.length>0;
+    openBtn.style.display = (s.status==='completed' && hasResults) ? '' : 'none';
+    if (s.status==='completed' && hasResults) {
+      try {
+        const ids = s.results.filter(r=>r && r.product_id).map(r=>r.product_id);
+        if (ids.length) {
+          sessionStorage.setItem('createdProducts', JSON.stringify(ids));
+          // Announce in chat and auto-open Pricing Manager
+          try {
+            addAssistant(`Created ${ids.length} product(s): ${ids.map(id=>`#${id}`).join(', ')}. Opening Pricing Manager…`);
+          } catch(_) {}
+          // Auto-open Pricing Manager after a short delay so the user sees the message
+          setTimeout(()=>{
+            try {
+              // Prefer same-tab navigation to keep flow consistent
+              window.location.assign('/bulk.html');
+            } catch(_) {
+              // Fallback: click the existing button
+              try { openBtn.click(); } catch(_) {}
+            }
+          }, 600);
+        }
+      } catch {}
+    }
+  }
+
+  // Cancel job
+  async function cancelJob(){
+    if (!chatState.jobId) return;
+    await fetch('/.netlify/functions/quick-job-cancel', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization: 'Bearer ' + (localStorage.getItem('authToken')||'') }, body: JSON.stringify({ job_id: chatState.jobId }) });
+    pollStatus(false);
+  }
+
+  // Events
+  document.getElementById('sendBtn').onclick = async function(){
+    const val = (document.getElementById('userPrompt').value||'').trim(); if (!val) return; addUser(val); document.getElementById('userPrompt').value='';
+    // Use the new AI-powered parser
+    showTyping();
+    try {
+      console.log('send -> parse-user-intent', val);
+      const res = await fetch('/.netlify/functions/parse-user-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: val, currentState: chatState })
+      });
+      const txt = await res.text();
+      let data; try { data = txt ? JSON.parse(txt) : {}; } catch(e){ console.warn('parse-intent non-JSON', txt?.slice(0,200)); data = { success:false, error:'Non-JSON response', raw: txt }; }
+      if (data.success && data.updatedState) {
+        // Merge the AI's parsed state into our local state
+        Object.assign(chatState, data.updatedState);
+      } else {
+        addAssistant('Sorry, I had trouble understanding that. Could you try rephrasing?');
+        hideTyping();
+        return;
+      }
+    } catch (e) {
+      addAssistant(`Error parsing your request: ${e.message}`);
+      hideTyping();
+      return;
+    } finally {
+      hideTyping();
+    }
+    // Lightweight client-side parsing to capture product scope, brand/material, quantity, and print areas
+    try {
+      const lower = val.toLowerCase();
+      // product types
+      const types = new Set(String(chatState.productScope||'').toLowerCase().split(/[\,\s]+/).filter(Boolean));
+      if (/(t\s*-?shirt|tee\b|tees\b)/.test(lower)) types.add('tshirt');
+      if (/(hoodie|sweatshirt)/.test(lower)) types.add('hoodie');
+      if (/(bottle|water\s*bottle|tumbler)/.test(lower)) types.add('bottle');
+      if (/(tank|singlet)/.test(lower)) types.add('tank');
+      if (/(long\s* sleeve|longsleeve)/.test(lower)) types.add('longsleeve');
+      if (/(mug)/.test(lower)) types.add('mug');
+      if (/(poster|canvas)/.test(lower)) types.add('poster');
+      if (/(tote|bag)/.test(lower)) types.add('tote');
+      if (types.size) chatState.productScope = Array.from(types).join(', ');
+
+      // brand/material
+      if (/\b(no\s*preference|any\s*brand|either|you\s*pick|no\s*brand|idc)\b/.test(lower)) chatState.brandPref = 'auto';
+      // Specific brands/models
+      if (/bella\s*\+?\s*canvas/.test(lower)) {
+        if (/\b3001\b/.test(lower)) chatState.brandPref = 'Bella+Canvas 3001'; else chatState.brandPref = 'Bella+Canvas';
+      }
+      if (/gildan/.test(lower)) {
+        if (/\b18500\b/.test(lower)) chatState.brandPref = 'Gildan 18500';
+        else if (/\b5000\b/.test(lower)) chatState.brandPref = 'Gildan 5000';
+        else if (/\b64000\b/.test(lower)) chatState.brandPref = 'Gildan 64000';
+        else chatState.brandPref = 'Gildan';
+      }
+      if (/next\s*level/.test(lower)) {
+        if (/\b6210\b/.test(lower)) chatState.brandPref = 'Next Level 6210'; else chatState.brandPref = 'Next Level';
+      }
+      if (/comfort\s*colors/.test(lower)) chatState.brandPref = 'Comfort Colors';
+      if (/hanes/.test(lower)) chatState.brandPref = 'Hanes';
+      if (/american\s*apparel/.test(lower)) chatState.brandPref = 'American Apparel';
+      if (/fruit\s*of\s*the\s*loom/.test(lower)) chatState.brandPref = 'Fruit of the Loom';
+
+      // quantity
+      const qMatch = lower.match(/\b(\d{1,3})\b/);
+      if (qMatch && !isNaN(parseInt(qMatch[1],10))) chatState.quantity = parseInt(qMatch[1],10);
+
+      const areas = new Set(Array.isArray(chatState.printAreas) ? chatState.printAreas.map(s=>String(s).toLowerCase()) : []);
+      if (/\bfront\b/.test(lower)) areas.add('front');
+      if (/\bback\b/.test(lower)) areas.add('back');
+      if (/\bleft\s*chest\b/.test(lower)) areas.add('left chest');
+      if (/\bright\s*chest\b/.test(lower)) areas.add('right chest');
+      if (/\bsleeve\b/.test(lower)) areas.add('sleeve');
+      if (areas.size) chatState.printAreas = Array.from(areas);
+      // Capture a design prompt if user writes a descriptive sentence
+      if (!chatState.designPrompt && lower.length > 3 && !/^yes\b/.test(lower)) {
+        chatState.designPrompt = val;
+      }
+    } catch(_) {}
+
+    // Server-side intent understanding (products stage): call intent-products to normalize
+    try {
+      if (chatState.machineStage === 'products') {
+        const token = localStorage.getItem('authToken') || '';
+        const reqState = {
+          products: {
+            types: String(chatState.productScope||'').split(/[,\s]+/).filter(Boolean),
+            brandPref: chatState.brandPref || 'auto',
+            quantity: Number(chatState.quantity||1)
+          },
+          printAreas: Array.isArray(chatState.printAreas) ? chatState.printAreas : [],
+          image: chatState.image || {},
+          content: chatState.content || {}
+        };
+        const ir = await fetch('/.netlify/functions/intent-products', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ message: val, state: reqState, stage: 'products' })
+        });
+        const itxt = await ir.text(); let idata; try { idata = itxt ? JSON.parse(itxt) : {}; } catch { idata = { success:false, error:'Non-JSON', raw: itxt }; }
+        if (idata && idata.success && idata.state) {
+          // Merge normalized state
+          try {
+            const st = idata.state || {};
+            if (st.products) {
+              const types = Array.isArray(st.products.types) ? st.products.types : [];
+              if (types.length) chatState.productScope = types.join(', ');
+              if (st.products.brandPref) chatState.brandPref = st.products.brandPref;
+              if (Number.isFinite(st.products.quantity)) chatState.quantity = st.products.quantity;
+            }
+            if (Array.isArray(st.printAreas)) chatState.printAreas = st.printAreas;
+          } catch {}
+          // Conversational branching for products stage
+          const hasTypes = !!chatState.productScope;
+          if (!hasTypes) { addAssistant('What products do you want to add today? (e.g., t-shirts, hoodies, bottles)'); return; }
+          if (!chatState.productsBrandAsked && (!chatState.brandPref || chatState.brandPref === 'auto')) {
+            chatState.productsBrandAsked = true;
+            addAssistant('Do you want a certain brand/material (e.g., Bella+Canvas 3001, Gildan 18500) or should I auto-pick the brand?');
+            return;
+          }
+          // We have enough to preview
+          addAssistant(`Great — I’ll fetch top options for ${chatState.productScope}. When the cards appear, check the print areas you want, then click Apply Selection.`);
+          try { await previewTopProductsAndAreas(); return; } catch(e){ addAssistant('Preview failed: ' + (e.message||e)); }
+        }
+      }
+    } catch (e) { console.warn('intent-products failed', e); }
+
+    // If we are in content stage, parse tags or allow skip, then advance
+    try {
+      if (chatState.machineStage === 'content') {
+        const lower = val.toLowerCase();
+        if (/^skip\b/.test(lower)) {
+          if (!chatState.tags) chatState.tags = '';
+          chatState.machineStage = 'confirm';
+          askNext();
+          return;
+        }
+        // tags: a, b, c
+        const tagMatch = val.match(/^\s*tags?\s*:\s*(.+)$/i);
+        let tagString = '';
+        if (tagMatch) tagString = tagMatch[1]; else if (val.indexOf(',') !== -1) tagString = val;
+        if (tagString) {
+          const parts = tagString.split(/,|\n/).map(s=>s.trim()).filter(Boolean).slice(0,13);
+          chatState.tags = parts.join(', ');
+          chatState.machineStage = 'confirm';
+          askNext();
+          return;
+        }
+      }
+    } catch(_) {}
+
+    // Server-side intent understanding (image stage): call intent-design to normalize
+    try {
+      if (chatState.machineStage === 'image') {
+        const token = localStorage.getItem('authToken') || '';
+        const reqState = {
+          products: {
+            types: String(chatState.productScope||'').split(/[\,\s]+/).filter(Boolean),
+            brandPref: chatState.brandPref || 'auto',
+            quantity: Number(chatState.quantity||1)
+          },
+          printAreas: Array.isArray(chatState.printAreas) ? chatState.printAreas : [],
+          image: {
+            mode: chatState.imageMode || null,
+            uploadUrls: Array.isArray(chatState.uploadUrls) ? chatState.uploadUrls : [],
+            designPrompt: chatState.designPrompt || '',
+            style: chatState.style || '',
+            colors: chatState.colors || '',
+            background: chatState.background || null
+          },
+          content: chatState.content || {}
+        };
+        const ir = await fetch('/.netlify/functions/intent-design', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ message: val, state: reqState, stage: 'image' })
+        });
+        const itxt = await ir.text(); let idata; try { idata = itxt ? JSON.parse(itxt) : {}; } catch { idata = { success:false, error:'Non-JSON', raw: itxt }; }
+        if (idata && idata.success && idata.state) {
+          try {
+            const st = idata.state || {};
+            if (st.image) {
+              chatState.imageMode = st.image.mode || chatState.imageMode;
+              chatState.uploadUrls = Array.isArray(st.image.uploadUrls) ? st.image.uploadUrls : chatState.uploadUrls;
+              chatState.designPrompt = st.image.designPrompt || chatState.designPrompt;
+              chatState.style = st.image.style || chatState.style;
+              chatState.colors = st.image.colors || chatState.colors;
+              chatState.background = st.image.background || chatState.background;
+            }
+          } catch {}
+          if (idata.summary) addAssistant(idata.summary);
+          if (idata.next_question) {
+            addAssistant(idata.next_question);
+          } else {
+            // Advance to content stage when image stage satisfied
+            chatState.machineStage = 'content';
+            askNext();
+            return;
+          }
+        }
+      }
+    } catch (e) { console.warn('intent-design failed', e); }
+
+    // command keywords
+    if (/^yes\b/i.test(val) && chatState.shopId && chatState.quantity && chatState.productScope && (chatState.imageMode||'generate')){
+      addAssistant('Starting your job…');
+      try { const res = await createJob(); updateJobUI(res); pollStatus(); } catch(e){ addAssistant('Could not start job: ' + (e.message||e)); }
+      return;
+    }
+    if (/^generate\b/i.test(val)) chatState.imageMode='generate';
+    if (/^upload\b/i.test(val)) { chatState.imageMode='upload'; document.getElementById('uploadBox').style.display=''; }
+    if (/\bremove bg\b|\bremove background\b/i.test(val)) chatState.removeBg = true;
+    // ask next field
+    askNext();
+  };
+
+  // Allow Enter to send, Shift+Enter for newline
+  const promptInput = document.getElementById('userPrompt');
+  if (promptInput) {
+    promptInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('sendBtn').click();
+      }
+    });
+  }
+
+  document.getElementById('cancelJobBtn').onclick = cancelJob;
+
+  // Init
+  loadShops().then(()=>askNext());
+
+  // Upload URLs UI handlers
+  const applyBtn = document.getElementById('applyUploadUrls');
+  if (applyBtn) {
+    applyBtn.onclick = function(){
+      const ta = document.getElementById('uploadUrls');
+      const raw = (ta.value||'');
+      const parts = raw.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      chatState.uploadUrls = parts;
+      const status = document.getElementById('uploadUrlsStatus');
+      status.textContent = parts.length ? `${parts.length} URL(s) captured` : 'No URLs provided';
+    };
+  }
+  </script>
+
+  <script>
+  // Preview top-3 per requested category (e.g., tshirt, hoodie, bottle) and their print areas; then set selection after user pick
+  async function previewTopProductsAndAreas(){
+    const token = localStorage.getItem('authToken') || '';
+    if (!token) throw new Error('No auth token');
+    // Fetch blueprints
+    const bpRes = await fetch('/.netlify/functions/printify-proxy', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ endpoint: '/v1/catalog/blueprints.json', method: 'GET' })
+    });
+    const bpText = await bpRes.text(); let bpData; try { bpData = bpText ? JSON.parse(bpText) : {}; } catch { bpData = {}; }
+    if (!bpRes.ok || !bpData.success) throw new Error('Failed to fetch blueprints');
+    const items = Array.isArray(bpData.data?.data) ? bpData.data.data : (Array.isArray(bpData.data) ? bpData.data : (Array.isArray(bpData) ? bpData : []));
+    console.log('[preview] blueprints total', items.length);
+    if (!items.length) throw new Error('No blueprints found');
+    const scope = `${(chatState.productScope||'').toLowerCase()} ${(chatState.designPrompt||chatState.prompt||'').toLowerCase()}`;
+    function scoreBlueprint(b){
+      const t = String(b.title||'').toLowerCase();
+      let s = 0;
+      if (/shirt|tee/.test(t) && /tshirt|tee/.test(scope)) s += 5;
+      if (/hoodie|sweatshirt/.test(t) && /hoodie/.test(scope)) s += 5;
+      if (/bottle|water\s*bottle|tumbler/.test(t) && /bottle|water\s*bottle|tumbler/.test(scope)) s += 5;
+      if (/mug/.test(t) && /mug/.test(scope)) s += 5;
+      if (/poster|canvas|print\b/.test(t) && /poster|canvas/.test(scope)) s += 5;
+      if (/tote|bag/.test(t) && /tote|bag/.test(scope)) s += 5;
+      if (/towel/.test(t) && /towel/.test(scope)) s += 5;
+      if (/phone.*case/.test(t) && /phone\s*case/.test(scope)) s += 5;
+      // Brand/model boosts
+      if (/\b3001\b|bella\s*\+?\s*canvas/.test(t)) s += 3;
+      if (/\b18500\b|gildan/.test(t)) s += 2;
+      if (/\b6210\b|next\s*level/.test(t)) s += 1;
+      if (/3001|bella|canvas/.test(t)) s += 2;
+      if (/gildan|18500|5000/.test(t)) s += 2;
+      return s;
+    }
+    // Determine desired categories primarily from chatState.productScope tokens
+    const categories = [];
+    try {
+      const scopeTokens = String(chatState.productScope||'')
+        .toLowerCase()
+        .split(/[\,\|\/+\s]+/)
+        .map(s=>s.trim())
+        .filter(Boolean);
+      const add = (c)=>{ if (!categories.includes(c)) categories.push(c); };
+      for (const t of scopeTokens) {
+        if (/(t\s*-?shirt|tee\b|\bshirt\b)/.test(t)) add('tshirt');
+        else if (/(hoodie|sweatshirt)/.test(t)) add('hoodie');
+        else if (/(bottle|water\s*bottle|tumbler)/.test(t)) add('bottle');
+        else if (/(mug|cup)/.test(t)) add('mug');
+        else if (/(poster|canvas|print\b)/.test(t)) add('poster');
+        else if (/(tote|bag)/.test(t)) add('tote');
+        else if (/(tank|singlet)/.test(t)) add('tank');
+        else if (/(long\s*sleeve|longsleeve)/.test(t)) add('longsleeve');
+        else if (/(towel|bath\s*towel|beach\s*towel)/.test(t)) add('towel');
+        else if (/(phone\s*case|phonecase|iphone\s*case|android\s*case)/.test(t)) add('phonecase');
+        else if (/(sweatshirt)/.test(t)) add('sweatshirt');
+        else if (/(glass|glassware)/.test(t)) add('glassware');
+        else if (/(candle|candles)/.test(t)) add('candle');
+        else if (/(journal|notebook)/.test(t)) add('notebook');
+        else if (/(magnet|sticker)/.test(t)) add('stickers');
+        else if (/(pillow|cover)/.test(t)) add('pillow');
+        else if (/(blanket|throw)/.test(t)) add('blanket');
+        else if (/(rug|mat)/.test(t)) add('rug');
+        else if (/(ornament)/.test(t)) add('ornament');
+        else if (/(seasonal|decoration)/.test(t)) add('seasonal');
+        else if (/(hat|cap|beanie)/.test(t)) add('hat');
+        else if (/(sock|socks)/.test(t)) add('socks');
+        else if (/(jewelry|necklace|bracelet|earring)/.test(t)) add('jewelry');
+        else if (/(mouse\s*pad)/.test(t)) add('mousepad');
+        else if (/(tiktok)/.test(t)) add('tiktok');
+        else if (/(canvas)/.test(t)) add('canvas');
+        else if (/(postcard|postcards)/.test(t)) add('postcard');
+        else if (/(journal|notebook)/.test(t)) add('notebook');
+        else if (/(home\s*decor|wall\s*art)/.test(t)) add('home_decor');
+        else if (/(bathroom)/.test(t)) add('bathroom');
+        else if (/(bag|tote|backpack|duffel)/.test(t)) add('bags');
+        else if (/(shoes|sneaker|flip\s*flop)/.test(t)) add('shoes');
+        else if (/(kids|baby)/.test(t)) add('kids');
+        else if (/(supplement|vitamin|gummy|capsule|powder)/.test(t)) add('supplements');
+        else if (/(greeting\s*card|cards?|thank\s*you\s*card|birthday\s*card)/.test(t)) add('cards');
+        else if (/(book\s*bag|back\s*pack|backpack|school\s*bag)/.test(t)) add('backpack');
+      }
+      // Fallback to prompt-based inference if nothing parsed from productScope
+      if (!categories.length) {
+        const wantsTee = /tshirt|tee|t\s*shirt/.test(scope);
+        const wantsHoodie = /hoodie|sweatshirt/.test(scope);
+        const wantsBottle = /bottle|water\s*bottle|tumbler/.test(scope);
+        const wantsTowel = /towel/.test(scope);
+        const wantsPhonecase = /phone\s*case/.test(scope);
+        const wantsSupplements = /supplement|vitamin|gummy|capsule|powder/.test(scope);
+        const wantsCards = /greeting\s*card|\bcards?\b/.test(scope);
+        const wantsBackpack = /book\s*bag|back\s*pack|backpack|school\s*bag/.test(scope);
+        if (wantsTee) add('tshirt');
+        if (wantsHoodie) add('hoodie');
+        if (wantsBottle) add('bottle');
+        if (wantsTowel) add('towel');
+        if (wantsPhonecase) add('phonecase');
+        if (wantsSupplements) add('supplements');
+        if (wantsCards) add('cards');
+        if (wantsBackpack) add('backpack');
+      }
+      if (!categories.length) categories.push('auto');
+    } catch(_) { categories.push('auto'); }
+    console.log('[preview] requested categories', categories.join(', '));
+
+    // Helper to pick top by category
+    // Category patterns derived from Printify catalog
+    const categoryPatterns = {
+      tshirt: /(t\s*-?shirt\b|\btee\b|\bshirt\b)/i,
+      hoodie: /(hoodie|sweatshirt)/i,
+      sweatshirt: /(sweatshirt)/i,
+      longsleeve: /(long\s*sleeve)/i,
+      tank: /(tank\s*top|tank\b|singlet)/i,
+      sportswear: /(sportswear|performance|athletic)/i,
+      bottoms: /(shorts|pants|leggings|jogger|bottoms)/i,
+      swimwear: /(swim|bikini|trunks|one\s*piece)/i,
+      shoes: /(shoes|sneaker|flip\s*flop|slides)/i,
+      kids: /(kids|youth|toddler|baby)/i,
+      mug: /(mug)/i,
+      candle: /(candle)/i,
+      glassware: /(glass|pint|wine|shot)/i,
+      bottle: /(bottle|tumbler)/i,
+      canvas: /(canvas)/i,
+      poster: /(poster)/i,
+      postcard: /(postcard)/i,
+      cards: /(greeting\s*card|\bcards?\b|thank\s*you\s*card|birthday\s*card)/i,
+      notebook: /(journal|notebook)/i,
+      stickers: /(magnet|sticker)/i,
+      home_decor: /(home\s*decor|wall\s*art|tapestry)/i,
+      bathroom: /(bathroom|shower\s*curtain|bath\s*mat)/i,
+      towel: /(towel)/i,
+      blanket: /(blanket|throw)/i,
+      pillow: /(pillow|pillowcase|cover)/i,
+      rug: /(rug|mat)/i,
+      ornament: /(ornament)/i,
+      seasonal: /(seasonal|decoration)/i,
+      phonecase: /(phone.*case|iphone\s*case|android\s*case)/i,
+      bags: /(bag|tote|duffel)/i,
+      backpack: /(backpack|book\s*bag|school\s*bag)/i,
+      mousepad: /(mouse\s*pad)/i,
+      hat: /(hat|cap|beanie)/i,
+      socks: /(sock)/i,
+      jewelry: /(jewelry|necklace|bracelet|earring)/i,
+      supplements: /(supplement|vitamin|gummy|capsule|powder)/i
+    };
+
+    function filterByCat(list, cat) {
+      // Normalize helpers
+      const textOf = (b)=>{
+        const title = String(b?.title || '');
+        const tags = Array.isArray(b?.tags) ? b.tags.join(' ') : '';
+        const category = String(b?.category || '');
+        const options = Array.isArray(b?.options) ? JSON.stringify(b.options) : '';
+        return `${title} ${tags} ${category} ${options}`.toLowerCase();
+      };
+      const isTshirt = (b)=>{
+        const t = textOf(b);
+        if (/hoodie|sweatshirt|jogger|tank|long\s*sleeve|bottle|mug|tumbler|poster|canvas|bag|tote/.test(t)) return false; // exclude common non-tee
+        return /(t\s*-?shirt\b|\btee\b|\bshirt\b)/.test(t);
+      };
+      const isHoodie = (b)=>/hoodie|sweatshirt/.test(textOf(b));
+      const isBottle = (b)=>/(\bwater\s*bottle\b|\bbottle\b|\btumbler\b)/.test(textOf(b));
+      const isTowel = (b)=>/\btowel\b/.test(textOf(b));
+      const isPhonecase = (b)=>/phone.*case/.test(textOf(b));
+
+      let filtered = [];
+      const patt = categoryPatterns[cat];
+      if (patt) {
+        filtered = list.filter(b => patt.test(String(b?.title||'') + ' ' + (Array.isArray(b?.tags)?b.tags.join(' '):'') + ' ' + String(b?.category||'')));
+      } else if (cat==='tshirt') filtered = list.filter(isTshirt);
+      else if (cat==='hoodie') filtered = list.filter(isHoodie);
+      else if (cat==='bottle') filtered = list.filter(isBottle);
+      else if (cat==='towel') filtered = list.filter(isTowel);
+      else if (cat==='phonecase') filtered = list.filter(isPhonecase);
+      else filtered = list.slice();
+      console.log('[preview] filterByCat', cat, '->', filtered.length);
+      return filtered; // strict: zero means skip
+    }
+    function pickTopByCat(cat){
+      const pool = filterByCat(items, cat);
+      const ranked = pool.map(b=>({b, s: scoreBlueprint(b)})).sort((a,b)=>b.s-a.s);
+      return (ranked[0] && ranked[0].s>0) ? ranked[0].b : pool[0];
+    }
+
+    // Helper to try to find an image URL in an object
+    function findImageUrlFromBlueprint(bp){
+      try { if (bp && Array.isArray(bp.images) && bp.images[0]) return String(bp.images[0]); } catch {}
+      return 'https://via.placeholder.com/480x360?text=Product';
+    }
+
+    // Build options: up to 3 per requested category, filter out zero-stock providers
+    const preview = [];
+    // Synonyms/related categories map to broaden search when strict match is too small
+    const relatedCats = {
+      cards: ['postcard', 'notebook', 'stationery'],
+      postcard: ['cards'],
+      bags: ['backpack', 'tote'],
+      backpack: ['bags', 'tote'],
+      towel: ['bathroom'],
+      phonecase: ['tech', 'accessories'],
+      supplements: ['food', 'health', 'beauty'],
+      glassware: ['mug', 'bottle'],
+      notebook: ['stationery', 'postcard']
+    };
+    // Relaxed filter that uses keyword sets only on title+tags strings
+    function relaxedFilter(list, cat){
+      const kw = {
+        cards: [/greeting\s*card|\bcards?\b|thank\s*you\s*card|birthday\s*card/i],
+        backpack: [/back\s*pack|book\s*bag|school\s*bag|backpack/i],
+        supplements: [/supplement|vitamin|gummy|capsule|powder/i],
+        towel: [/towel/i],
+        phonecase: [/phone.*case|iphone\s*case|android\s*case/i]
+      };
+      const pats = kw[cat]; if (!pats) return [];
+      return list.filter(b=>{
+        const txt = (String(b?.title||'') + ' ' + (Array.isArray(b?.tags)?b.tags.join(' '):'')).toLowerCase();
+        return pats.some(p=>p.test(txt));
+      });
+    }
+    for (const cat of categories) {
+      let pool = filterByCat(items, cat);
+      let expanded = false;
+      if (!pool.length) {
+        // Try relaxed match
+        const relaxed = relaxedFilter(items, cat);
+        if (relaxed.length) { pool = relaxed; expanded = true; }
+      }
+      if (pool.length < 3) {
+        // Pull from related categories
+        const rel = relatedCats[cat] || [];
+        for (const rc of rel) {
+          const addl = filterByCat(items, rc);
+          if (addl && addl.length) { pool = pool.concat(addl); expanded = true; }
+          if (pool.length >= 6) break;
+        }
+      }
+      if (!pool.length) { console.log('[preview] No matches for category', cat); continue; }
+      try {
+        console.log('[preview] first match', cat, { id: pool[0]?.id, title: pool[0]?.title });
+      } catch(_) {}
+      const ranked = pool.map(b=>({b, s: scoreBlueprint(b)})).sort((a,b)=>b.s-a.s).slice(0,6);
+      for (const entry of ranked) {
+        const bp = entry.b;
+        // Fetch providers (list for dropdown)
+        const provRes = await fetch('/.netlify/functions/printify-proxy', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ endpoint: `/v1/catalog/blueprints/${bp.id}/print_providers.json`, method: 'GET' })
+        });
+        const provText = await provRes.text(); let provData; try { provData = provText ? JSON.parse(provText) : {}; } catch { provData = {}; }
+        const providers = Array.isArray(provData.data?.data) ? provData.data.data : (Array.isArray(provData.data) ? provData.data : []);
+        if (!providers.length) continue;
+        // Choose provider with stock preference after variant check
+        let provider = providers[0];
+        let chosenProvider = null;
+        let reasons = expanded ? ['Expanded search'] : [];
+        for (const p of providers) {
+          // Variants API to check in-stock quickly
+          let inStockCount = 0;
+          try {
+            const varRes = await fetch('/.netlify/functions/printify-proxy', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ endpoint: `/v1/catalog/blueprints/${bp.id}/print_providers/${p.id}/variants.json`, method: 'GET' })
+            });
+            const vTxt = await varRes.text();
+            let vData; try { vData = vTxt ? JSON.parse(vTxt) : {}; } catch { vData = {}; }
+            const variants = Array.isArray(vData.variants) ? vData.variants : (Array.isArray(vData) ? vData : []);
+            inStockCount = variants.filter(v => v && v.is_available !== false && v.is_in_stock !== false).length;
+          } catch {}
+          if (inStockCount > 0) { chosenProvider = { ...p, _inStock: inStockCount }; break; }
+        }
+        if (chosenProvider) {
+          provider = chosenProvider;
+          reasons.push('In stock');
+        } else {
+          // If no provider shows explicit stock, keep first but mark as unknown
+          reasons.push('Stock unknown');
+        }
+        // Fetch print areas
+        const paRes = await fetch('/.netlify/functions/print-area-sizes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ blueprintId: bp.id, providerId: provider.id })
+        });
+        const paText = await paRes.text(); let paData; try { paData = paText ? JSON.parse(paText) : {}; } catch { paData = {}; }
+        const areas = Array.isArray(paData.data?.printAreas) ? paData.data.printAreas : [];
+        const imageUrl = findImageUrlFromBlueprint(bp);
+        // Add brand/model reasoning
+        const lowerTitle = String(bp.title||'').toLowerCase();
+        if (/bella\s*\+?\s*canvas|\b3001\b/.test(lowerTitle)) reasons.push('Bella+Canvas 3001');
+        if (/gildan|\b18500\b/.test(lowerTitle)) reasons.push('Gildan');
+        preview.push({
+          category: cat,
+          blueprintId: String(bp.id),
+          providerId: String(provider.id),
+          title: bp.title,
+          providerTitle: provider.title || provider.id,
+          providers: providers.map(p=>({ id:String(p.id), title: p.title||String(p.id) })),
+          positions: areas.map(a=>`${a.position} (${a.width}x${a.height})`),
+          imageUrl,
+          reasons: reasons
+        });
+      }
+    }
+
+    if (!preview.length) throw new Error('No suitable products found for your request');
+
+    // Render options as cards with radio + checkboxes, grouped by category
+    chatState.previewOptions = preview.map((p,i)=>({ index:i+1, ...p }));
+    try {
+      const row = document.getElementById('previewOptionsRow');
+      const panel = document.getElementById('productPreviewCard');
+      if (row && panel) {
+        // Group by category
+        const groups = {};
+        for (const opt of chatState.previewOptions) {
+          const g = opt.category || 'options';
+          if (!groups[g]) groups[g] = [];
+          groups[g].push(opt);
+        }
+        const groupOrder = Object.keys(groups);
+        row.innerHTML = groupOrder.map(cat => {
+          const cards = groups[cat].map(opt => {
+            const areasHtml = (opt.positions || []).map((pos, idx) => {
+              const id = `area_${opt.index}_${idx}`;
+              const label = pos; // e.g., "front (WxH)"
+              return `<div class=\"form-check\"><input class=\"form-check-input\" type=\"checkbox\" id=\"${id}\" data-pos=\"${label}\"><label class=\"form-check-label\" for=\"${id}\">${label}</label></div>`;
+            }).join('') || '<div class=\"text-muted small\">No areas reported</div>';
+            const provHtml = (Array.isArray(opt.providers)?opt.providers:[]).map(p=>`<option value=\"${p.id}\">${p.title}</option>`).join('');
+            const reasonBadges = (opt.reasons||[]).map(r=>`<span class=\"badge bg-light text-dark border me-1\">${r}</span>`).join('');
+            return `
+            <div class=\"col-md-4\">
+              <div class=\"card h-100\" id=\"card_${opt.index}\" data-opt-index=\"${opt.index}\" data-category=\"${cat}\" data-reasons=\"${(opt.reasons||[]).join(' ').toLowerCase()}\" data-title=\"${String(opt.title||'').toLowerCase().replace(/\"/g,'&quot;')}\" data-provider=\"${String(opt.providerTitle||'').toLowerCase().replace(/\"/g,'&quot;')}\">
+                <img src=\"${opt.imageUrl}\" class=\"card-img-top\" alt=\"${opt.title}\" style=\"object-fit:cover; height:160px\">
+                <div class=\"card-body d-flex flex-column\">
+                  <div class=\"form-check mb-2\">
+                    <input class=\"form-check-input\" type=\"radio\" name=\"previewPick_${cat}\" id=\"pick_${opt.index}\" value=\"${opt.index}\" data-category=\"${cat}\">
+                    <label class=\"form-check-label fw-bold\" for=\"pick_${opt.index}\">#${opt.index}. ${opt.title}</label>
+                  </div>
+                  <div class=\"mb-2\">${reasonBadges}</div>
+                  <div class=\"mb-2\">
+                    <label class=\"form-label small mb-1\">Provider</label>
+                    <select class=\"form-select form-select-sm\" id=\"prov_${opt.index}\">${provHtml}</select>
+                  </div>
+                  <div class=\"border rounded p-2 bg-light flex-grow-1\">
+                    <div class=\"fw-semibold small mb-1\">Print areas</div>
+                    ${areasHtml}
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          }).join('');
+          const header = `<div class=\"col-12\"><div class=\"fw-bold mb-1\">${cat.charAt(0).toUpperCase()+cat.slice(1)}</div></div>`;
+          return header + cards;
+        }).join('');
+        // Apply filters and pagination on the client without refetch
+        try {
+          const stockOnlyEl = document.getElementById('filterStockOnly');
+          const brandEl = document.getElementById('filterBrand');
+          const moreBtn = document.getElementById('toggleMoreBtn');
+          let showMore = false;
+          function applyFilters(){
+            const wantStock = !!(stockOnlyEl && stockOnlyEl.checked);
+            const brand = (brandEl && brandEl.value || '').toLowerCase().trim();
+            const cards = Array.from(document.querySelectorAll('#previewOptionsRow .card'));
+            // First show all, then hide non-matching
+            for (const c of cards) {
+              const reasons = String(c.getAttribute('data-reasons')||'');
+              const title = String(c.getAttribute('data-title')||'');
+              const provider = String(c.getAttribute('data-provider')||'');
+              let ok = true;
+              if (wantStock && reasons.indexOf('in stock') === -1) ok = false;
+              if (brand && !(title.includes(brand) || provider.includes(brand))) ok = false;
+              c.parentElement.style.display = ok ? '' : 'none';
+            }
+            // Pagination: cap to first 3 per category unless showMore
+            const cats = Array.from(new Set(Array.from(document.querySelectorAll('#previewOptionsRow .card')).map(c=>c.getAttribute('data-category'))));
+            for (const cat of cats) {
+              let visible = 0;
+              const wrappers = Array.from(document.querySelectorAll(`#previewOptionsRow .card[data-category="${cat}"]`)).map(c=>c.parentElement);
+              for (const w of wrappers) {
+                if (w.style.display === 'none') continue;
+                visible++;
+                const over = !showMore && visible > 3;
+                w.style.display = over ? 'none' : w.style.display;
+              }
+            }
+          }
+          if (stockOnlyEl) stockOnlyEl.onchange = applyFilters;
+          if (brandEl) brandEl.oninput = function(){
+            clearTimeout(brandEl.__t); brandEl.__t = setTimeout(applyFilters, 200);
+          };
+          if (moreBtn) moreBtn.onclick = function(){ showMore = !showMore; moreBtn.textContent = showMore ? 'Show less' : 'Show more'; applyFilters(); };
+          applyFilters();
+        } catch(e){ console.warn('preview filters failed', e); }
+        panel.style.display = '';
+        // Auto-select the card when any of its area checkboxes is checked
+        try {
+          const container = document.getElementById('previewOptionsRow');
+          if (container && !container.__areasHooked) {
+            container.addEventListener('change', (e) => {
+              const t = e.target;
+              if (!(t instanceof HTMLInputElement)) return;
+              if (t.type !== 'checkbox') return;
+              const card = t.closest('.card');
+              if (!card) return;
+              const idx = card.getAttribute('id')?.replace('card_', '') || '';
+              if (!idx) return;
+              const radio = document.getElementById('pick_' + idx);
+              if (radio && radio instanceof HTMLInputElement) {
+                radio.checked = true;
+              }
+            });
+            container.__areasHooked = true;
+          }
+        } catch(_) {}
+      }
+      const btn = document.getElementById('applyPreviewBtn');
+      if (btn) {
+        btn.onclick = function(){
+          try {
+            // Collect selections per category
+            const cats = Array.from(new Set((chatState.previewOptions||[]).map(o=>o.category))).filter(Boolean);
+            const picks = [];
+            for (const cat of cats) {
+              let sel = document.querySelector(`input[name="previewPick_${cat}"]:checked`);
+              let idx = sel ? Number(sel.getAttribute('value')) : NaN;
+              // If no radio selected, infer from any card in this category that has a checked area
+              if (!sel || !Number.isFinite(idx)) {
+                const catOpts = chatState.previewOptions.filter(p=>p.category===cat);
+                let inferred = null;
+                for (const opt of catOpts) {
+                  const card = document.getElementById(`card_${opt.index}`);
+                  if (!card) continue;
+                  const hasChecked = !!card.querySelector('input[type="checkbox"]:checked');
+                  if (hasChecked) { inferred = opt; break; }
+                }
+                if (inferred) {
+                  idx = inferred.index;
+                } else if (catOpts.length) {
+                  // Default to the first option if absolutely nothing selected
+                  idx = catOpts[0].index;
+                }
+              }
+              const pick = chatState.previewOptions.find(p=>p.index===idx && p.category===cat);
+              if (!pick) { alert(`Invalid selection for ${cat}`); return; }
+              picks.push(pick);
+            }
+            // For each pick, collect checked areas within its own card only
+            const picksWithAreas = picks.map(p => {
+              const container = document.getElementById(`card_${p.index}`);
+              let areas = [];
+              if (container) {
+                const boxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+                const chosen = boxes.filter(b => b.checked).map(b => String(b.getAttribute('data-pos')||'').split('(')[0].trim().toLowerCase());
+                areas = chosen.length ? Array.from(new Set(chosen)) : [];
+              }
+              // Provider selection
+              let providerId = p.providerId;
+              try {
+                const selProv = container && container.querySelector(`#prov_${p.index}`);
+                if (selProv && selProv.value) providerId = String(selProv.value);
+              } catch {}
+              return { ...p, providerId, printAreas: areas };
+            });
+            // Create a union of all areas for summary only
+            const union = Array.from(new Set(picksWithAreas.flatMap(p=>p.printAreas||[])));
+            chatState.printAreas = union;
+            // Persist selections with per-pick areas
+            chatState.selectedPicks = picksWithAreas.map(p=>({ category: p.category, blueprintId: p.blueprintId, providerId: p.providerId, title: p.title, printAreas: p.printAreas||[] }));
+            // Backward compatibility: set first pick
+            if (picks[0]) {
+              chatState.selectedBlueprintId = picks[0].blueprintId;
+              chatState.selectedProviderId = picks[0].providerId;
+            }
+            chatState.previewDone = true;
+            // Hide panel, advance stage, and continue
+            document.getElementById('productPreviewCard').style.display = 'none';
+            chatState.machineStage = 'image';
+            const names = picksWithAreas.map(p=>`${p.title}${p.printAreas&&p.printAreas.length?` [${p.printAreas.join(', ')}]`:''}`).join('; ');
+            addAssistant(`Got it. Selected: ${names}.`);
+            askNext();
+          } catch(e) { alert('Failed to apply selection: ' + e.message); }
+        };
+      }
+    } catch (e) {
+      console.warn('Render preview panel failed', e);
+      const lines = chatState.previewOptions.map(p=>`#${p.index}. ${p.title} (blueprint ${p.blueprintId})\n   Provider: ${p.providerTitle}\n   Print areas: ${p.positions.join(', ')||'—'}`).join('\n\n');
+      addAssistant(`Here are top options I can use:\n${lines}\n\nReply with 1, 2, or 3 to pick one (or say the product name). Then tell me your preferred areas (e.g., "front and back"). Type "yes" to accept #1.`);
+    }
+  }
+  </script>
+</body>
+</html>

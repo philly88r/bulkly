@@ -92,7 +92,7 @@ exports.handler = async (event, context) => {
     // Generate JWT token
     const token = jwt.sign(
       { 
-        sub: newUser.id,
+        sub: String(newUser.id), // Convert to string to avoid Supabase JWT parsing error
         email: newUser.email,
         name: newUser.name
       },

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .error { color: red; }
+        .success { color: green; }
+        pre { background: #f5f5f5; padding: 10px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Ultra Simple Debug Test</h1>
+    <button onclick="runDebug()">Run Debug Test</button>
+    <div id="output"></div>
+
+    <script>
+        async function runDebug() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Running debug test...</p>';
+            
+            try {
+                const response = await fetch('/.netlify/functions/debug-test', {
+                    method: 'POST'
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                if (!text) {
+                    output.innerHTML = '<div class="error">❌ Empty response from function</div>';
+                    return;
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    output.innerHTML = `
+                        <div class="error">❌ Invalid JSON response:</div>
+                        <pre>${text}</pre>
+                        <div class="error">Parse error: ${e.message}</div>
+                    `;
+                    return;
+                }
+                
+                let html = '<h2>Debug Results:</h2>';
+                
+                if (data.status === 'success') {
+                    html += '<div class="success">✅ Test completed successfully</div>';
+                } else {
+                    html += '<div class="error">❌ Test failed at step: ' + data.step + '</div>';
+                    if (data.error) {
+                        html += '<div class="error">Error: ' + data.error + '</div>';
+                    }
+                }
+                
+                html += '<h3>Environment:</h3>';
+                if (data.data && data.data.env) {
+                    const env = data.data.env;
+                    html += '<ul>';
+                    html += '<li>Gemini API Key: ' + (env.hasGemini ? '✅ SET' : '❌ MISSING') + '</li>';
+                    html += '<li>Database URL: ' + (env.hasDB ? '✅ SET' : '❌ MISSING') + '</li>';
+                    html += '<li>FAL Key: ' + (env.hasFAL ? '✅ SET' : '❌ MISSING') + '</li>';
+                    html += '</ul>';
+                }
+                
+                if (data.data && data.data.parseTest) {
+                    html += '<h3>Parse Intent Test:</h3>';
+                    const parse = data.data.parseTest;
+                    html += '<ul>';
+                    html += '<li>Status: ' + parse.status + '</li>';
+                    html += '<li>Response Length: ' + parse.responseLength + '</li>';
+                    if (parse.success !== undefined) {
+                        html += '<li>Parse Success: ' + (parse.success ? '✅' : '❌') + '</li>';
+                    }
+                    if (parse.hasUpdatedState !== undefined) {
+                        html += '<li>Has Updated State: ' + (parse.hasUpdatedState ? '✅' : '❌') + '</li>';
+                    }
+                    if (parse.parseError) {
+                        html += '<li class="error">Parse Error: ' + parse.parseError + '</li>';
+                    }
+                    html += '</ul>';
+                    
+                    if (parse.response) {
+                        html += '<h4>Response Preview:</h4><pre>' + parse.response + '</pre>';
+                    }
+                }
+                
+                html += '<h3>Raw Data:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                output.innerHTML = html;
+                
+            } catch (error) {
+                output.innerHTML = `
+                    <div class="error">❌ Complete failure: ${error.message}</div>
+                    <div>This means there's a fundamental issue with the function or network.</div>
+                `;
+                console.error('Debug test error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
