@@ -676,6 +676,9 @@ function renderPricingUI(products) {
               </div>
             </div>
             <div class="d-flex gap-2" style="flex-shrink: 0;">
+              <button class="btn btn-sm btn-primary generate-mockups-btn" data-id="${p.catalog_product_id}" data-db-id="${p.product_id}" title="Generate 10 lifestyle mockups" disabled>
+                <i class="bi bi-images"></i> Generate Mockups
+              </button>
               <button class="btn btn-sm btn-success publish-btn" data-id="${p.catalog_product_id}" data-db-id="${p.product_id}" disabled>
                 <i class="bi bi-cloud-arrow-up"></i> Publish
               </button>
