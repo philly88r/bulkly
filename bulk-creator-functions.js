@@ -2106,7 +2106,7 @@ async function sendToEtsy(card) {
     // Attach shipping profile
     try {
       const storedShipId = localStorage.getItem('etsy_shipping_profile_id');
-      const storedShipName = localStorage.getItem('etsy_shipping_profile_name') || 'Phillip';
+      const storedShipName = localStorage.getItem('etsy_shipping_profile_name') || 'Printful';
       if (storedShipId && /^\d+$/.test(storedShipId)) {
         etsyPayload.shipping_profile_id = Number(storedShipId);
       } else {
