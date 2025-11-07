@@ -768,6 +768,26 @@ function renderPricingUI(products) {
     } else {
       // Store product data as base64 for publishing (Unicode-safe)
       const productDataJson = btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+
+      // Build mockup images HTML (show all mockups)
+      let mockupsHtml = '';
+      if (Array.isArray(p.mockups) && p.mockups.length > 0) {
+        const mainMockupUrl = typeof p.mockups[0] === 'string' ? p.mockups[0] : p.mockups[0]?.url;
+        mockupsHtml = `
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <img src="${mainMockupUrl}" width="140" class="rounded shadow-sm" style="display: block;">
+            ${p.mockups.length > 1 ? `
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 140px;">
+                ${p.mockups.slice(1).map(mockup => {
+                  const url = typeof mockup === 'string' ? mockup : mockup?.url;
+                  return url ? `<img src="${url}" width="44" height="44" class="rounded" style="object-fit: cover; cursor: pointer;" title="Click to view full size">` : '';
+                }).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
       box.insertAdjacentHTML('beforeend', `
         <div class="card mb-3" data-product-id="${p.product_id}" data-catalog-product-id="${p.catalog_product_id}" data-base-cost="${totalCost}" data-product-b64="${productDataJson}">
           <div class="card-header d-flex justify-content-between align-items-center">
@@ -775,7 +795,7 @@ function renderPricingUI(products) {
             <span class="badge bg-secondary">${placementPricing?.title || (placementId ? placementId.toUpperCase() : '')}</span>
           </div>
           <div class="card-body d-flex align-items-center gap-3" style="flex-wrap: wrap;">
-            ${mockupSource ? `<img src="${mockupSource}" width="140" class="rounded shadow-sm">` : ''}
+            ${mockupsHtml}
             <div class="flex-grow-1">
               <p class="mb-1"><strong>Base cost:</strong> <span class="base-cost-amount">$${totalCost}</span></p>
               <div class="d-flex align-items-center gap-2">
@@ -783,6 +803,7 @@ function renderPricingUI(products) {
                 <input type="number" class="form-control markup" value="40" min="1" max="500" style="width:90px">
                 <span class="sale-price badge bg-success fs-6">$${(totalCost * 1.4).toFixed(2)}</span>
               </div>
+              ${p.mockups && p.mockups.length > 1 ? `<p class="mb-0 mt-1 text-muted small"><i class="bi bi-images"></i> ${p.mockups.length} mockup images</p>` : ''}
             </div>
             <div class="d-flex gap-2" style="flex-shrink: 0;">
               <button class="btn btn-sm btn-success publish-btn" data-id="${p.catalog_product_id}" data-db-id="${p.product_id}">
@@ -997,22 +1018,51 @@ async function pollForPendingMockups(pendingMockups) {
               
               // Add mockup images if available
               if (mockupUrls.length > 0) {
-                // Create a container for mockup images
+                // Create a container for mockup images (main + thumbnails)
                 const mockupContainer = document.createElement('div');
-                mockupContainer.className = 'd-flex gap-2 flex-wrap mockup-container';
-                mockupContainer.style.marginRight = '10px';
-                
-                mockupUrls.forEach((url, idx) => {
-                  const img = document.createElement('img');
-                  img.src = url;
-                  img.width = 140;
-                  img.className = 'rounded shadow-sm';
-                  img.title = `Mockup ${idx + 1}`;
-                  mockupContainer.appendChild(img);
-                  console.log(`[MOCKUP-POLL] Adding mockup ${idx + 1}`);
-                });
-                
+                mockupContainer.className = 'mockup-container';
+                mockupContainer.style.cssText = 'display: flex; flex-direction: column; gap: 8px; margin-right: 10px;';
+
+                // Add main mockup (first one)
+                const mainImg = document.createElement('img');
+                mainImg.src = mockupUrls[0];
+                mainImg.width = 140;
+                mainImg.className = 'rounded shadow-sm';
+                mainImg.style.display = 'block';
+                mainImg.title = 'Main mockup';
+                mockupContainer.appendChild(mainImg);
+                console.log(`[MOCKUP-POLL] Adding main mockup`);
+
+                // Add thumbnails for remaining mockups
+                if (mockupUrls.length > 1) {
+                  const thumbContainer = document.createElement('div');
+                  thumbContainer.style.cssText = 'display: flex; gap: 4px; flex-wrap: wrap; max-width: 140px;';
+
+                  mockupUrls.slice(1).forEach((url, idx) => {
+                    const thumbImg = document.createElement('img');
+                    thumbImg.src = url;
+                    thumbImg.width = 44;
+                    thumbImg.height = 44;
+                    thumbImg.className = 'rounded';
+                    thumbImg.style.cssText = 'object-fit: cover; cursor: pointer;';
+                    thumbImg.title = `Mockup ${idx + 2} - Click to view full size`;
+                    thumbContainer.appendChild(thumbImg);
+                    console.log(`[MOCKUP-POLL] Adding thumbnail mockup ${idx + 2}`);
+                  });
+
+                  mockupContainer.appendChild(thumbContainer);
+                }
+
                 bodyDiv.insertAdjacentElement('afterbegin', mockupContainer);
+
+                // Add mockup count indicator
+                const flexGrowDiv = bodyDiv.querySelector('.flex-grow-1');
+                if (flexGrowDiv && mockupUrls.length > 1) {
+                  const countBadge = document.createElement('p');
+                  countBadge.className = 'mb-0 mt-1 text-muted small';
+                  countBadge.innerHTML = `<i class="bi bi-images"></i> ${mockupUrls.length} mockup images`;
+                  flexGrowDiv.appendChild(countBadge);
+                }
               }
             }
             
