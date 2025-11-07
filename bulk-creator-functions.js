@@ -2097,6 +2097,28 @@ async function sendToEtsy(card) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[ETSY] HTTP error:', response.status, errorText);
+
+      // Check if token is expired - trigger re-auth
+      if (errorText.includes('invalid_token') || errorText.includes('access token is expired') || errorText.includes('token expired')) {
+        console.log('[ETSY] Token expired, clearing token and restarting OAuth...');
+        localStorage.removeItem('etsy_access_token');
+        localStorage.removeItem('etsy_refresh_token');
+
+        // Save the card to resume after re-auth
+        const resumeId = card?.getAttribute('data-product-id') || card?.querySelector('.etsy-btn')?.getAttribute('data-db-id');
+        if (resumeId) localStorage.setItem('etsy_resume_db_id', resumeId);
+
+        // Trigger OAuth flow
+        const startRes = await fetch('/.netlify/functions/etsy-oauth-start');
+        const startData = await startRes.json().catch(() => ({}));
+        if (startRes.ok && startData?.success && startData?.auth_url) {
+          localStorage.setItem('etsy_oauth_state', startData.state);
+          localStorage.setItem('etsy_code_verifier', startData.code_verifier);
+          window.location.href = startData.auth_url;
+          return;
+        }
+      }
+
       throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
     }
 
@@ -2109,18 +2131,49 @@ async function sendToEtsy(card) {
       etsyBtn.innerHTML = `<i class="bi bi-check-circle"></i> Sent to Etsy`;
       etsyBtn.classList.remove('btn-info');
       etsyBtn.classList.add('btn-secondary');
-      
+
       // Show success message with link
       const listingUrl = result.listing_url || `https://www.etsy.com/listing/${result.listing_id}`;
       alert(`✅ Product sent to Etsy!\n\nListing URL: ${listingUrl}\n\nImages uploaded: ${result.images_uploaded}`);
     } else {
       console.error(`❌ Etsy send failed:`, result.error);
+
+      // Check if error message indicates expired token
+      const errorMsg = result.error || '';
+      if (errorMsg.includes('invalid_token') || errorMsg.includes('access token is expired') || errorMsg.includes('token expired')) {
+        console.log('[ETSY] Token expired (from result), clearing token and restarting OAuth...');
+        localStorage.removeItem('etsy_access_token');
+        localStorage.removeItem('etsy_refresh_token');
+
+        // Save the card to resume after re-auth
+        const resumeId = card?.getAttribute('data-product-id') || card?.querySelector('.etsy-btn')?.getAttribute('data-db-id');
+        if (resumeId) localStorage.setItem('etsy_resume_db_id', resumeId);
+
+        // Trigger OAuth flow
+        const startRes = await fetch('/.netlify/functions/etsy-oauth-start');
+        const startData = await startRes.json().catch(() => ({}));
+        if (startRes.ok && startData?.success && startData?.auth_url) {
+          localStorage.setItem('etsy_oauth_state', startData.state);
+          localStorage.setItem('etsy_code_verifier', startData.code_verifier);
+          window.location.href = startData.auth_url;
+          return;
+        }
+      }
+
       throw new Error(result.error || 'Unknown error');
     }
 
   } catch (err) {
     console.error('[ETSY] Error:', err);
-    alert(`❌ Failed to send to Etsy: ${err.message}\n\nCheck the browser console for details.`);
+
+    // Check if error message indicates expired token (final catch-all)
+    if (err.message && (err.message.includes('invalid_token') || err.message.includes('access token is expired') || err.message.includes('token expired'))) {
+      alert('⚠️ Your Etsy authorization has expired. You will be redirected to re-authorize with Etsy.');
+      // This might have already redirected above, but just in case
+    } else {
+      alert(`❌ Failed to send to Etsy: ${err.message}\n\nCheck the browser console for details.`);
+    }
+
     etsyBtn.disabled = false;
     etsyBtn.innerHTML = originalText;
   }
