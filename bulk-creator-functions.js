@@ -2438,6 +2438,12 @@ async function sendToEtsy(card) {
       etsyBtn.classList.remove('btn-info');
       etsyBtn.classList.add('btn-secondary');
 
+      // Save the resolved shipping profile ID for future use
+      if (result.shipping_profile_id) {
+        localStorage.setItem('etsy_shipping_profile_id', String(result.shipping_profile_id));
+        console.log('[ETSY] Saved shipping_profile_id:', result.shipping_profile_id);
+      }
+
       // Show success message with link
       const listingUrl = result.listing_url || `https://www.etsy.com/listing/${result.listing_id}`;
       alert(`✅ Product sent to Etsy!\n\nListing URL: ${listingUrl}\n\nImages uploaded: ${result.images_uploaded}`);

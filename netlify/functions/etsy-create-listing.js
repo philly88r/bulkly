@@ -611,6 +611,7 @@ exports.handler = async (event) => {
       listing_url: `https://www.etsy.com/listing/${listingId}`,
       images_uploaded: uploadedImageIds.length,
       published: publishRes.ok,
+      shipping_profile_id: resolvedShippingProfileId, // Return this so frontend can cache it
       _debug: {
         listing_data: createListingData,
         image_ids: uploadedImageIds
