@@ -1,8 +1,21 @@
 [build]
   # Build configuration for Netlify
-  command = "echo 'No build step required'"
+  # Safely copy only public assets into build directory to avoid deploying secrets like .env
+  command = """
+    rm -rf build && \
+    mkdir -p build && \
+    # Copy static site assets
+    cp -f _redirects build/ 2>/dev/null || true && \
+    cp -f *.html build/ 2>/dev/null || true && \
+    cp -f *.js build/ 2>/dev/null || true && \
+    cp -f *.css build/ 2>/dev/null || true && \
+    # Copy common asset directories if they exist
+    [ -d src ] && cp -r src build/src || true && \
+    [ -d images ] && cp -r images build/images || true && \
+    [ -d assets ] && cp -r assets build/assets || true
+  """
   functions = "netlify/functions"
-  publish = "."
+  publish = "build"
 
 [functions]
   node_bundler = "esbuild"
@@ -16,6 +29,22 @@
 
 [functions."quick-job-status"]
   # This is the main worker, it needs a long timeout to orchestrate other functions
+  timeout = 300 # seconds
+
+[functions."generate-mockup-gallery"]
+  # Mockup generation with polling needs extended timeout
+  timeout = 300 # seconds
+
+[functions."printful-proxy"]
+  # Proxy needs timeout for OAuth refresh and Supabase operations
+  timeout = 60 # seconds
+
+[functions."printful-create-product"]
+  # Product creation can take time due to file uploads
+  timeout = 120 # seconds
+
+[functions."pricing-orchestrator"]
+  # Orchestrator calls multiple functions, needs extended timeout
   timeout = 300 # seconds
 
 [build.environment]

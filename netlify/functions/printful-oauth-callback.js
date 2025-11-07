@@ -21,26 +21,47 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
   if (event.httpMethod !== 'GET') return { statusCode: 405, headers, body: JSON.stringify({ success:false, error:'Method Not Allowed' }) };
 
+  console.log('[printful-oauth-callback] Request received:', {
+    method: event.httpMethod,
+    queryParams: event.queryStringParameters,
+    headers: event.headers
+  });
+
   try {
     const { code, state } = event.queryStringParameters || {};
-    if (!code) return { statusCode: 400, headers, body: JSON.stringify({ success:false, error:'Missing code' }) };
+    console.log('[printful-oauth-callback] Extracted params:', { code: code?.slice(0, 10) + '...', state: state?.slice(0, 20) + '...' });
+    
+    if (!code) {
+      console.log('[printful-oauth-callback] Missing authorization code');
+      return { statusCode: 400, headers, body: JSON.stringify({ success:false, error:'Missing code' }) };
+    }
 
     // Resolve userId from state or Authorization header
     let userId = null;
+    console.log('[printful-oauth-callback] Resolving user ID...');
+    
     // 1) Try verify state with server secret
     try {
       if (state) {
         const verified = jwt.verify(state, process.env.JWT_SECRET);
         userId = verified.sub || verified.id || null;
+        console.log('[printful-oauth-callback] User ID from verified state:', userId);
       }
-    } catch {}
+    } catch (e) {
+      console.log('[printful-oauth-callback] State verification failed:', e.message);
+    }
+    
     // 2) If still missing, try decoding state without verification (best-effort)
     if (!userId && state) {
       try {
         const decodedLoose = jwt.decode(state) || {};
         userId = decodedLoose.sub || decodedLoose.id || null;
-      } catch {}
+        console.log('[printful-oauth-callback] User ID from decoded state:', userId);
+      } catch (e) {
+        console.log('[printful-oauth-callback] State decode failed:', e.message);
+      }
     }
+    
     // 3) If still missing, try Authorization header
     if (!userId) {
       try {
@@ -49,18 +70,27 @@ exports.handler = async (event) => {
           const bearer = auth.replace(/^Bearer\s+/i, '');
           const verifiedAuth = jwt.verify(bearer, process.env.JWT_SECRET);
           userId = verifiedAuth.sub || verifiedAuth.id || null;
+          console.log('[printful-oauth-callback] User ID from auth header:', userId);
         }
-      } catch {}
+      } catch (e) {
+        console.log('[printful-oauth-callback] Auth header verification failed:', e.message);
+      }
     }
 
     const clientId = process.env.PRINTFUL_CLIENT_ID;
     const clientSecret = process.env.PRINTFUL_CLIENT_SECRET;
+    console.log('[printful-oauth-callback] OAuth credentials check:', { 
+      hasClientId: !!clientId, 
+      hasClientSecret: !!clientSecret 
+    });
+    
     if (!clientId || !clientSecret) {
+      console.log('[printful-oauth-callback] Missing OAuth credentials');
       return { statusCode: 500, headers, body: JSON.stringify({ success:false, error:'Missing Printful OAuth env vars' }) };
     }
 
     // Exchange code for tokens. Printful docs: use your app installation token endpoint.
-    // Commonly providers use /oauth/token with POST form data.
+    console.log('[printful-oauth-callback] Starting token exchange...');
     const tokenUrl = 'https://www.printful.com/oauth/token';
     const form = new URLSearchParams();
     form.set('client_id', clientId);
@@ -68,14 +98,23 @@ exports.handler = async (event) => {
     form.set('grant_type', 'authorization_code');
     form.set('code', code);
 
+    console.log('[printful-oauth-callback] Making token request to:', tokenUrl);
     const tokenRes = await fetch(tokenUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form.toString()
     });
 
+    console.log('[printful-oauth-callback] Token response status:', tokenRes.status);
     const tokenJson = await tokenRes.json().catch(() => ({}));
+    console.log('[printful-oauth-callback] Token response data:', { 
+      hasAccessToken: !!tokenJson.access_token,
+      hasRefreshToken: !!tokenJson.refresh_token,
+      expiresAt: tokenJson.expires_at 
+    });
+    
     if (!tokenRes.ok) {
+      console.log('[printful-oauth-callback] Token exchange failed:', tokenJson);
       return { statusCode: tokenRes.status, headers, body: JSON.stringify({ success:false, error:'Token exchange failed', details: tokenJson }) };
     }
 
@@ -85,10 +124,19 @@ exports.handler = async (event) => {
     const expiresAtUnix = tokenJson.expires_at ? parseInt(tokenJson.expires_at, 10) : null;
     const expiresAt = expiresAtUnix ? new Date(expiresAtUnix * 1000).toISOString() : null;
 
+    console.log('[printful-oauth-callback] Processing tokens:', {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      expiresAt,
+      userId
+    });
+
     if (!userId) {
+      console.log('[printful-oauth-callback] No user ID found - cannot save tokens');
       return { statusCode: 400, headers, body: JSON.stringify({ success:false, error:'Missing user context for OAuth token save' }) };
     }
 
+    console.log('[printful-oauth-callback] Encrypting and saving tokens to database...');
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const encAccess = accessToken ? encrypt(accessToken, process.env.JWT_SECRET) : null;
     const encRefresh = refreshToken ? encrypt(refreshToken, process.env.JWT_SECRET) : null;
@@ -103,8 +151,11 @@ exports.handler = async (event) => {
       .eq('id', userId);
 
     if (error) {
+      console.log('[printful-oauth-callback] Database save failed:', error);
       return { statusCode: 500, headers, body: JSON.stringify({ success:false, error:'Failed to save tokens', details: error.message }) };
     }
+
+    console.log('[printful-oauth-callback] Tokens saved successfully!');
 
     // Redirect back to settings with success
     return {

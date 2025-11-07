@@ -25,9 +25,11 @@ exports.handler = async (event) => {
   }
 
   try {
+    const reqId = Math.random().toString(36).slice(2,10) + '-' + Date.now();
+    const t0 = Date.now();
     const body = JSON.parse(event.body || '{}');
     const { prompt, contentType = 'product-content', style, colors, audience, productId, productInfo } = body;
-    console.log('[generate-content] START');
+    console.log(`[generate-content][${reqId}] START`);
     console.log('[generate-content] Parsed data - prompt:', prompt);
     console.log('[generate-content] Parsed data - contentType:', contentType);
     console.log('[generate-content] Parsed data - productId:', productId);
@@ -73,7 +75,7 @@ exports.handler = async (event) => {
       case 'tags': systemPrompt = getSystemPromptForTags(); maxTokens = 200; break;
       case 'key-features': systemPrompt = getSystemPromptForKeyFeatures(); maxTokens = 1000; break;
       case 'materials': systemPrompt = getSystemPromptForMaterials(); maxTokens = 200; break;
-      case 'product-content': systemPrompt = getSystemPromptForProductContent(); maxTokens = 3000; break; // lowered to avoid timeouts
+      case 'product-content': systemPrompt = getSystemPromptForProductContent(); maxTokens = 1500; break; // further reduced to avoid timeouts
       default:
         return {
           statusCode: 400,
@@ -81,8 +83,8 @@ exports.handler = async (event) => {
           body: JSON.stringify({ success: false, error: 'Invalid contentType' })
         };
     }
-    console.log('[generate-content] System prompt set for contentType:', contentType);
-    console.log('[generate-content] Max tokens:', maxTokens);
+    console.log(`[generate-content][${reqId}] System prompt set for contentType: ${contentType}`);
+    console.log(`[generate-content][${reqId}] Max tokens: ${maxTokens}`);
 
     const fullPrompt = buildFullPrompt(systemPrompt, enhancedPrompt);
     const geminiPayload = {
@@ -96,53 +98,82 @@ exports.handler = async (event) => {
       }
     };
     try {
-      console.log('[generate-content] Gemini payload prepared. Prompt length:', fullPrompt?.length || 0);
+      console.log(`[generate-content][${reqId}] Gemini payload prepared. Prompt length: ${fullPrompt?.length || 0}`);
       // Avoid logging entire payload if very large; log keys only
-      console.log('[generate-content] generationConfig:', JSON.stringify(geminiPayload.generationConfig));
+      console.log(`[generate-content][${reqId}] generationConfig:`, JSON.stringify(geminiPayload.generationConfig));
     } catch {}
     // Try primary and backup models in order
-    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+    const models = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'];
     let data = null;
     let lastErr = null;
+    let chosenModel = null;
     for (const model of models) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-        console.log('[generate-content] Calling model:', model);
+        console.log(`[generate-content][${reqId}] Calling model: ${model}`);
+        // Use AbortController for timeout since node-fetch doesn't support timeout option
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-          body: JSON.stringify(geminiPayload)
+          body: JSON.stringify(geminiPayload),
+          signal: controller.signal
         });
-        console.log('[generate-content] Model response status:', model, response.status);
+        
+        clearTimeout(timeoutId);
+        console.log(`[generate-content][${reqId}] Model response status: ${model} ${response.status}`);
         if (!response.ok) {
           const errorText = await response.text();
-          console.warn('[generate-content] Model failed:', model, errorText?.slice(0,200));
+          console.warn(`[generate-content][${reqId}] Model failed: ${model} ${String(errorText||'').slice(0,200)}`);
           lastErr = new Error(`Gemini API error ${response.status}: ${errorText}`);
           continue;
         }
         const d = await response.json();
         if (d && Array.isArray(d.candidates) && d.candidates.length) {
           data = d;
-          console.log('[generate-content] Model succeeded:', model);
+          chosenModel = model;
+          console.log(`[generate-content][${reqId}] Model succeeded: ${model}`);
           break;
         } else {
-          console.warn('[generate-content] Model returned no candidates:', model);
+          console.warn(`[generate-content][${reqId}] Model returned no candidates: ${model}`);
           lastErr = new Error('No candidates');
         }
       } catch (e) {
-        console.warn('[generate-content] Model threw exception:', model, e && (e.message||e));
+        console.warn(`[generate-content][${reqId}] Model threw exception: ${model} ${(e && (e.message||e))}`);
         lastErr = e;
       }
     }
     if (!data) {
       if (contentType === 'product-content') {
         const fallback = buildFallbackProductContent(enhancedPrompt, productInfo);
-        console.warn('[generate-content] All models failed; returning fallback payload');
+        console.warn(`[generate-content][${reqId}] All models failed; returning fallback payload`);
         return { statusCode: 200, headers: corsHeaders, body: JSON.stringify(fallback) };
       }
       throw new Error(`Gemini models failed: ${lastErr ? String(lastErr.message||lastErr) : 'unknown error'}`);
     }
-    console.log('[generate-content] Gemini full response received.');
+    console.log(`[generate-content][${reqId}] Gemini full response received. chosenModel=${chosenModel || 'n/a'}`);
+    // Debug log the response structure to understand why content extraction is failing
+    try {
+      console.log(`[generate-content][${reqId}] Response structure debug:`);
+      console.log(`[generate-content][${reqId}] • candidates.length: ${data.candidates?.length || 0}`);
+      if (data.candidates?.[0]) {
+        const c = data.candidates[0];
+        console.log(`[generate-content][${reqId}] • candidate[0] keys: ${Object.keys(c).join(',')}`);
+        console.log(`[generate-content][${reqId}] • candidate[0].content keys: ${Object.keys(c.content || {}).join(',')}`);
+        console.log(`[generate-content][${reqId}] • candidate[0].content.parts.length: ${c.content?.parts?.length || 0}`);
+        if (c.content?.parts?.[0]) {
+          const p = c.content.parts[0];
+          console.log(`[generate-content][${reqId}] • parts[0] keys: ${Object.keys(p).join(',')}`);
+          console.log(`[generate-content][${reqId}] • parts[0].text length: ${p.text?.length || 0}`);
+          console.log(`[generate-content][${reqId}] • parts[0].text preview: "${String(p.text || '').slice(0, 200)}"`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[generate-content][${reqId}] Debug logging failed:`, e.message);
+    }
+    
     // Robustly extract text from candidates
     let content = '';
     try {
@@ -184,7 +215,32 @@ exports.handler = async (event) => {
         throw new Error(`Failed to process ${contentType}: ${err.message}`);
       }
     }
-    console.log('[generate-content] Returning success response:', JSON.stringify(responseData).slice(0, 500));
+    // Summarize output for Netlify logs (without dumping full payloads)
+    try {
+      const durMs = Date.now() - t0;
+      const tokens = data?.usageMetadata?.totalTokenCount || responseData?.tokens || 0;
+      if (contentType === 'product-content') {
+        const title = String(responseData.title || '');
+        const desc = String(responseData.description || '');
+        const tags = Array.isArray(responseData.tags) ? responseData.tags : [];
+        const kf = Array.isArray(responseData.key_features) ? responseData.key_features : [];
+        const mats = Array.isArray(responseData.materials) ? responseData.materials : [];
+        console.log(`[generate-content][${reqId}] OUTPUT SUMMARY`);
+        console.log(`[generate-content][${reqId}] • model=${chosenModel} tokens=${tokens} durMs=${durMs}`);
+        console.log(`[generate-content][${reqId}] • title.len=${title.length} preview="${title.slice(0,120)}"`);
+        console.log(`[generate-content][${reqId}] • description.len=${desc.length} preview="${desc.slice(0,160).replace(/\n/g,' ') }"`);
+        console.log(`[generate-content][${reqId}] • tags[${tags.length}]=${tags.join(',')}`);
+        console.log(`[generate-content][${reqId}] • key_features[${kf.length}] first="${String(kf[0]||'').slice(0,120)}"`);
+        console.log(`[generate-content][${reqId}] • materials[${mats.length}] first="${String(mats[0]||'').slice(0,40)}"`);
+      } else {
+        const c = typeof responseData?.content === 'string' ? responseData.content : JSON.stringify(responseData?.content||'');
+        console.log(`[generate-content][${reqId}] OUTPUT SUMMARY • model=${chosenModel} tokens=${tokens} durMs=${durMs} • content.len=${(c||'').length}`);
+        console.log(`[generate-content][${reqId}] • preview="${String(c||'').slice(0,200).replace(/\n/g,' ')}"`);
+      }
+    } catch (e) {
+      console.warn(`[generate-content][${reqId}] Failed to log output summary:`, e && e.message);
+    }
+    console.log(`[generate-content][${reqId}] Returning success response`);
     // Return success payload
     return {
       statusCode: 200,

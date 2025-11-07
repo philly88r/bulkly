@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Printful Image Swap</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body{ background:#f8fafc; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .card{ border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.06) }
+    .monospace{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Admin</a>
+      <div class="navbar-nav ms-auto">
+        <button class="btn btn-outline-light btn-sm" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1 class="mb-3"><i class="bi bi-image"></i> Printful Image Swap</h1>
+    <p class="text-muted">Quickly replace product images via Printful API (PUT <span class="monospace">/store/products/{id}</span>). Uses partial update: send only the fields you want to change.</p>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <div id="connectionStatus" class="alert alert-info mb-3" style="display:none;"></div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Product ID or @external_id</label>
+            <input id="productIdInput" type="text" class="form-control" placeholder="e.g. 12345 or @my_sku">
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <button id="loadBtn" class="btn btn-outline-secondary w-100" onclick="loadCurrentProduct()"><i class="bi bi-download"></i> Load Current</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="currentImagesCard" class="card mb-4" style="display:none;">
+      <div class="card-header"><strong>Current Images</strong></div>
+      <div class="card-body" id="currentImagesBody"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><strong>New Images</strong></div>
+      <div class="card-body">
+        <div id="imagesList"></div>
+        <button class="btn btn-sm btn-outline-primary" onclick="addImageRow()"><i class="bi bi-plus-circle"></i> Add Image URL</button>
+        <hr/>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" id="swapBtn" onclick="swapImages()"><i class="bi bi-arrow-repeat"></i> Swap Images</button>
+          <button class="btn btn-outline-secondary" onclick="prefillFromCurrent()"><i class="bi bi-copy"></i> Copy Current To Editor</button>
+        </div>
+        <div class="small text-muted mt-2">This performs a partial update and replaces the entire <span class="monospace">sync_product.images</span> array.</div>
+      </div>
+    </div>
+
+    <div id="resultBox" class="alert mt-4 d-none" role="alert"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Auth guard
+    document.addEventListener('DOMContentLoaded', async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return location.href = '/auth.html';
+      
+      // Show connection status
+      showConnectionStatus('Testing Printful connection...', 'info');
+      
+      try {
+        await loadStores();
+        // Status is set inside loadStores() now
+      } catch (e) {
+        showConnectionStatus('⚠ Connection issue: ' + e.message, 'warning');
+      }
+      
+      // Start with one row
+      addImageRow();
+    });
+
+    function logout(){ try { localStorage.removeItem('authToken'); location.href = '/auth.html'; } catch(e) {} }
+
+    async function pfCall(path, { method = 'GET', body, headers: extra = {} } = {}){
+      // Uses existing Netlify function: /.netlify/functions/printful-proxy
+      const token = localStorage.getItem('authToken');
+      const res = await fetch('/.netlify/functions/printful-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ endpoint: path, method, body, headers: { ...extra } })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'API error');
+      return data.data;
+    }
+
+    async function loadStores(){
+      // Skip store loading entirely - use same approach as bulkly.html
+      // Store is auto-detected from OAuth token, no need to call /store or /stores endpoints
+      showConnectionStatus('✓ Connected to Printful (store auto-detected)', 'success');
+    }
+
+    function addImageRow(url = ''){
+      const holder = document.getElementById('imagesList');
+      const id = 'img_' + Math.random().toString(36).slice(2,8);
+      holder.insertAdjacentHTML('beforeend', `
+        <div class="input-group mb-2" id="row_${id}">
+          <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+          <input type="url" class="form-control" placeholder="https://..." value="${url}">
+          <button class="btn btn-outline-danger" onclick="document.getElementById('row_${id}').remove()"><i class="bi bi-trash"></i></button>
+        </div>
+      `);
+    }
+
+    function getNewImageUrls(){
+      return Array.from(document.querySelectorAll('#imagesList input[type="url"]'))
+        .map(inp => inp.value.trim())
+        .filter(v => v);
+    }
+
+    async function loadCurrentProduct(){
+      try {
+        const id = document.getElementById('productIdInput').value.trim();
+        if (!id) return alert('Enter Product ID or @external_id');
+        const data = await pfCall(`/store/products/${encodeURIComponent(id)}`, { method: 'GET' });
+        const imgs = (data && data.sync_product && Array.isArray(data.sync_product.images)) ? data.sync_product.images : [];
+        const body = document.getElementById('currentImagesBody');
+        if (imgs.length){
+          body.innerHTML = imgs.map((im,i)=>`<div class="d-flex align-items-center gap-2 mb-2"><span class="badge text-bg-secondary">${i+1}</span><a href="${im.src}" target="_blank" class="text-truncate" style="max-width:600px">${im.src}</a></div>`).join('');
+        } else {
+          body.innerHTML = '<div class="text-muted">No images on this product.</div>';
+        }
+        document.getElementById('currentImagesCard').style.display = '';
+      } catch(e){
+        showResult('danger', 'Failed to load product: ' + e.message);
+      }
+    }
+
+    function prefillFromCurrent(){
+      const links = Array.from(document.querySelectorAll('#currentImagesBody a')).map(a => a.href);
+      if (!links.length) return alert('No current images found to copy.');
+      document.getElementById('imagesList').innerHTML = '';
+      links.forEach(addImageRow);
+      showResult('info', 'Copied current image URLs into editor. Edit as needed, then click Swap Images.');
+    }
+
+    async function swapImages(){
+      try {
+        const id = document.getElementById('productIdInput').value.trim();
+        if (!id) return alert('Enter Product ID or @external_id');
+        const urls = getNewImageUrls();
+        if (!urls.length) return alert('Add at least one image URL.');
+
+        const payload = {
+          sync_product: {
+            images: urls.map(u => ({ src: u }))
+          }
+        };
+
+        await pfCall(`/store/products/${encodeURIComponent(id)}`, { method: 'PUT', body: payload });
+        showResult('success', 'Images updated successfully. It may take a moment to reflect in the dashboard.');
+        // Reload to show updates
+        await loadCurrentProduct();
+      } catch(e){
+        showResult('danger', 'Failed to update images: ' + e.message);
+      }
+    }
+
+    function showResult(type, msg){
+      const box = document.getElementById('resultBox');
+      box.className = 'alert alert-' + type;
+      box.textContent = msg;
+      box.classList.remove('d-none');
+    }
+
+    function showConnectionStatus(msg, type = 'info') {
+      const box = document.getElementById('connectionStatus');
+      if (!box) return;
+      box.className = 'alert alert-' + type + ' mb-3';
+      box.textContent = msg;
+      box.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

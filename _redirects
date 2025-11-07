@@ -18,6 +18,7 @@
 /auth /auth.html 200
 /pricing /pricing.html 200
 /inspiration /inspiration.html 200
+/printful-swap /printful-swap.html 200
 
 # [4] Netlify Functions Passthrough (must come before SPA catch-all)
 /api/* /.netlify/functions/:splat 200

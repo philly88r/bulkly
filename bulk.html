@@ -1897,6 +1897,9 @@ async function generateDesigns() {
   const prompt = document.getElementById('bulkPrompt').value.trim();
   if (!prompt) return alert('Enter a prompt');
 
+  // Persist latest user prompt for reuse (e.g., Step 5 fallback content)
+  try { sessionStorage.setItem('lastUserPrompt', prompt); } catch(_){}
+
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating…';
@@ -1976,7 +1979,8 @@ async function generateDesigns() {
       'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
     },
     body: JSON.stringify({
-      prompt: enhancedPrompt,
+      // Use base content prompt; backend composes/enhances it
+      prompt,
       contentType: 'product-content',
       style, colors, audience, removeBackground: removeBg,
       productInfo: productInfo.length > 0 ? productInfo : undefined,

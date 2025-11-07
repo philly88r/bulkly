@@ -445,41 +445,51 @@
             try {
                 updatePrintfulStatus('Testing connection...', 'info');
                 const token = localStorage.getItem('authToken') || '';
-                // First try /store (requires store permission)
+                
+                // First try /products (public catalog - works with OAuth)
                 let res = await fetch('/.netlify/functions/printful-proxy', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ endpoint: '/store', method: 'GET' })
+                    body: JSON.stringify({ endpoint: '/products', method: 'GET' })
                 });
                 let payload = await res.json().catch(()=>({}));
+                
+                // Handle specific error cases
+                if (payload?.requiresReauth || res.status === 403) {
+                    updatePrintfulStatus('Authorization expired or insufficient permissions. Please re-connect Printful.', 'error');
+                    return;
+                }
+                
+                if (res.status === 429) {
+                    const retryAfter = payload?.retryAfter || 60;
+                    updatePrintfulStatus(`Rate limited. Try again in ${retryAfter} seconds.`, 'warning');
+                    return;
+                }
+                
                 if (!res.ok || !payload.success) {
-                    // Fallback to /stores list
+                    // Fallback to /sync/products (works with sync_products scope)
                     res = await fetch('/.netlify/functions/printful-proxy', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ endpoint: '/stores', method: 'GET' })
+                        body: JSON.stringify({ endpoint: '/sync/products', method: 'GET' })
                     });
                     payload = await res.json().catch(()=>({}));
-                }
-                if (!res.ok || !payload.success) {
-                    // Final fallback: try public catalog /products to verify OAuth works at least
-                    const res2 = await fetch('/.netlify/functions/printful-proxy', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ endpoint: '/products', method: 'GET' })
-                    });
-                    const p2 = await res2.json().catch(()=>({}));
-                    if (res2.ok && p2.success) {
-                        updatePrintfulStatus('Connected (catalog only). Some store APIs may be restricted by permissions.', 'warning');
+                    
+                    if (payload?.requiresReauth || res.status === 403) {
+                        updatePrintfulStatus('Authorization expired or insufficient permissions. Please re-connect Printful.', 'error');
                         return;
                     }
-                    const errMsg = payload?.error || p2?.error || `HTTP ${res.status}`;
-                    updatePrintfulStatus(`Not connected: ${errMsg}`, 'error');
+                }
+                
+                if (!res.ok || !payload.success) {
+                    const errMsg = payload?.error || `HTTP ${res.status}`;
+                    updatePrintfulStatus(`Connection failed: ${errMsg}`, 'error');
                     return;
                 }
+                
                 const data = payload.data?.result || payload.data || {};
                 const name = data?.name || (Array.isArray(data) && data[0]?.name) || 'Printful';
-                updatePrintfulStatus(`Connected to Printful (${name})`, 'success');
+                updatePrintfulStatus(`Connected to Printful (${name}) with full permissions`, 'success');
             } catch (e) {
                 updatePrintfulStatus('Connection test failed', 'error');
             }
@@ -531,6 +541,12 @@
                         <a href="#" class="nav-link" data-section="printful-products">
                             <i class="fas fa-store"></i>
                             Printful Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/printful-swap" class="nav-link" onclick="event.preventDefault(); window.location.href='/printful-swap';">
+                            <i class="fas fa-image"></i>
+                            Printful Image Swap
                         </a>
                     </li>
                     <li class="nav-item">
@@ -672,6 +688,10 @@
                         <a href="/bulk.html" class="btn btn-secondary" id="btnStartNewBulkPrintify">
                             <i class="fas fa-magic"></i>
                             Start New (Printify)
+                        </a>
+                        <a href="/printful-swap" class="btn btn-secondary" id="btnPrintfulSwap">
+                            <i class="fas fa-image"></i>
+                            Printful Image Swap
                         </a>
                         <a href="#" class="btn btn-secondary" id="btnResumeLast">
                             <i class="fas fa-box"></i>

@@ -125,6 +125,14 @@ exports.handler = async (event) => {
     // STEP 3: Generate Image
     result.currentStep = 'generate_image';
     console.log('[WORKFLOW-TEST] Step 3: Testing generate-image');
+    // Require explicit size from request body to avoid any defaults
+    let input = {};
+    try { input = JSON.parse(event.body || '{}'); } catch(_) {}
+    const testSize = (typeof input.size === 'string') ? input.size : null;
+    if (!testSize || !/^(\d+)x(\d+)$/.test(testSize)) {
+      throw new Error('full-workflow-test requires a size like "4350x4783" in request body');
+    }
+    console.log('[WORKFLOW-TEST] Using size:', testSize);
     
     const imageResponse = await fetch(`${origin}/.netlify/functions/generate-image`, {
       method: 'POST',
@@ -132,8 +140,8 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         prompt: 'cartoon style cute dog wearing t-shirt, bright colors, friendly expression',
         numImages: 1,
-        model: 'flux-schnell',
-        size: '1024x1024',
+        size: testSize,
+        targetSize: testSize,
         style: 'cartoon',
         colors: 'bright',
         audience: 'dog lovers'

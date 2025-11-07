@@ -26,12 +26,22 @@ exports.handler = async (event) => {
     };
   }
 
-  // According to Printful docs, use installation URL format:
-  // https://www.printful.com/oauth/authorize?client_id={clientId}&state={stateValue}&redirect_url={redirectUrl}
+  // According to Printful docs, use installation URL format with proper scopes:
+  // https://www.printful.com/oauth/authorize?client_id={clientId}&state={stateValue}&redirect_url={redirectUrl}&scope={scopes}
   const authUrl = new URL('https://www.printful.com/oauth/authorize');
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_url', redirectUri);
-  // Printful does not require response_type or scope in the authorize URL per docs
+  
+  // Request comprehensive scopes for full API access
+  const scopes = [
+    'orders',              // Full orders access (read/write)
+    'sync_products',       // Full sync products access (read/write) 
+    'file_library',        // Full file library access (read/write)
+    'webhooks',            // Full webhooks access (read/write)
+    'product_templates'    // Full product templates access (read/write)
+  ];
+  authUrl.searchParams.set('scope', scopes.join(' '));
+  
   if (state) authUrl.searchParams.set('state', state);
 
   return {

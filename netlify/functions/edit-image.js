@@ -45,8 +45,8 @@ exports.handler = async (event, context) => {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'FAL API key not configured' }) };
     }
 
-    // Make initial request to FAL nano-banana edit endpoint
-    const editResponse = await fetch('https://queue.fal.run/fal-ai/nano-banana/edit', {
+    // Make initial request to FAL Seedream v4 edit endpoint
+    const editResponse = await fetch('https://queue.fal.run/fal-ai/bytedance/seedream/v4/edit', {
       method: 'POST',
       headers: {
         'Authorization': `Key ${falKey}`,
@@ -55,7 +55,9 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         prompt,
         image_urls,
-        num_images: 1
+        num_images: 1,
+        max_images: 1,
+        enable_safety_checker: true
       }),
     });
 
@@ -75,7 +77,7 @@ exports.handler = async (event, context) => {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
       
-      statusResponse = await fetch(`https://queue.fal.run/fal-ai/nano-banana/requests/${requestId}/status`, {
+      statusResponse = await fetch(`https://queue.fal.run/fal-ai/bytedance/requests/${requestId}/status`, {
         headers: {
           'Authorization': `Key ${falKey}`,
         },
@@ -97,7 +99,7 @@ exports.handler = async (event, context) => {
     }
 
     // Get final result
-    const resultResponse = await fetch(`https://queue.fal.run/fal-ai/nano-banana/requests/${requestId}`, {
+    const resultResponse = await fetch(`https://queue.fal.run/fal-ai/bytedance/requests/${requestId}`, {
       headers: {
         'Authorization': `Key ${falKey}`,
       },
@@ -139,7 +141,7 @@ exports.handler = async (event, context) => {
               type: 'ai_generations',
               count: 1,
               metadata: {
-                service: 'fal-nano-banana-edit',
+                service: 'fal-seedream-edit',
                 prompt,
                 image_count: image_urls.length,
               },
