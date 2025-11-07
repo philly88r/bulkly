@@ -727,6 +727,9 @@ function renderPricingUI(products) {
               ${p.mockups && p.mockups.length > 1 ? `<p class="mb-0 mt-1 text-muted small"><i class="bi bi-images"></i> ${p.mockups.length} mockup images</p>` : ''}
             </div>
             <div class="d-flex gap-2" style="flex-shrink: 0;">
+              <button class="btn btn-sm btn-primary generate-mockups-btn" data-id="${p.catalog_product_id}" data-db-id="${p.product_id}" title="Generate 10 lifestyle mockups">
+                <i class="bi bi-images"></i> Generate Mockups
+              </button>
               <button class="btn btn-sm btn-success publish-btn" data-id="${p.catalog_product_id}" data-db-id="${p.product_id}">
                 <i class="bi bi-cloud-arrow-up"></i> Publish
               </button>
@@ -754,6 +757,17 @@ function renderPricingUI(products) {
       etsyBtn.addEventListener('click', () => {
         const card = etsyBtn.closest('.card');
         try { sendToEtsy(card); } catch (e) { console.error('[ETSY] Click handler error', e); }
+      });
+    }
+  });
+
+  // Attach Generate Mockups button click handlers
+  box.querySelectorAll('.generate-mockups-btn').forEach(btn => {
+    if (!btn.__mockupBound) {
+      btn.__mockupBound = true;
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.card');
+        try { generateLifestyleMockups(card); } catch (e) { console.error('[MOCKUPS] Click handler error', e); }
       });
     }
   });
@@ -2004,6 +2018,153 @@ ${failureCount === 0 ? '🎉 All products published successfully!' : '⚠️ Som
 }
 
 /**
+ * Generate 10 lifestyle mockup images using AI image editing
+ * @param {HTMLElement} card - The product card element
+ */
+async function generateLifestyleMockups(card) {
+  const btn = card.querySelector('.generate-mockups-btn');
+  const originalText = btn.innerHTML;
+
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
+
+    // Get product data from card
+    let productData;
+    try {
+      const productB64 = card.dataset.productB64;
+      if (productB64) {
+        const productJson = decodeURIComponent(escape(atob(productB64)));
+        productData = JSON.parse(productJson);
+      } else {
+        productData = null;
+      }
+    } catch (e) {
+      console.error('[LIFESTYLE-MOCKUPS] Failed to parse product data:', e);
+      productData = null;
+    }
+
+    if (!productData) {
+      throw new Error('No product data found on card');
+    }
+
+    // Get the base mockup image
+    const mockupImg = card.querySelector('img');
+    const baseImageUrl = mockupImg?.src;
+
+    if (!baseImageUrl) {
+      throw new Error('No mockup image found');
+    }
+
+    console.log('[LIFESTYLE-MOCKUPS] Starting generation with base image:', baseImageUrl);
+
+    // Get auth token
+    let token = localStorage.getItem('authToken') ||
+                localStorage.getItem('auth_token') ||
+                localStorage.getItem('token') ||
+                window.authToken;
+
+    if (!token) {
+      throw new Error('Authentication required. Please log in.');
+    }
+
+    // 10 different prompts for men grilling/cooking with the apron
+    const prompts = [
+      "A confident man wearing this exact apron design stands next to a smoking outdoor grill, holding a spatula, with BBQ food cooking on the grill, sunny backyard setting. Keep the apron design exactly as shown.",
+      "A smiling man in this exact apron flips burgers on a grill at a backyard party, with friends in the background. The apron design must remain unchanged.",
+      "A man wearing this precise apron holds grilling tongs near a large BBQ grill with steaks cooking, warm afternoon light. Do not alter the apron design.",
+      "A cheerful man in this exact apron stands proudly by his grill with smoke rising, holding a beer, relaxed weekend vibe. Keep apron design identical.",
+      "A man wearing this specific apron seasons meat on a cutting board near his grill, outdoor kitchen setting. Preserve the exact apron design.",
+      "A focused man in this exact apron tends to kabobs on a grill, golden hour lighting, professional home chef atmosphere. Apron design stays the same.",
+      "A man wearing this precise apron demonstrates grilling techniques with a spatula, smoke and flames visible, expert BBQ master. Do not modify apron design.",
+      "A laughing man in this exact apron serves grilled food from the BBQ to guests at an outdoor gathering. Keep the apron design untouched.",
+      "A man wearing this specific apron stands confidently with arms crossed next to his premium grill, proud backyard chef. Apron design must be identical.",
+      "A man in this exact apron carefully bastes ribs on the grill with a brush, focused cooking moment. The apron design cannot change."
+    ];
+
+    const lifestyleImages = [];
+    const totalPrompts = prompts.length;
+
+    // Generate images sequentially to avoid overwhelming the API
+    for (let i = 0; i < prompts.length; i++) {
+      try {
+        btn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${i + 1}/${totalPrompts}...`;
+        console.log(`[LIFESTYLE-MOCKUPS] Generating image ${i + 1}/${totalPrompts} with prompt:`, prompts[i]);
+
+        const response = await fetch('/.netlify/functions/edit-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            prompt: prompts[i],
+            imageUrl: baseImageUrl
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          console.error(`[LIFESTYLE-MOCKUPS] Failed to generate image ${i + 1}:`, result.error);
+          // Continue with other images even if one fails
+          continue;
+        }
+
+        const imageUrl = result.data?.image_url;
+        if (imageUrl) {
+          lifestyleImages.push(imageUrl);
+          console.log(`[LIFESTYLE-MOCKUPS] Generated image ${i + 1}/${totalPrompts}:`, imageUrl);
+        }
+
+      } catch (err) {
+        console.error(`[LIFESTYLE-MOCKUPS] Error generating image ${i + 1}:`, err);
+        // Continue with other images
+      }
+    }
+
+    console.log(`[LIFESTYLE-MOCKUPS] Successfully generated ${lifestyleImages.length} lifestyle images`);
+
+    // Store lifestyle images in product data
+    if (!productData.lifestyle_mockups) {
+      productData.lifestyle_mockups = [];
+    }
+    productData.lifestyle_mockups = lifestyleImages;
+
+    // Update the card's data attribute with the new lifestyle images
+    const updatedProductJson = JSON.stringify(productData);
+    const updatedB64 = btoa(unescape(encodeURIComponent(updatedProductJson)));
+    card.dataset.productB64 = updatedB64;
+
+    // Update UI to show the lifestyle images
+    const mockupContainer = card.querySelector('div[style*="flex-direction: column"]');
+    if (mockupContainer && lifestyleImages.length > 0) {
+      const thumbnailContainer = document.createElement('div');
+      thumbnailContainer.style.cssText = 'display: flex; gap: 4px; flex-wrap: wrap; max-width: 140px; margin-top: 8px;';
+      thumbnailContainer.innerHTML = lifestyleImages.slice(0, 12).map(url =>
+        `<img src="${url}" width="44" height="44" class="rounded" style="object-fit: cover; cursor: pointer;" title="Lifestyle mockup">`
+      ).join('');
+      mockupContainer.appendChild(thumbnailContainer);
+    }
+
+    btn.innerHTML = `<i class="bi bi-check-circle"></i> ${lifestyleImages.length} Generated`;
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-success');
+
+    alert(`✅ Successfully generated ${lifestyleImages.length} lifestyle mockup images!`);
+
+  } catch (error) {
+    console.error('[LIFESTYLE-MOCKUPS] Error:', error);
+    btn.innerHTML = originalText;
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-primary');
+    alert(`❌ Failed to generate lifestyle mockups: ${error.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/**
  * Send a single product to Etsy
  * @param {HTMLElement} card - The product card element
  */
@@ -2133,6 +2294,16 @@ async function sendToEtsy(card) {
         }
       });
     }
+    // Add lifestyle mockups if they exist
+    if (Array.isArray(productData.lifestyle_mockups)) {
+      productData.lifestyle_mockups.forEach(url => {
+        if (url && !imageUrls.includes(url)) {
+          imageUrls.push(url);
+        }
+      });
+    }
+
+    console.log(`[ETSY] Total images to send: ${imageUrls.length} (${productData.lifestyle_mockups?.length || 0} lifestyle mockups)`);
 
     // Determine taxonomy_id based on product type
     const titleLower = title.toLowerCase();
