@@ -71,6 +71,9 @@
     url.searchParams.delete('state');
     window.history.replaceState({}, document.title, url.toString());
 
+    // Update the auth button to show connected status
+    updateEtsyAuthButton();
+
     // Mark that we should resume the action if a product was selected before OAuth
     const resumeId = localStorage.getItem('etsy_resume_db_id');
     if (resumeId) {
@@ -118,6 +121,53 @@ const RATE_LIMIT_CONFIG = {
 document.addEventListener('DOMContentLoaded', init);
 
 /**
+ * Update Etsy auth button status based on whether token exists
+ */
+function updateEtsyAuthButton() {
+  const etsyToken = localStorage.getItem('etsy_access_token');
+  const etsyAuthBtn = document.getElementById('etsyAuthBtn');
+  const etsyAuthBtnText = document.getElementById('etsyAuthBtnText');
+
+  if (etsyAuthBtn && etsyAuthBtnText) {
+    if (etsyToken) {
+      etsyAuthBtn.classList.remove('btn-outline-warning');
+      etsyAuthBtn.classList.add('btn-success');
+      etsyAuthBtnText.textContent = 'Etsy Connected';
+    } else {
+      etsyAuthBtn.classList.remove('btn-success');
+      etsyAuthBtn.classList.add('btn-outline-warning');
+      etsyAuthBtnText.textContent = 'Connect Etsy';
+    }
+  }
+}
+
+/**
+ * Initiates Etsy OAuth authorization flow
+ */
+async function authorizeEtsy() {
+  try {
+    console.log('[ETSY-AUTH] Starting OAuth flow...');
+    const startRes = await fetch('/.netlify/functions/etsy-oauth-start');
+    const startData = await startRes.json().catch(() => ({}));
+
+    if (!startRes.ok || !startData?.success || !startData?.auth_url || !startData?.code_verifier) {
+      throw new Error('Failed to initiate Etsy OAuth. Please try again.');
+    }
+
+    // Persist PKCE details
+    localStorage.setItem('etsy_oauth_state', startData.state);
+    localStorage.setItem('etsy_code_verifier', startData.code_verifier);
+
+    // Redirect user to Etsy
+    console.log('[ETSY-AUTH] Redirecting to Etsy...');
+    window.location.href = startData.auth_url;
+  } catch (err) {
+    console.error('[ETSY-AUTH] Error:', err);
+    alert(`❌ Failed to start Etsy authorization: ${err.message}`);
+  }
+}
+
+/**
  * Initializes the application on page load.
  */
 async function init() {
@@ -127,6 +177,9 @@ async function init() {
     window.location.href = '/auth.html';
     return;
   }
+
+  // Update Etsy authorization button status
+  updateEtsyAuthButton();
 
   // Initialize store dropdown early so user can pick the target store
   try {
@@ -1981,20 +2034,9 @@ async function sendToEtsy(card) {
     let etsyShopId = localStorage.getItem('etsy_shop_id');
 
     if (!etsyToken) {
-      console.log('[ETSY] No Etsy token found. Starting OAuth PKCE flow...');
-      const startRes = await fetch('/.netlify/functions/etsy-oauth-start');
-      const startData = await startRes.json().catch(() => ({}));
-      if (!startRes.ok || !startData?.success || !startData?.auth_url || !startData?.code_verifier) {
-        throw new Error('Failed to initiate Etsy OAuth. Please try again.');
-      }
-      // Persist PKCE details and which card to resume
-      localStorage.setItem('etsy_oauth_state', startData.state);
-      localStorage.setItem('etsy_code_verifier', startData.code_verifier);
-      const resumeId = card?.getAttribute('data-product-id') || card?.querySelector('.etsy-btn')?.getAttribute('data-db-id');
-      if (resumeId) localStorage.setItem('etsy_resume_db_id', resumeId);
-      // Redirect user to Etsy
-      window.location.href = startData.auth_url;
-      return; // stop here, resume after redirect
+      console.log('[ETSY] No Etsy token found.');
+      alert('⚠️ Please authorize with Etsy first by clicking the "Connect Etsy" button in the navigation bar.');
+      throw new Error('Etsy not authorized. Please connect Etsy first.');
     }
 
     // Ensure we have a shop ID or name; prompt once if missing
@@ -2100,23 +2142,15 @@ async function sendToEtsy(card) {
 
       // Check if token is expired - trigger re-auth
       if (errorText.includes('invalid_token') || errorText.includes('access token is expired') || errorText.includes('token expired')) {
-        console.log('[ETSY] Token expired, clearing token and restarting OAuth...');
+        console.log('[ETSY] Token expired, clearing token and prompting re-auth...');
         localStorage.removeItem('etsy_access_token');
         localStorage.removeItem('etsy_refresh_token');
+        updateEtsyAuthButton();
 
-        // Save the card to resume after re-auth
-        const resumeId = card?.getAttribute('data-product-id') || card?.querySelector('.etsy-btn')?.getAttribute('data-db-id');
-        if (resumeId) localStorage.setItem('etsy_resume_db_id', resumeId);
-
-        // Trigger OAuth flow
-        const startRes = await fetch('/.netlify/functions/etsy-oauth-start');
-        const startData = await startRes.json().catch(() => ({}));
-        if (startRes.ok && startData?.success && startData?.auth_url) {
-          localStorage.setItem('etsy_oauth_state', startData.state);
-          localStorage.setItem('etsy_code_verifier', startData.code_verifier);
-          window.location.href = startData.auth_url;
-          return;
-        }
+        alert('⚠️ Your Etsy authorization has expired. Please click "Connect Etsy" in the navigation bar to re-authorize.');
+        etsyBtn.disabled = false;
+        etsyBtn.innerHTML = originalText;
+        return;
       }
 
       throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
@@ -2141,23 +2175,15 @@ async function sendToEtsy(card) {
       // Check if error message indicates expired token
       const errorMsg = result.error || '';
       if (errorMsg.includes('invalid_token') || errorMsg.includes('access token is expired') || errorMsg.includes('token expired')) {
-        console.log('[ETSY] Token expired (from result), clearing token and restarting OAuth...');
+        console.log('[ETSY] Token expired (from result), clearing token and prompting re-auth...');
         localStorage.removeItem('etsy_access_token');
         localStorage.removeItem('etsy_refresh_token');
+        updateEtsyAuthButton();
 
-        // Save the card to resume after re-auth
-        const resumeId = card?.getAttribute('data-product-id') || card?.querySelector('.etsy-btn')?.getAttribute('data-db-id');
-        if (resumeId) localStorage.setItem('etsy_resume_db_id', resumeId);
-
-        // Trigger OAuth flow
-        const startRes = await fetch('/.netlify/functions/etsy-oauth-start');
-        const startData = await startRes.json().catch(() => ({}));
-        if (startRes.ok && startData?.success && startData?.auth_url) {
-          localStorage.setItem('etsy_oauth_state', startData.state);
-          localStorage.setItem('etsy_code_verifier', startData.code_verifier);
-          window.location.href = startData.auth_url;
-          return;
-        }
+        alert('⚠️ Your Etsy authorization has expired. Please click "Connect Etsy" in the navigation bar to re-authorize.');
+        etsyBtn.disabled = false;
+        etsyBtn.innerHTML = originalText;
+        return;
       }
 
       throw new Error(result.error || 'Unknown error');

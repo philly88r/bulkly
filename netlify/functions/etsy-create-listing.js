@@ -253,12 +253,63 @@ exports.handler = async (event) => {
       };
     }
 
-    // Resolve shipping profile by name if ID not provided (NOW we have etsyAccessToken and etsyApiKey)
+    // Resolve shipping profile and readiness state for physical products
     let resolvedShippingProfileId = shipping_profile_id;
-    if (type === 'physical' && !resolvedShippingProfileId) {
+    let resolvedReadinessStateId = null;
+
+    if (type === 'physical') {
+      // Fetch shipping profiles if not provided
+      if (!resolvedShippingProfileId) {
+        try {
+          console.log('[etsy-create-listing] Fetching shipping profiles for shop:', shop_id);
+          const profRes = await fetch(`https://api.etsy.com/v3/application/shops/${shop_id}/shipping-profiles`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${etsyAccessToken}`,
+              'x-api-key': etsyApiKey,
+              'Content-Type': 'application/json'
+            }
+          });
+          const profData = await profRes.json().catch(() => ({}));
+          if (profRes.ok) {
+            const profiles = Array.isArray(profData?.results) ? profData.results
+              : Array.isArray(profData?.shipping_profiles) ? profData.shipping_profiles
+              : Array.isArray(profData?.data) ? profData.data : [];
+
+            console.log('[etsy-create-listing] Found', profiles.length, 'shipping profiles');
+
+            // If shipping_profile_name is provided, try to match it
+            if (shipping_profile_name) {
+              console.log('[etsy-create-listing] Resolving shipping profile by name:', shipping_profile_name);
+              const match = profiles.find(p => {
+                const title = String(p.title || p.name || '').toLowerCase();
+                return title === String(shipping_profile_name).toLowerCase();
+              }) || profiles.find(p => String(p.title || p.name || '').toLowerCase().includes(String(shipping_profile_name).toLowerCase()));
+              if (match) {
+                resolvedShippingProfileId = match.shipping_profile_id || match.id || match.profile_id;
+                console.log('[etsy-create-listing] Resolved shipping_profile_id:', resolvedShippingProfileId);
+              } else {
+                console.warn('[etsy-create-listing] No shipping profile matched name:', shipping_profile_name);
+              }
+            }
+
+            // If still no shipping profile, use the first one (default)
+            if (!resolvedShippingProfileId && profiles.length > 0) {
+              resolvedShippingProfileId = profiles[0].shipping_profile_id || profiles[0].id || profiles[0].profile_id;
+              console.log('[etsy-create-listing] Using default (first) shipping profile:', resolvedShippingProfileId);
+            }
+          } else {
+            console.warn('[etsy-create-listing] Failed to list shipping profiles:', JSON.stringify(profData).slice(0, 400));
+          }
+        } catch (e) {
+          console.warn('[etsy-create-listing] Error resolving shipping profile:', e?.message || e);
+        }
+      }
+
+      // Fetch or create readiness state (processing profile)
       try {
-        console.log('[etsy-create-listing] Fetching shipping profiles for shop:', shop_id);
-        const profRes = await fetch(`https://api.etsy.com/v3/application/shops/${shop_id}/shipping-profiles`, {
+        console.log('[etsy-create-listing] Fetching readiness states for shop:', shop_id);
+        const readinessRes = await fetch(`https://api.etsy.com/v3/application/shops/${shop_id}/readiness-state-definitions`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${etsyAccessToken}`,
@@ -266,49 +317,64 @@ exports.handler = async (event) => {
             'Content-Type': 'application/json'
           }
         });
-        const profData = await profRes.json().catch(() => ({}));
-        if (profRes.ok) {
-          const profiles = Array.isArray(profData?.results) ? profData.results
-            : Array.isArray(profData?.shipping_profiles) ? profData.shipping_profiles
-            : Array.isArray(profData?.data) ? profData.data : [];
+        const readinessData = await readinessRes.json().catch(() => ({}));
 
-          console.log('[etsy-create-listing] Found', profiles.length, 'shipping profiles');
+        if (readinessRes.ok && readinessData?.results && readinessData.results.length > 0) {
+          // Use existing "made_to_order" readiness state, or the first one available
+          const madeToOrder = readinessData.results.find(r => r.readiness_state === 'made_to_order');
+          const readyToShip = readinessData.results.find(r => r.readiness_state === 'ready_to_ship');
+          const selectedState = madeToOrder || readyToShip || readinessData.results[0];
 
-          // If shipping_profile_name is provided, try to match it
-          if (shipping_profile_name) {
-            console.log('[etsy-create-listing] Resolving shipping profile by name:', shipping_profile_name);
-            const match = profiles.find(p => {
-              const title = String(p.title || p.name || '').toLowerCase();
-              return title === String(shipping_profile_name).toLowerCase();
-            }) || profiles.find(p => String(p.title || p.name || '').toLowerCase().includes(String(shipping_profile_name).toLowerCase()));
-            if (match) {
-              resolvedShippingProfileId = match.shipping_profile_id || match.id || match.profile_id;
-              console.log('[etsy-create-listing] Resolved shipping_profile_id:', resolvedShippingProfileId);
-            } else {
-              console.warn('[etsy-create-listing] No shipping profile matched name:', shipping_profile_name);
-            }
-          }
-
-          // If still no shipping profile, use the first one (default)
-          if (!resolvedShippingProfileId && profiles.length > 0) {
-            resolvedShippingProfileId = profiles[0].shipping_profile_id || profiles[0].id || profiles[0].profile_id;
-            console.log('[etsy-create-listing] Using default (first) shipping profile:', resolvedShippingProfileId);
-          }
+          resolvedReadinessStateId = selectedState.readiness_state_id;
+          console.log('[etsy-create-listing] Using existing readiness_state_id:', resolvedReadinessStateId, '(', selectedState.readiness_state, ')');
         } else {
-          console.warn('[etsy-create-listing] Failed to list shipping profiles:', JSON.stringify(profData).slice(0, 400));
+          // No readiness states exist, create one for "made_to_order"
+          console.log('[etsy-create-listing] No readiness states found, creating "made_to_order" state...');
+          const createParams = new URLSearchParams();
+          createParams.append('readiness_state', 'made_to_order');
+          createParams.append('min_processing_time', String(processing_min));
+          createParams.append('max_processing_time', String(processing_max));
+          createParams.append('processing_time_unit', 'business_days');
+
+          const createRes = await fetch(`https://api.etsy.com/v3/application/shops/${shop_id}/readiness-state-definitions`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${etsyAccessToken}`,
+              'x-api-key': etsyApiKey,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: createParams.toString()
+          });
+
+          const createData = await createRes.json().catch(() => ({}));
+          if (createRes.ok && createData?.readiness_state_id) {
+            resolvedReadinessStateId = createData.readiness_state_id;
+            console.log('[etsy-create-listing] Created new readiness_state_id:', resolvedReadinessStateId);
+          } else {
+            console.error('[etsy-create-listing] Failed to create readiness state:', JSON.stringify(createData).slice(0, 400));
+          }
         }
       } catch (e) {
-        console.warn('[etsy-create-listing] Error resolving shipping profile:', e?.message || e);
+        console.warn('[etsy-create-listing] Error resolving readiness state:', e?.message || e);
       }
     }
 
     // Validate required fields for physical products (after resolution)
-    if (type === 'physical' && !resolvedShippingProfileId) {
-      return {
-        statusCode: 400,
-        headers: cors,
-        body: JSON.stringify({ success: false, error: 'Missing required field: shipping_profile_id (required for physical products). Could not auto-resolve from shop.' })
-      };
+    if (type === 'physical') {
+      if (!resolvedShippingProfileId) {
+        return {
+          statusCode: 400,
+          headers: cors,
+          body: JSON.stringify({ success: false, error: 'Missing required field: shipping_profile_id (required for physical products). Could not auto-resolve from shop.' })
+        };
+      }
+      if (!resolvedReadinessStateId) {
+        return {
+          statusCode: 400,
+          headers: cors,
+          body: JSON.stringify({ success: false, error: 'Missing required field: readiness_state_id (processing profile required for physical products). Could not auto-resolve from shop.' })
+        };
+      }
     }
 
     const etsyHeaders = {
@@ -336,8 +402,7 @@ exports.handler = async (event) => {
     // Required for physical products
     if (type === 'physical') {
       listingParams.append('shipping_profile_id', String(resolvedShippingProfileId));
-      listingParams.append('processing_min', String(processing_min));
-      listingParams.append('processing_max', String(processing_max));
+      listingParams.append('readiness_state_id', String(resolvedReadinessStateId));
     }
 
     if (Array.isArray(tags) && tags.length) {
