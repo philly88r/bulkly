@@ -6,81 +6,66 @@ async function makePrintfulApiCall(endpoint, options = {}, event) {
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || '';
     const proxyUrl = `${siteUrl || `http://${event.headers.host}`}/.netlify/functions/printful-proxy`;
     const authHeader = event.headers.authorization || '';
-    const forward = { endpoint, method: options.method || 'GET', body: options.body || null, headers: options.headers || {} };
 
-    const resp = await fetch(proxyUrl, {
+    const response = await fetch(proxyUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(authHeader ? { Authorization: authHeader } : {}) },
-        body: JSON.stringify(forward)
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({ endpoint, ...options })
     });
 
-    const json = await resp.json();
-    if (!resp.ok) {
-        const detail = (json?.details?.body?.error) || JSON.stringify(json, null, 2);
-        console.error(`[generate-main-mockup] API call to ${endpoint} failed: ${resp.status}`, detail);
-        throw new Error(`Printful API error: ${detail}`);
+    const json = await response.json();
+    
+    // If response has a 'body' field (Netlify function response), parse it
+    if (json.body && typeof json.body === 'string') {
+        const parsed = JSON.parse(json.body);
+        // Return the parsed body content (which has { success, data, rateLimit })
+        return parsed;
     }
     return json;
 }
 
-// --- Helper Functions (adapted from frontend) ---
+// --- Helper Functions ---
 
-async function getV2PlacementTechniqueMap(catalogProductId, event) {
+async function getDefaultVariantId(catalogProductId, sellingRegionName, event) {
     try {
-        const res = await makePrintfulApiCall(`/v2/catalog-products/${catalogProductId}/mockup-styles?default_mockup_styles=true`, { headers: { 'X-PF-Language': 'en' } }, event);
-        const data = res?.data?.data ?? [];
-        const map = new Map();
-        data.forEach(it => {
-            const placement = String(it?.placement || '').trim().toLowerCase();
-            const technique = String(it?.technique || '').trim().toLowerCase();
-            if (placement && technique) map.set(placement, technique);
-        });
-        return { techniqueByPlacement: map };
+        const region = (sellingRegionName || 'usa').toLowerCase();
+        console.log(`[MOCKUPS] Fetching default variant for product ${catalogProductId} (region: ${region})`);
+        const res = await makePrintfulApiCall(`/v2/catalog-products/${catalogProductId}/catalog-variants?selling_region_name=${region}&limit=1`, {}, event);
+        const variantId = res?.data?.data?.[0]?.id;
+        if (!variantId) {
+            throw new Error('No variants found in API response.');
+        }
+        console.log(`[MOCKUPS] Found default variant ID: ${variantId}`);
+        return variantId;
     } catch (e) {
-        console.error('getV2PlacementTechniqueMap failed', e);
-        return { techniqueByPlacement: new Map() };
-    }
-}
-
-async function getV2ProductOptionNames(catalogProductId, event) {
-    try {
-        const res = await makePrintfulApiCall(`/mockup-generator/printfiles/${Number(catalogProductId)}`, {}, event);
-        const groups = res?.result?.option_groups || [];
-        const names = new Set();
-        const scanNode = (node) => {
-            if (!node || typeof node !== 'object') return;
-            const key = String(node.key || node.name || node.id || '').trim().toLowerCase().replace(/\s+/g, '_');
-            if (key) names.add(key);
-            if (Array.isArray(node.options)) node.options.forEach(scanNode);
-        };
-        groups.forEach(scanNode);
-        return { optionNames: names };
-    } catch (e) {
-        console.error('getV2ProductOptionNames failed', e);
-        return { optionNames: new Set() };
-    }
-}
-
-async function fetchCatalogVariantIds(catalogProductId, event) {
-    try {
-        const pf = await makePrintfulApiCall(`/mockup-generator/printfiles/${Number(catalogProductId)}`, {}, event);
-        const ids = (pf?.result?.variant_printfiles || []).map(e => e?.variant_id).filter(Boolean).map(Number);
-        return ids.length ? ids : [];
-    } catch (e) {
-        console.warn('fetchCatalogVariantIds error', e);
-        return [];
+        console.error(`[MOCKUPS] Could not fetch default variant for ${catalogProductId}:`, e.message);
+        throw e;
     }
 }
 
 async function pollV2MockupTask(taskId, event, { timeoutMs = 240000, intervalMs = 3000 }) {
     const start = Date.now();
+    console.log(`[MOCKUPS] Polling task ${taskId} for up to ${timeoutMs / 1000}s...`);
     while (Date.now() - start < timeoutMs) {
         await new Promise(r => setTimeout(r, intervalMs));
-        const res = await makePrintfulApiCall(`/v2/mockup-tasks?id=${taskId}`, {}, event);
-        const task = res?.data?.data?.[0] || {};
-        const status = String(task.status || '').toLowerCase();
-        if (status === 'completed') return task;
-        if (status === 'failed') throw new Error(`Mockup task ${taskId} failed: ${JSON.stringify(task.failure_reasons)}`);
+        try {
+            const res = await makePrintfulApiCall(`/v2/mockup-tasks?id=${taskId}`, {}, event);
+            const task = res?.data?.data?.[0] || {};
+            const status = String(task.status || '').toLowerCase();
+            console.log(`[MOCKUPS] Task ${taskId} status: ${status}`);
+            if (status === 'completed') {
+                // Log mockup count
+                const mockupCount = (task?.catalog_variant_mockups || []).reduce((count, vm) => {
+                    return count + (vm?.mockups || []).length;
+                }, 0);
+                console.log(`[MOCKUPS] Task ${taskId} completed with ${mockupCount} mockups total`);
+                return task;
+            }
+            if (status === 'failed') throw new Error(`Mockup task ${taskId} failed: ${JSON.stringify(task.failure_reasons)}`);
+        } catch (pollError) {
+            console.warn(`[MOCKUPS] Poll attempt for task ${taskId} failed:`, pollError.message);
+            // Continue polling even if one attempt fails
+        }
     }
     throw new Error(`Mockup task ${taskId} timed out after ${timeoutMs / 1000}s`);
 }
@@ -89,54 +74,46 @@ async function createMockupGenerationTask(payload, event) {
     console.log('[MOCKUPS] Creating mockup task with payload:', JSON.stringify(payload, null, 2));
     let taskResponse;
     try {
+        // Pass payload as object, not stringified - printful-proxy will stringify it
         taskResponse = await makePrintfulApiCall('/v2/mockup-tasks', { method: 'POST', body: payload }, event);
+        console.log('[MOCKUPS] Mockup task response:', JSON.stringify(taskResponse, null, 2));
     } catch (err) {
-        // Handle rate limiting - return pending for client to retry
+        console.error('[MOCKUPS] Error creating mockup task:', err.message);
         if (/rate limit|too many requests|429/i.test(err.message)) {
             console.warn('[MOCKUPS] Rate limit detected. Returning pending for client retry.');
             return { pending: true, rate_limited: true, retry_payload: payload };
         }
-        
-        // Retry logic for stitch_color
-        if (/stitch_color/i.test(err.message)) {
-            console.warn('[MOCKUPS] Missing stitch_color detected. Retrying with default value.');
-            const patched = JSON.parse(JSON.stringify(payload));
-            patched.products[0].product_options = patched.products[0].product_options || [];
-            patched.products[0].product_options.push({ name: 'stitch_color', value: 'black' });
-            taskResponse = await makePrintfulApiCall('/v2/mockup-tasks', { method: 'POST', body: patched }, event);
-        } else if (/style_ids.*are not available/i.test(err.message)) {
-            console.warn('[MOCKUPS] Style ID mismatch detected. Adding compatible style IDs and retrying.');
-            const patched = JSON.parse(JSON.stringify(payload));
-            // Extract available style IDs from error message
-            const match = err.message.match(/Available.*?style_ids.*?are:\s*([0-9,\s]+)/i);
-            if (match) {
-                const availableStyles = match[1].split(',').map(s => parseInt(s.trim())).filter(Boolean);
-                console.log('[MOCKUPS] Using available style IDs:', availableStyles.slice(0, 3)); // Use first 3
-                patched.products[0].mockup_style_ids = availableStyles.slice(0, 3);
-            }
-            taskResponse = await makePrintfulApiCall('/v2/mockup-tasks', { method: 'POST', body: patched }, event);
-        } else {
-            throw err;
-        }
+        throw err; // Re-throw other errors
     }
 
+    // Check if response indicates an error
+    if (taskResponse?.success === false) {
+        const reason = taskResponse?.details?.error?.reason || '';
+        const msg = (taskResponse?.error || '').toString();
+        console.error('[MOCKUPS] Printful API returned error:', taskResponse.error, taskResponse.details);
+        // Treat TooManyRequests as a pending state to avoid failing the flow
+        if (/TooManyRequests/i.test(reason) || /rate limit/i.test(msg)) {
+            const retryAfter = Number(taskResponse?.retryAfter) || null;
+            console.warn('[MOCKUPS] Rate limit in response body. Returning pending for client retry.', { retryAfter });
+            return { pending: true, rate_limited: true, retryAfter, retry_payload: payload };
+        }
+        throw new Error(`Printful API error: ${taskResponse.error || 'Unknown error'}`);
+    }
+
+    // printful-proxy wraps response as { success, data: { data: [...], extra: [] }, rateLimit }
+    // So we need to access data.data[0].id
     const taskId = taskResponse?.data?.data?.[0]?.id;
-    if (!taskId) throw new Error('No task ID returned from mockup creation');
+    if (!taskId) {
+        console.error('[MOCKUPS] No task ID in response. Response structure:', JSON.stringify(taskResponse, null, 2));
+        throw new Error('No task ID returned from mockup creation');
+    }
 
-    console.log(`[MOCKUPS] Task ${taskId} created. Polling for completion...`);
-    const result = await pollV2MockupTask(taskId, event, {});
-
-    const mockupUrls = [];
-    (result?.catalog_variant_mockups || []).forEach(variantMockup => {
-        (variantMockup?.mockups || []).forEach(mockup => {
-            if (mockup.mockup_url) mockupUrls.push(mockup.mockup_url);
-        });
-    });
-
-    console.log('[MOCKUPS] Generated', mockupUrls.length, 'mockup URLs');
-    return Array.from(new Set(mockupUrls)); // Return deduped URLs
+    console.log(`[MOCKUPS] Task created with ID: ${taskId}. Returning pending for client polling.`);
+    // Return immediately with task ID for client polling instead of blocking for 240 seconds
+    const result = { pending: true, task_id: taskId };
+    console.log('[MOCKUPS] Returning result:', result);
+    return result;
 }
-
 
 // --- Main Handler ---
 
@@ -146,71 +123,129 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { product } = JSON.parse(event.body);
-        if (!product || !product._productData) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Invalid product data provided.' }) };
+        const body = JSON.parse(event.body);
+        // The orchestrator sends technique at the top level.
+        const { catalog_product_id, placement_files, style_id, technique, catalog_variant_id, selling_region_name, mockup_style_ids } = body;
+
+        if (!catalog_product_id || !Array.isArray(placement_files) || placement_files.length === 0) {
+            return { statusCode: 400, body: JSON.stringify({ success: false, error: 'Missing catalog_product_id or placement_files.' }) };
         }
 
-        const { _productData } = product;
-        const catalogProductId = Number(_productData.catalog_product_id);
-
-        const { techniqueByPlacement } = await getV2PlacementTechniqueMap(catalogProductId, event);
-        const { optionNames } = await getV2ProductOptionNames(catalogProductId, event);
-
-        const product_options = [];
-        if (optionNames.has('stitch_color')) {
-            product_options.push({ name: 'stitch_color', value: 'black' }); // Default to black
+        if (!technique) {
+            return { statusCode: 400, body: JSON.stringify({ success: false, error: 'Missing technique.' }) };
         }
 
-        let catalog_variant_ids = (_productData.selected_variant_ids || []).map(Number).filter(Boolean);
-        if (!catalog_variant_ids.length) {
-            catalog_variant_ids = await fetchCatalogVariantIds(catalogProductId, event);
+        const region = (selling_region_name || 'usa').toLowerCase();
+
+        // Fetch a default variant ID to use for mockup generation
+        const resolvedVariantId = catalog_variant_id || await getDefaultVariantId(catalog_product_id, region, event);
+
+        const styleIdsFromPayload = Array.isArray(mockup_style_ids)
+            ? mockup_style_ids.filter(id => id !== null && id !== undefined)
+            : [];
+        let combinedStyleIds = styleIdsFromPayload.length > 0
+            ? styleIdsFromPayload
+            : (style_id ? [style_id] : []);
+
+        console.log(`[MOCKUPS] Received mockup_style_ids from request:`, mockup_style_ids);
+        console.log(`[MOCKUPS] Filtered styleIdsFromPayload:`, styleIdsFromPayload);
+        console.log(`[MOCKUPS] Combined style IDs to use:`, combinedStyleIds);
+
+        // If no mockup_style_ids provided, fetch available styles
+        if (combinedStyleIds.length === 0) {
+            console.log(`[MOCKUPS] No mockup styles specified. Fetching available styles...`);
+            try {
+                const stylesResponse = await makePrintfulApiCall(
+                    `/v2/catalog-products/${catalog_product_id}/mockup-styles?selling_region_name=${region}`,
+                    {},
+                    event
+                );
+                const styles = stylesResponse?.data?.data || stylesResponse?.data || [];
+                console.log(`[MOCKUPS] Available mockup styles:`, styles.map(s => ({ id: s.id, title: s.title })));
+                
+                if (styles.length > 0) {
+                    // Use first available style
+                    combinedStyleIds = [styles[0].id];
+                    console.log(`[MOCKUPS] Using first available style: ${styles[0].title} (${styles[0].id})`);
+                } else {
+                    console.warn(`[MOCKUPS] No mockup styles available for product ${catalog_product_id}`);
+                    // mockup_style_ids is required per API docs - use empty array and let Printful use defaults
+                    combinedStyleIds = [];
+                }
+            } catch (err) {
+                console.warn(`[MOCKUPS] Failed to fetch mockup styles:`, err.message);
+                combinedStyleIds = [];
+            }
         }
-        if (!catalog_variant_ids.length) {
-            throw new Error(`No variant IDs found for product ${catalogProductId}`);
-        }
+        
+        console.log(`[MOCKUPS] Using mockup style IDs:`, combinedStyleIds);
 
         const mockupPayload = {
             format: 'png',
             products: [{
                 source: 'catalog',
-                catalog_product_id: catalogProductId,
-                catalog_variant_ids,
-                placements: _productData.placement_files.map(pf => {
-                    const plc = String(pf.placement || 'front').toLowerCase();
-                    const tech = techniqueByPlacement.get(plc);
-                    if (!tech) {
-                        console.warn(`[MOCKUPS] No technique for placement '${plc}'. Skipping.`);
-                        return null;
-                    }
+                catalog_product_id: Number(catalog_product_id),
+                catalog_variant_ids: [resolvedVariantId],
+                ...(combinedStyleIds.length ? { mockup_style_ids: combinedStyleIds } : {}),
+                placements: placement_files.map(pf => {
+                    // Convert from pixels to inches using DPI, since API validates in inches
+                    const dpi = Math.round(Number(pf.dpi) || 300);
+                    const areaWidthPx = Math.round(Number(pf.width) || 1000);
+                    const areaHeightPx = Math.round(Number(pf.height) || 1000);
+                    const areaWidthIn = Number((areaWidthPx / dpi).toFixed(2));
+                    const areaHeightIn = Number((areaHeightPx / dpi).toFixed(2));
+
+                    // Fill entire print area (in inches)
+                    const designWidthIn = areaWidthIn;
+                    const designHeightIn = areaHeightIn;
+                    const leftIn = 0;
+                    const topIn = 0;
+
+                    const urlWithCb = (() => {
+                        let srcUrl = pf.image_url || '';
+                        try {
+                            const u = new URL(srcUrl);
+                            if (u.pathname && u.pathname.includes('/.netlify/functions/resize-image-public')) {
+                                const inner = u.searchParams.get('url');
+                                if (inner) {
+                                    srcUrl = decodeURIComponent(inner);
+                                    console.warn('[MOCKUPS] Stripped resize-image-public wrapper. Using original URL for Printful fetch.');
+                                }
+                            }
+                        } catch (e) {
+                            // ignore URL parse errors, fall back to original
+                        }
+                        const sep = srcUrl.includes('?') ? '&' : '?';
+                        return `${srcUrl}${sep}cb=${Date.now()}`;
+                    })();
+
+                    console.log(`[MOCKUPS] Placement ${pf.placement}: area=${areaWidthPx}x${areaHeightPx}px @ ${dpi}dpi (~${areaWidthIn}x${areaHeightIn} in)`);
+                    console.log(`[MOCKUPS] Position: auto-center (no position provided)`);
+
                     return {
-                        placement: plc,
-                        technique: tech,
-                        layers: [{ type: 'file', url: pf.image_url }]
+                        placement: pf.placement,
+                        technique: technique,
+                        layers: [{
+                            type: 'file',
+                            url: urlWithCb
+                        }]
                     };
-                }).filter(Boolean),
-                ...(product_options.length ? { product_options } : {})
+                })
             }]
         };
-        
+
         const result = await createMockupGenerationTask(mockupPayload, event);
 
-        // Handle pending/rate-limited responses
         if (result && result.pending) {
             return {
-                statusCode: 200,
-                body: JSON.stringify({ 
-                    success: true, 
-                    pending: true, 
-                    rate_limited: result.rate_limited || false,
-                    retry_payload: result.retry_payload 
-                })
+                statusCode: 202, // Use 202 Accepted for pending tasks
+                body: JSON.stringify({ success: true, pending: true, ...result })
             };
         }
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ success: true, mockupUrls: result })
+            body: JSON.stringify({ success: true, mockups: result })
         };
 
     } catch (error) {
