@@ -2086,6 +2086,13 @@ async function sendToEtsy(card) {
     }
 
     // Build Etsy listing payload
+    // Etsy tags must be max 20 characters each, max 13 tags
+    const rawTags = Array.isArray(productData?.tags) ? productData.tags : [];
+    const validTags = rawTags
+      .map(tag => String(tag).trim().substring(0, 20))
+      .filter(tag => tag.length > 0)
+      .slice(0, 13);
+
     const etsyPayload = {
       title: title,
       description: productData.description || `${title} - Custom Design`,
@@ -2099,7 +2106,7 @@ async function sendToEtsy(card) {
       type: 'physical',
       is_supply: false,
       should_auto_renew: true,
-      tags: Array.isArray(productData?.tags) ? productData.tags.slice(0, 13) : [],
+      tags: validTags,
       materials: Array.isArray(productData?.materials) ? productData.materials.slice(0, 13) : []
     };
 
