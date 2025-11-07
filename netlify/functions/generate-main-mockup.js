@@ -160,16 +160,54 @@ exports.handler = async (event) => {
                     {},
                     event
                 );
-                const styles = stylesResponse?.data?.data || stylesResponse?.data || [];
-                console.log(`[MOCKUPS] Available mockup styles:`, styles.map(s => ({ id: s.id, title: s.title })));
-                
-                if (styles.length > 0) {
-                    // Use first available style
-                    combinedStyleIds = [styles[0].id];
-                    console.log(`[MOCKUPS] Using first available style: ${styles[0].title} (${styles[0].id})`);
+                console.log(`[MOCKUPS] Raw styles response:`, JSON.stringify(stylesResponse, null, 2));
+
+                // Response is grouped by placement/technique, extract all mockup_styles
+                const placementGroups = stylesResponse?.data?.data || stylesResponse?.data || [];
+                const allMockupStyles = [];
+
+                placementGroups.forEach(group => {
+                    if (Array.isArray(group?.mockup_styles)) {
+                        group.mockup_styles.forEach(style => {
+                            if (style?.id) {
+                                allMockupStyles.push({
+                                    id: style.id,
+                                    category: style.category_name || style.category || '',
+                                    view: style.view_name || style.view || ''
+                                });
+                            }
+                        });
+                    }
+                });
+
+                console.log(`[MOCKUPS] Found ${allMockupStyles.length} mockup styles for product ${catalog_product_id}:`, allMockupStyles);
+
+                if (allMockupStyles.length > 0) {
+                    // Select diverse styles (prefer model/lifestyle, then flat views)
+                    const modelStyle = allMockupStyles.find(s =>
+                        s.category.toLowerCase().includes('model') ||
+                        s.category.toLowerCase().includes('lifestyle')
+                    );
+                    const flatFront = allMockupStyles.find(s =>
+                        s.view.toLowerCase() === 'front' &&
+                        s.category.toLowerCase().includes('flat')
+                    );
+                    const backView = allMockupStyles.find(s => s.view.toLowerCase() === 'back');
+
+                    // Take up to 5 diverse styles
+                    const selectedStyles = [
+                        modelStyle,
+                        flatFront,
+                        backView,
+                        ...allMockupStyles.filter(s =>
+                            s !== modelStyle && s !== flatFront && s !== backView
+                        ).slice(0, 2)
+                    ].filter(Boolean);
+
+                    combinedStyleIds = selectedStyles.map(s => s.id);
+                    console.log(`[MOCKUPS] Selected ${combinedStyleIds.length} diverse mockup styles:`, selectedStyles);
                 } else {
-                    console.warn(`[MOCKUPS] No mockup styles available for product ${catalog_product_id}`);
-                    // mockup_style_ids is required per API docs - use empty array and let Printful use defaults
+                    console.warn(`[MOCKUPS] No mockup styles found for product ${catalog_product_id}`);
                     combinedStyleIds = [];
                 }
             } catch (err) {
