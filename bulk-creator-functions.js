@@ -2085,17 +2085,27 @@ async function generateLifestyleMockups(card) {
     }
 
     // 10 different prompts for men grilling/cooking with the apron
+    // CRITICAL: Apron must be PIXEL-PERFECT identical - same text, same graphics, same cut, same everything
     const prompts = [
-      "A confident man wearing this exact apron design stands next to a smoking outdoor grill, holding a spatula, with BBQ food cooking on the grill, sunny backyard setting. Keep the apron design exactly as shown.",
-      "A smiling man in this exact apron flips burgers on a grill at a backyard party, with friends in the background. The apron design must remain unchanged.",
-      "A man wearing this precise apron holds grilling tongs near a large BBQ grill with steaks cooking, warm afternoon light. Do not alter the apron design.",
-      "A cheerful man in this exact apron stands proudly by his grill with smoke rising, holding a beer, relaxed weekend vibe. Keep apron design identical.",
-      "A man wearing this specific apron seasons meat on a cutting board near his grill, outdoor kitchen setting. Preserve the exact apron design.",
-      "A focused man in this exact apron tends to kabobs on a grill, golden hour lighting, professional home chef atmosphere. Apron design stays the same.",
-      "A man wearing this precise apron demonstrates grilling techniques with a spatula, smoke and flames visible, expert BBQ master. Do not modify apron design.",
-      "A laughing man in this exact apron serves grilled food from the BBQ to guests at an outdoor gathering. Keep the apron design untouched.",
-      "A man wearing this specific apron stands confidently with arms crossed next to his premium grill, proud backyard chef. Apron design must be identical.",
-      "A man in this exact apron carefully bastes ribs on the grill with a brush, focused cooking moment. The apron design cannot change."
+      "CRITICAL INSTRUCTION: First analyze every detail of the apron in this image - memorize the exact text wording, exact graphic design, exact colors, exact cut and style. Then add a photorealistic scene: A confident man wearing this EXACT apron (with IDENTICAL text, graphics, cut, and style - do not change even one pixel of the apron design) stands next to a smoking outdoor grill, holding a spatula, with BBQ food cooking on the grill, sunny backyard setting. ONLY change the background and add the person - the apron must remain 100% pixel-perfect identical.",
+
+      "CRITICAL INSTRUCTION: Preserve every single detail of the apron design perfectly - same exact text letters, same exact graphics, same exact cut. Then create scene: A smiling man wearing this EXACT apron (ZERO modifications to text, graphics, or design) flips burgers on a grill at a backyard party, with friends in the background. The apron text, graphics, and style must be absolutely identical to the original.",
+
+      "CRITICAL INSTRUCTION: The apron design is legally protected and must not be altered AT ALL. Analyze it carefully: preserve exact text wording, exact graphic placement, exact cut and style. Then generate: A man wearing this PERFECTLY PRESERVED apron holds grilling tongs near a large BBQ grill with steaks cooking, warm afternoon light. Every letter, graphic element, and cut detail must match the original exactly.",
+
+      "CRITICAL INSTRUCTION: Study the apron's exact text, graphics, colors, and cut - memorize every detail. Then create: A cheerful man in this UNMODIFIED apron (exact same text, exact same graphics, exact same cut as the original) stands proudly by his grill with smoke rising, holding a beer, relaxed weekend vibe. The apron must be forensically identical to the original.",
+
+      "CRITICAL INSTRUCTION: Preserve the apron EXACTLY as shown - same text letter-by-letter, same graphics pixel-by-pixel, same cut and style. Then generate: A man wearing this IDENTICAL apron seasons meat on a cutting board near his grill, outdoor kitchen setting. Do not alter a single character of text or any design element on the apron.",
+
+      "CRITICAL INSTRUCTION: The apron must remain 100% unchanged - analyze its exact text, exact graphics, exact cut first. Then create: A focused man in this EXACT REPLICA apron (no modifications whatsoever to text, graphics, or cut) tends to kabobs on a grill, golden hour lighting, professional home chef atmosphere. Every detail of the apron must match perfectly.",
+
+      "CRITICAL INSTRUCTION: Copy the apron design with absolute precision - same exact text wording, same exact graphics, same exact style and cut. Then generate: A man wearing this PERFECTLY MATCHED apron demonstrates grilling techniques with a spatula, smoke and flames visible, expert BBQ master. The apron text and design must be character-for-character identical to the original.",
+
+      "CRITICAL INSTRUCTION: The apron is the product being sold - it must be EXACTLY as shown with zero changes. Study the text, graphics, and cut carefully. Then create: A laughing man in this PRECISE apron (with completely identical text, graphics, and cut) serves grilled food from the BBQ to guests at an outdoor gathering. The apron must be a perfect duplicate of the original.",
+
+      "CRITICAL INSTRUCTION: Analyze the apron's every detail - exact text, exact graphics, exact cut and style - and preserve it perfectly. Then generate: A man wearing this EXACT DUPLICATE apron stands confidently with arms crossed next to his premium grill, proud backyard chef. The apron text, graphics, and style must be 100% identical - this is legally required.",
+
+      "CRITICAL INSTRUCTION: The apron design cannot be modified in ANY way - same exact text word-for-word, same exact graphics, same exact cut. Then create: A man in this PERFECTLY PRESERVED apron carefully bastes ribs on the grill with a brush, focused cooking moment. Every element of the apron must be forensically identical to the original image."
     ];
 
     const lifestyleImages = [];
