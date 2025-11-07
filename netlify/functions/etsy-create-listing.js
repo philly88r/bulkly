@@ -464,8 +464,8 @@ exports.handler = async (event) => {
 
         try {
           console.log(`[etsy-create-listing] Uploading image ${i + 1}/${image_urls.length}...`);
-          
-          // Fetch image and convert to base64
+
+          // Fetch image
           const imgRes = await fetch(imageUrl);
           if (!imgRes.ok) {
             console.warn(`[etsy-create-listing] Could not fetch image ${i + 1}:`, imgRes.status);
@@ -473,27 +473,43 @@ exports.handler = async (event) => {
           }
 
           const imgBuffer = await imgRes.buffer();
-          const base64Image = imgBuffer.toString('base64');
 
-          // Upload to Etsy
-          const uploadParams = new URLSearchParams();
-          uploadParams.append('image', base64Image);
+          // Create multipart form data
+          const FormData = require('form-data');
+          const formData = new FormData();
 
+          // Determine file extension from URL or content-type
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          let extension = 'jpg';
+          if (contentType.includes('png')) extension = 'png';
+          else if (contentType.includes('gif')) extension = 'gif';
+          else if (contentType.includes('webp')) extension = 'webp';
+
+          formData.append('image', imgBuffer, {
+            filename: `image_${i + 1}.${extension}`,
+            contentType: contentType
+          });
+
+          // Upload to Etsy using multipart/form-data
           const uploadRes = await fetch(
             `https://api.etsy.com/v3/application/shops/${shop_id}/listings/${listingId}/images`,
             {
               method: 'POST',
-              headers: etsyHeaders,
-              body: uploadParams.toString()
+              headers: {
+                'Authorization': `Bearer ${etsyAccessToken}`,
+                'x-api-key': etsyApiKey,
+                ...formData.getHeaders()
+              },
+              body: formData
             }
           );
 
           const uploadData = await uploadRes.json().catch(() => ({}));
           console.log(`[etsy-create-listing] Image ${i + 1} upload status:`, uploadRes.status);
 
-          if (uploadRes.ok && uploadData?.image_id) {
-            uploadedImageIds.push(uploadData.image_id);
-            console.log(`[etsy-create-listing] Image ${i + 1} uploaded. ID:`, uploadData.image_id);
+          if (uploadRes.ok && uploadData?.listing_image_id) {
+            uploadedImageIds.push(uploadData.listing_image_id);
+            console.log(`[etsy-create-listing] Image ${i + 1} uploaded. ID:`, uploadData.listing_image_id);
           } else {
             console.warn(`[etsy-create-listing] Image ${i + 1} upload failed:`, JSON.stringify(uploadData).slice(0, 300));
           }
