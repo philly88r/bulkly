@@ -532,91 +532,9 @@ async function initializePricingStep() {
           : null)
         || 'digital').toLowerCase();
 
-      // Fetch ALL available mockup styles for this product to get diverse angles/models
+      // Use empty mockup style IDs to get default mockup
       let mockupStyleIds = [];
-      try {
-        console.log(`[MOCKUP-STYLES] Fetching mockup styles for product ${productId}...`);
-        const stylesRes = await fetch(`/.netlify/functions/printful-proxy`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            endpoint: `/v2/catalog-products/${productId}/mockup-styles?default_mockup_styles=true`,
-            method: 'GET'
-          })
-        });
-
-        if (stylesRes.ok) {
-          const stylesData = await stylesRes.json().catch(() => ({}));
-          // Proxy wraps as { success, data: { data: [...] } }
-          const stylesArray = stylesData?.data?.data || stylesData?.data || [];
-
-          console.log(`[MOCKUP-STYLES] Raw API response for product ${productId}:`, JSON.stringify(stylesData, null, 2));
-
-          // Extract all mockup style IDs, prioritizing diverse styles
-          const allStyles = [];
-          stylesArray.forEach(placementGroup => {
-            if (Array.isArray(placementGroup?.mockup_styles)) {
-              placementGroup.mockup_styles.forEach(style => {
-                if (style?.id) {
-                  allStyles.push({
-                    id: style.id,
-                    name: style.name || '',
-                    category: style.category || '',
-                    view: style.view || ''
-                  });
-                }
-              });
-            }
-          });
-
-          // Select diverse mockup styles (prioritize different views and categories)
-          const selectedStyles = [];
-          const priorities = [
-            // First priority: Get one model/lifestyle shot
-            (s) => s.category?.toLowerCase().includes('model') || s.category?.toLowerCase().includes('lifestyle'),
-            // Second priority: Front flat
-            (s) => s.view?.toLowerCase() === 'front' && s.category?.toLowerCase().includes('flat'),
-            // Third priority: Back view
-            (s) => s.view?.toLowerCase() === 'back',
-            // Fourth priority: Any other unique views
-            (s) => true
-          ];
-
-          for (const priorityFn of priorities) {
-            const matches = allStyles.filter(s =>
-              !selectedStyles.some(sel => sel.id === s.id) && priorityFn(s)
-            );
-            if (matches.length > 0) {
-              selectedStyles.push(matches[0]);
-              if (selectedStyles.length >= 5) break; // Limit to 5 diverse mockups
-            }
-          }
-
-          // If we still don't have 5, add more from any remaining
-          while (selectedStyles.length < 5 && selectedStyles.length < allStyles.length) {
-            const remaining = allStyles.find(s => !selectedStyles.some(sel => sel.id === s.id));
-            if (remaining) selectedStyles.push(remaining);
-            else break;
-          }
-
-          mockupStyleIds = selectedStyles.map(s => s.id);
-          console.log(`[MOCKUP-STYLES] Selected ${mockupStyleIds.length} diverse mockup styles for product ${productId}:`, selectedStyles.map(s => `${s.name} (${s.category}/${s.view})`));
-        } else {
-          console.warn(`[MOCKUP-STYLES] Failed to fetch mockup styles for product ${productId}, using fallback`);
-        }
-      } catch (e) {
-        console.warn(`[MOCKUP-STYLES] Error fetching mockup styles for product ${productId}:`, e);
-      }
-
-      // Fallback to catalogPlacement mockup styles if API fetch failed
-      if (mockupStyleIds.length === 0 && Array.isArray(catalogPlacement?.mockup_styles)) {
-        mockupStyleIds = catalogPlacement.mockup_styles.map(style => style?.id).filter(Boolean);
-      }
-
-      const defaultStyleId = mockupStyleIds[0] || null;
+      const defaultStyleId = null;
 
       // Find the first available variant for this product
       const variant = Array.isArray(product.variants) && product.variants.length > 0 ? product.variants[0] : null;
