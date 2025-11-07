@@ -1030,7 +1030,20 @@ async function pollForPendingMockups(pendingMockups) {
               console.log(`[MOCKUP-POLL] Enabling markup input`);
               markupInput.disabled = false;
             }
-            
+
+            const generateMockupsBtn = card.querySelector('.generate-mockups-btn');
+            if (generateMockupsBtn) {
+              console.log(`[MOCKUP-POLL] Enabling Generate Mockups button`);
+              generateMockupsBtn.disabled = false;
+              // Attach Generate Mockups button click handler
+              if (!generateMockupsBtn.__mockupBound) {
+                generateMockupsBtn.__mockupBound = true;
+                generateMockupsBtn.onclick = () => {
+                  try { generateLifestyleMockups(card); } catch (e) { console.error('[MOCKUPS] Click handler error', e); }
+                };
+              }
+            }
+
             console.log(`[MOCKUP-POLL] Updated card for product ${pending.productId}`);
             console.log(`[MOCKUP-POLL] Card HTML after update:`, card.innerHTML);
           } else {
