@@ -377,6 +377,61 @@ exports.handler = async (event) => {
       }
     }
 
+    // Fetch or create return policy for custom/made-to-order items
+    let resolvedReturnPolicyId = null;
+    if (type === 'physical') {
+      try {
+        console.log('[etsy-create-listing] Fetching return policies for shop:', shop_id);
+        const returnPoliciesRes = await fetch(`https://api.etsy.com/v3/application/shops/${shop_id}/policies/return`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${etsyAccessToken}`,
+            'x-api-key': etsyApiKey,
+            'Content-Type': 'application/json'
+          }
+        });
+        const returnPoliciesData = await returnPoliciesRes.json().catch(() => ({}));
+
+        if (returnPoliciesRes.ok && returnPoliciesData?.results && returnPoliciesData.results.length > 0) {
+          // Use existing return policy (prefer "no returns" policy if exists)
+          const noReturnsPolicy = returnPoliciesData.results.find(p =>
+            p.accepts_returns === false ||
+            String(p.name || '').toLowerCase().includes('no return') ||
+            String(p.name || '').toLowerCase().includes('custom')
+          );
+          const selectedPolicy = noReturnsPolicy || returnPoliciesData.results[0];
+          resolvedReturnPolicyId = selectedPolicy.return_policy_id;
+          console.log('[etsy-create-listing] Using existing return_policy_id:', resolvedReturnPolicyId);
+        } else {
+          // Create a "no returns" policy for custom items
+          console.log('[etsy-create-listing] No return policies found, creating no-returns policy...');
+          const createPolicyParams = new URLSearchParams();
+          createPolicyParams.append('accepts_returns', 'false');
+          createPolicyParams.append('accepts_exchanges', 'false');
+
+          const createPolicyRes = await fetch(`https://api.etsy.com/v3/application/shops/${shop_id}/policies/return`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${etsyAccessToken}`,
+              'x-api-key': etsyApiKey,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: createPolicyParams.toString()
+          });
+
+          const createPolicyData = await createPolicyRes.json().catch(() => ({}));
+          if (createPolicyRes.ok && createPolicyData?.return_policy_id) {
+            resolvedReturnPolicyId = createPolicyData.return_policy_id;
+            console.log('[etsy-create-listing] Created new return_policy_id:', resolvedReturnPolicyId);
+          } else {
+            console.warn('[etsy-create-listing] Failed to create return policy:', JSON.stringify(createPolicyData).slice(0, 400));
+          }
+        }
+      } catch (e) {
+        console.warn('[etsy-create-listing] Error resolving return policy:', e?.message || e);
+      }
+    }
+
     const etsyHeaders = {
       'Authorization': `Bearer ${etsyAccessToken}`,
       'x-api-key': etsyApiKey,
@@ -403,6 +458,9 @@ exports.handler = async (event) => {
     if (type === 'physical') {
       listingParams.append('shipping_profile_id', String(resolvedShippingProfileId));
       listingParams.append('readiness_state_id', String(resolvedReadinessStateId));
+      if (resolvedReturnPolicyId) {
+        listingParams.append('return_policy_id', String(resolvedReturnPolicyId));
+      }
     }
 
     if (Array.isArray(tags) && tags.length) {
