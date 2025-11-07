@@ -2085,6 +2085,35 @@ async function sendToEtsy(card) {
       });
     }
 
+    // Determine taxonomy_id based on product type
+    const titleLower = title.toLowerCase();
+    let taxonomy_id = 1; // Default fallback
+
+    // Category mappings based on Etsy's seller taxonomy
+    if (titleLower.includes('apron')) {
+      taxonomy_id = 1063; // Home & Living > Kitchen & Dining > Linens > Aprons
+    } else if (titleLower.includes('t-shirt') || titleLower.includes('tshirt') || titleLower.includes('tee')) {
+      taxonomy_id = 1095; // Clothing > Shirts & Tops > T-shirts
+    } else if (titleLower.includes('hoodie') || titleLower.includes('sweatshirt')) {
+      taxonomy_id = 1094; // Clothing > Shirts & Tops > Sweatshirts & Hoodies
+    } else if (titleLower.includes('mug') || titleLower.includes('cup')) {
+      taxonomy_id = 1062; // Home & Living > Kitchen & Dining > Drink & Barware > Mugs
+    } else if (titleLower.includes('pillow') || titleLower.includes('cushion')) {
+      taxonomy_id = 1067; // Home & Living > Home Décor > Decorative Pillows
+    } else if (titleLower.includes('poster') || titleLower.includes('print') || titleLower.includes('wall art')) {
+      taxonomy_id = 1077; // Art & Collectibles > Prints > Digital Prints
+    } else if (titleLower.includes('tote') || titleLower.includes('bag')) {
+      taxonomy_id = 1549; // Bags & Purses > Tote Bags
+    } else if (titleLower.includes('phone case') || titleLower.includes('iphone') || titleLower.includes('samsung case')) {
+      taxonomy_id = 1156; // Accessories > Electronics & Gadgets > Phone Cases
+    } else if (titleLower.includes('notebook') || titleLower.includes('journal')) {
+      taxonomy_id = 891; // Paper & Party Supplies > Paper > Notebooks & Journals
+    } else if (titleLower.includes('sticker')) {
+      taxonomy_id = 1082; // Paper & Party Supplies > Paper > Stickers, Labels & Tags
+    }
+
+    console.log('[ETSY] Selected taxonomy_id:', taxonomy_id, 'for product:', title);
+
     // Build Etsy listing payload
     // Etsy tags must be max 20 characters each, max 13 tags
     const rawTags = Array.isArray(productData?.tags) ? productData.tags : [];
@@ -2100,7 +2129,7 @@ async function sendToEtsy(card) {
       quantity: 1,
       who_made: 'i_did',
       when_made: '2020_2024',
-      taxonomy_id: 1, // Default category; can be customized per product type
+      taxonomy_id: taxonomy_id,
       image_urls: imageUrls,
       shop_id: numericShopId,
       type: 'physical',
