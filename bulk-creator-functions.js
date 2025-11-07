@@ -550,7 +550,10 @@ async function initializePricingStep() {
 
         if (stylesRes.ok) {
           const stylesData = await stylesRes.json().catch(() => ({}));
-          const stylesArray = stylesData?.data || stylesData?.result || [];
+          // Proxy wraps as { success, data: { data: [...] } }
+          const stylesArray = stylesData?.data?.data || stylesData?.data || [];
+
+          console.log(`[MOCKUP-STYLES] Raw API response for product ${productId}:`, JSON.stringify(stylesData, null, 2));
 
           // Extract all mockup style IDs, prioritizing diverse styles
           const allStyles = [];
